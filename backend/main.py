@@ -33,7 +33,7 @@ class MemoryManager:
     def __init__(self):
         self.chat_histories: Dict[str, List[Dict]] = {}
         self.long_term_memory: Dict[str, Dict] = {}
-        self.max_short_term = 20  # Son 20 mesaj
+        self.max_short_term = 20
         self.memory_file = "memory.json"
         self.load_memory()
     
