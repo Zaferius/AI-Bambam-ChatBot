@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bambam AI - Giriş</title>
+  <link rel="icon" type="image/png" href="b-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: #0a0a0a;
+      color: #e5e5e5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .auth-container {
+      width: 100%;
+      max-width: 420px;
+      padding: 20px;
+    }
+
+    .auth-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+
+    .auth-logo img {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+    }
+
+    .auth-logo span {
+      font-size: 28px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .auth-card {
+      background: #141414;
+      border: 1px solid #262626;
+      border-radius: 16px;
+      padding: 32px;
+    }
+
+    .auth-card h2 {
+      font-size: 22px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .auth-card p {
+      color: #888;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #aaa;
+      margin-bottom: 6px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px 14px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 10px;
+      color: #fff;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus {
+      border-color: #646cff;
+    }
+
+    .form-group input::placeholder {
+      color: #555;
+    }
+
+    .auth-btn {
+      width: 100%;
+      padding: 12px;
+      background: #646cff;
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      margin-top: 8px;
+    }
+
+    .auth-btn:hover {
+      background: #535bf2;
+    }
+
+    .auth-btn:active {
+      transform: scale(0.98);
+    }
+
+    .auth-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .auth-switch {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 14px;
+      color: #888;
+    }
+
+    .auth-switch a {
+      color: #646cff;
+      text-decoration: none;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .auth-switch a:hover {
+      text-decoration: underline;
+    }
+
+    .auth-error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .auth-error.show {
+      display: block;
+    }
+
+    .auth-success {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #22c55e;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .auth-success.show {
+      display: block;
+    }
+
+    /* Tab switching */
+    .auth-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 24px;
+      background: #1a1a1a;
+      border-radius: 10px;
+      padding: 4px;
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 500;
+      color: #888;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.2s;
+      border: none;
+      background: none;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .auth-tab.active {
+      background: #262626;
+      color: #fff;
+    }
+
+    .auth-form {
+      display: none;
+    }
+
+    .auth-form.active {
+      display: block;
+    }
+
+    .password-toggle {
+      position: relative;
+    }
+
+    .password-toggle input {
+      padding-right: 42px;
+    }
+
+    .password-toggle button {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #666;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 4px;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.6s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-logo">
+      <img src="b-icon.png" alt="Bambam">
+      <span>Bambam AI</span>
+    </div>
+
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchTab('login')">Giriş Yap</button>
+        <button class="auth-tab" onclick="switchTab('signup')">Kayıt Ol</button>
+      </div>
+
+      <div class="auth-error" id="authError"></div>
+      <div class="auth-success" id="authSuccess"></div>
+
+      <!-- LOGIN FORM -->
+      <form class="auth-form active" id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" placeholder="ornek@email.com" required>
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Şifre</label>
+          <div class="password-toggle">
+            <input type="password" id="loginPassword" placeholder="Şifrenizi girin" required minlength="6">
+            <button type="button" onclick="togglePassword('loginPassword', this)">👁</button>
+          </div>
+        </div>
+        <button type="submit" class="auth-btn" id="loginBtn">Giriş Yap</button>
+      </form>
+
+      <!-- SIGNUP FORM -->
+      <form class="auth-form" id="signupForm" onsubmit="handleSignup(event)">
+        <div class="form-group">
+          <label for="signupUsername">Kullanıcı Adı</label>
+          <input type="text" id="signupUsername" placeholder="kullanici_adi" required minlength="3" maxlength="30" pattern="[a-zA-Z0-9_]+">
+        </div>
+        <div class="form-group">
+          <label for="signupEmail">Email</label>
+          <input type="email" id="signupEmail" placeholder="ornek@email.com" required>
+        </div>
+        <div class="form-group">
+          <label for="signupPassword">Şifre</label>
+          <div class="password-toggle">
+            <input type="password" id="signupPassword" placeholder="En az 6 karakter" required minlength="6">
+            <button type="button" onclick="togglePassword('signupPassword', this)">👁</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="signupPasswordConfirm">Şifre Tekrar</label>
+          <div class="password-toggle">
+            <input type="password" id="signupPasswordConfirm" placeholder="Şifrenizi tekrar girin" required minlength="6">
+            <button type="button" onclick="togglePassword('signupPasswordConfirm', this)">👁</button>
+          </div>
+        </div>
+        <button type="submit" class="auth-btn" id="signupBtn">Kayıt Ol</button>
+      </form>
+
+      <div class="auth-switch" id="authSwitch">
+        Hesabınız yok mu? <a onclick="switchTab('signup')">Kayıt olun</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://127.0.0.1:8000';
+
+    // Sayfa yüklendiğinde token kontrolü
+    (function() {
+      const token = localStorage.getItem('bambam_token');
+      if (token) {
+        // Token'ı doğrula
+        fetch(`${API_BASE}/auth/verify`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(r => {
+          if (r.ok) window.location.href = 'index.html';
+        })
+        .catch(() => {
+          localStorage.removeItem('bambam_token');
+          localStorage.removeItem('bambam_user');
+        });
+      }
+    })();
+
+    function switchTab(tab) {
+      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+      hideMessages();
+
+      if (tab === 'login') {
+        document.querySelectorAll('.auth-tab')[0].classList.add('active');
+        document.getElementById('loginForm').classList.add('active');
+        document.getElementById('authSwitch').innerHTML = 'Hesabınız yok mu? <a onclick="switchTab(\'signup\')">Kayıt olun</a>';
+      } else {
+        document.querySelectorAll('.auth-tab')[1].classList.add('active');
+        document.getElementById('signupForm').classList.add('active');
+        document.getElementById('authSwitch').innerHTML = 'Zaten hesabınız var mı? <a onclick="switchTab(\'login\')">Giriş yapın</a>';
+      }
+    }
+
+    function togglePassword(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+      } else {
+        input.type = 'password';
+        btn.textContent = '👁';
+      }
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('authError');
+      el.textContent = msg;
+      el.classList.add('show');
+      document.getElementById('authSuccess').classList.remove('show');
+    }
+
+    function showSuccess(msg) {
+      const el = document.getElementById('authSuccess');
+      el.textContent = msg;
+      el.classList.add('show');
+      document.getElementById('authError').classList.remove('show');
+    }
+
+    function hideMessages() {
+      document.getElementById('authError').classList.remove('show');
+      document.getElementById('authSuccess').classList.remove('show');
+    }
+
+    function setLoading(btnId, loading) {
+      const btn = document.getElementById(btnId);
+      if (loading) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading-spinner"></span> Yükleniyor...';
+      } else {
+        btn.disabled = false;
+        btn.textContent = btnId === 'loginBtn' ? 'Giriş Yap' : 'Kayıt Ol';
+      }
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      hideMessages();
+      setLoading('loginBtn', true);
+
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+
+      try {
+        const res = await fetch(`${API_BASE}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showError(data.detail || 'Giriş başarısız');
+          setLoading('loginBtn', false);
+          return;
+        }
+
+        // Token ve user kaydet
+        localStorage.setItem('bambam_token', data.access_token);
+        localStorage.setItem('bambam_user', JSON.stringify(data.user));
+
+        showSuccess('Giriş başarılı! Yönlendiriliyorsunuz...');
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 500);
+
+      } catch (err) {
+        showError('Sunucuya bağlanılamadı. Backend çalışıyor mu?');
+        setLoading('loginBtn', false);
+      }
+    }
+
+    async function handleSignup(e) {
+      e.preventDefault();
+      hideMessages();
+
+      const username = document.getElementById('signupUsername').value.trim();
+      const email = document.getElementById('signupEmail').value.trim();
+      const password = document.getElementById('signupPassword').value;
+      const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
+
+      if (password !== passwordConfirm) {
+        showError('Şifreler eşleşmiyor');
+        return;
+      }
+
+      setLoading('signupBtn', true);
+
+      try {
+        const res = await fetch(`${API_BASE}/auth/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, username, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showError(data.detail || 'Kayıt başarısız');
+          setLoading('signupBtn', false);
+          return;
+        }
+
+        // Token ve user kaydet
+        localStorage.setItem('bambam_token', data.access_token);
+        localStorage.setItem('bambam_user', JSON.stringify(data.user));
+
+        showSuccess('Hesap oluşturuldu! Yönlendiriliyorsunuz...');
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 500);
+
+      } catch (err) {
+        showError('Sunucuya bağlanılamadı. Backend çalışıyor mu?');
+        setLoading('signupBtn', false);
+      }
+    }
+  </script>
+</body>
+</html>

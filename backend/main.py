@@ -1,5 +1,5 @@
-from fastapi import FastAPI, File, UploadFile, Form, Request
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, File, UploadFile, Form, Request, Depends
+from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -13,142 +13,201 @@ from typing import Dict, List, Optional
 import asyncio
 import base64
 import io
+import google.generativeai as genai
+from database import DatabaseManager
+from auth import router as auth_router, init_auth, get_current_user, get_optional_user, decode_token
+from collections import defaultdict
+import time
 
 load_dotenv()
 
-app = FastAPI()
+app = FastAPI(title="Bambam AI Chat API", version="1.0.0")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Database Manager'ı başlat
+db = DatabaseManager()
+
+# Auth modülünü başlat
+init_auth(db)
+app.include_router(auth_router)
+
+# CORS
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+
+if "*" in ALLOWED_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[o.strip() for o in ALLOWED_ORIGINS],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+# Simple Rate Limiting
+rate_limit_store: Dict[str, List[float]] = defaultdict(list)
+RATE_LIMIT_CHAT = 30  # max requests per minute for chat
+RATE_LIMIT_AUTH = 10   # max requests per minute for auth
+
+def check_rate_limit(client_ip: str, limit: int = RATE_LIMIT_CHAT) -> bool:
+    """Rate limit kontrolü - True = izin ver, False = engelle"""
+    now = time.time()
+    # 1 dakikadan eski istekleri temizle
+    rate_limit_store[client_ip] = [t for t in rate_limit_store[client_ip] if now - t < 60]
+    if len(rate_limit_store[client_ip]) >= limit:
+        return False
+    rate_limit_store[client_ip].append(now)
+    return True
 
 # OpenAI Client (sadece API key varsa oluştur)
 openai_client = None
 if os.getenv("OPENAI_API_KEY"):
     openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Local LLM Configuration
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-LM_STUDIO_BASE_URL = os.getenv("LM_STUDIO_BASE_URL", "http://localhost:1234/v1")
+# Groq Client (OpenAI-compatible)
+groq_client = None
+if os.getenv("GROQ_API_KEY"):
+    groq_client = OpenAI(
+        api_key=os.getenv("GROQ_API_KEY"),
+        base_url="https://api.groq.com/openai/v1"
+    )
 
-class LocalLLMManager:
+# Gemini Client
+gemini_client = None
+if os.getenv("GEMINI_API_KEY"):
+    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+    gemini_client = True  # Flag to indicate Gemini is configured
+
+# OpenRouter Client (OpenAI-compatible, access to 200+ models)
+openrouter_client = None
+if os.getenv("OPENROUTER_API_KEY"):
+    openrouter_client = OpenAI(
+        api_key=os.getenv("OPENROUTER_API_KEY"),
+        base_url="https://openrouter.ai/api/v1"
+    )
+
+class CloudModelManager:
     def __init__(self):
         self.available_models = {}
-        # Sadece başlangıçta bir kere yükle
         self.refresh_models()
     
     def refresh_models(self):
-        """Mevcut local modelleri güncelle"""
+        """Cloud modelleri yükle - hızlı, network isteği yok"""
         models = []
         
-        # Ollama modelleri
-        try:
-            response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
-            if response.status_code == 200:
-                ollama_models = response.json().get('models', [])
-                for model in ollama_models:
-                    models.append({
-                        'id': f"ollama:{model['name']}",
-                        'name': model['name'],
-                        'provider': 'ollama',
-                        'model_name': model['name'],
-                        'icon': ''
-                    })
-        except:
-            pass
+        # Bambam Branded Models
+        bambam_models = [
+            {
+                'id': 'bambam:lite',
+                'name': 'Bambam 1.2 Lite',
+                'description': 'Günlük görevler için hafif bir ajan.',
+                'provider': 'bambam',
+                'model_name': 'groq:llama-3.1-8b-instant',
+                'icon': '',
+                'badge': '',
+                'is_bambam': True
+            },
+            {
+                'id': 'bambam:standard',
+                'name': 'Bambam 1.2',
+                'description': 'Çoğu görevi yapabilen çok yönlü bir ajan.',
+                'provider': 'bambam',
+                'model_name': 'gpt-4o-mini',
+                'icon': '',
+                'badge': '',
+                'is_bambam': True
+            },
+            {
+                'id': 'bambam:max',
+                'name': 'Bambam 1.2 Max',
+                'description': 'Karmaşık görevler için tasarlanmış yüksek performanslı bir ajan.',
+                'provider': 'bambam',
+                'model_name': 'openrouter:anthropic/claude-3.5-sonnet',
+                'icon': '',
+                'badge': 'Max',
+                'is_bambam': True
+            }
+        ]
+        models.extend(bambam_models)
         
-        # LM Studio modelleri
-        try:
-            response = requests.get(f"{LM_STUDIO_BASE_URL}/models", timeout=2)
-            if response.status_code == 200:
-                lm_models = response.json().get('data', [])
-                for model in lm_models:
-                    models.append({
-                        'id': f"lmstudio:{model['id']}",
-                        'name': model['id'],
-                        'provider': 'lmstudio',
-                        'model_name': model['id'],
-                        'icon': ''
-                    })
-        except:
-            pass
+        # Groq modelleri
+        groq_models = [
+            {'id': 'llama-3.1-70b-versatile', 'name': 'Llama 3.1 70B'},
+            {'id': 'llama-3.1-8b-instant', 'name': 'Llama 3.1 8B'},
+            {'id': 'mixtral-8x7b-32768', 'name': 'Mixtral 8x7B'},
+            {'id': 'gemma2-9b-it', 'name': 'Gemma 2 9B'}
+        ]
+        for model in groq_models:
+            models.append({
+                'id': f"groq:{model['id']}",
+                'name': model['name'],
+                'provider': 'groq',
+                'model_name': model['id'],
+                'icon': ''
+            })
+        
+        # Gemini modelleri
+        gemini_models = [
+            {'id': 'gemini-1.5-pro', 'name': 'Gemini 1.5 Pro'},
+            {'id': 'gemini-1.5-flash', 'name': 'Gemini 1.5 Flash'},
+            {'id': 'gemini-1.0-pro', 'name': 'Gemini 1.0 Pro'}
+        ]
+        for model in gemini_models:
+            models.append({
+                'id': f"gemini:{model['id']}",
+                'name': model['name'],
+                'provider': 'gemini',
+                'model_name': model['id'],
+                'icon': ''
+            })
+        
+        # OpenRouter modelleri
+        openrouter_models = [
+            {'id': 'anthropic/claude-3.5-sonnet', 'name': 'Claude 3.5 Sonnet'},
+            {'id': 'anthropic/claude-3-opus', 'name': 'Claude 3 Opus'},
+            {'id': 'openai/gpt-4-turbo', 'name': 'GPT-4 Turbo'},
+            {'id': 'openai/gpt-4o', 'name': 'GPT-4o'},
+            {'id': 'google/gemini-pro-1.5', 'name': 'Gemini Pro 1.5'},
+            {'id': 'meta-llama/llama-3.1-405b-instruct', 'name': 'Llama 3.1 405B'},
+            {'id': 'mistralai/mistral-large', 'name': 'Mistral Large'},
+            {'id': 'deepseek/deepseek-chat', 'name': 'DeepSeek Chat'},
+            {'id': 'qwen/qwen-2.5-72b-instruct', 'name': 'Qwen 2.5 72B'}
+        ]
+        for model in openrouter_models:
+            models.append({
+                'id': f"openrouter:{model['id']}",
+                'name': model['name'],
+                'provider': 'openrouter',
+                'model_name': model['id'],
+                'icon': ''
+            })
         
         self.available_models = {model['id']: model for model in models}
         return models
     
     def get_provider_and_model(self, model_id: str):
         """Model ID'sinden provider ve gerçek model adını al"""
-        if model_id.startswith("ollama:"):
-            return "ollama", model_id.replace("ollama:", "")
-        elif model_id.startswith("lmstudio:"):
-            return "lmstudio", model_id.replace("lmstudio:", "")
+        # Bambam branded modelleri underlying modele map et
+        if model_id.startswith("bambam:"):
+            if model_id in self.available_models:
+                underlying_model = self.available_models[model_id]['model_name']
+                return self.get_provider_and_model(underlying_model)
+            return "openai", "gpt-4o-mini"  # Fallback
+        
+        if model_id.startswith("groq:"):
+            return "groq", model_id.replace("groq:", "")
+        elif model_id.startswith("gemini:"):
+            return "gemini", model_id.replace("gemini:", "")
+        elif model_id.startswith("openrouter:"):
+            return "openrouter", model_id.replace("openrouter:", "")
         else:
             return "openai", model_id
-    
-    async def chat_with_ollama(self, model_name: str, messages: List[Dict]):
-        """Ollama ile sohbet"""
-        payload = {
-            "model": model_name,
-            "messages": messages,
-            "stream": True
-        }
-        
-        response = requests.post(
-            f"{OLLAMA_BASE_URL}/api/chat",
-            json=payload,
-            stream=True,
-            timeout=300
-        )
-        
-        if response.status_code == 200:
-            for line in response.iter_lines():
-                if line:
-                    try:
-                        data = json.loads(line.decode('utf-8'))
-                        if 'message' in data and 'content' in data['message']:
-                            yield data['message']['content']
-                    except:
-                        continue
-        else:
-            yield f"Ollama error: {response.status_code}"
-    
-    async def chat_with_lmstudio(self, model_name: str, messages: List[Dict]):
-        """LM Studio ile sohbet"""
-        payload = {
-            "model": model_name,
-            "messages": messages,
-            "stream": True
-        }
-        
-        response = requests.post(
-            f"{LM_STUDIO_BASE_URL}/chat/completions",
-            json=payload,
-            stream=True,
-            timeout=300
-        )
-        
-        if response.status_code == 200:
-            for line in response.iter_lines():
-                if line:
-                    try:
-                        line_str = line.decode('utf-8')
-                        if line_str.startswith('data: '):
-                            data_str = line_str[6:]
-                            if data_str.strip() == '[DONE]':
-                                break
-                            data = json.loads(data_str)
-                            if 'choices' in data and len(data['choices']) > 0:
-                                delta = data['choices'][0].get('delta', {})
-                                if 'content' in delta:
-                                    yield delta['content']
-                    except:
-                        continue
-        else:
-            yield f"LM Studio error: {response.status_code}"
     
     async def chat_with_openai(self, model_name: str, messages: List[Dict]):
         """OpenAI ile sohbet"""
@@ -167,8 +226,8 @@ class LocalLLMManager:
             if delta:
                 yield delta
 
-# Local LLM Manager'ı başlat
-llm_manager = LocalLLMManager()
+# Cloud Model Manager'ı başlat
+llm_manager = CloudModelManager()
 
 class ChatRequest(BaseModel):
     message: str
@@ -317,12 +376,15 @@ class MemoryManager:
 # Memory Manager'ı başlat
 memory_manager = MemoryManager()
 
+# Chat endpoints'leri setup et
+from chat_endpoints import setup_chat_routes
+setup_chat_routes(app, db)
+
 SYSTEM_MESSAGE = {
     "role": "system",
     "content": """Sen çok akıllı bir AI asistanısın. Kullanıcıyla önceki konuşmalarını hatırlıyorsun ve önemli bilgileri saklıyorsun. 
     Kullanıcının tercihlerini, ismini, projelerini ve diğer önemli detayları hatırla ve bunları konuşmalarında kullan.
-    Samimi, dostane ve yardımsever ol. Cevaplarını net ve pratik tut."""
-}
+    Samimi, dostane ve yardımsever ol. Cevaplarını net ve pratik tut."""}
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
@@ -369,73 +431,6 @@ async def chat(req: ChatRequest):
                     full_reply += delta
                     yield delta
         
-        elif provider == "ollama":
-            try:
-                response = requests.post(
-                    f"{OLLAMA_BASE_URL}/api/chat",
-                    json={
-                        "model": model_name,
-                        "messages": messages,
-                        "stream": True
-                    },
-                    stream=True,
-                    timeout=300
-                )
-                
-                if response.status_code == 200:
-                    for line in response.iter_lines():
-                        if line:
-                            try:
-                                data = json.loads(line.decode('utf-8'))
-                                if 'message' in data and 'content' in data['message']:
-                                    chunk = data['message']['content']
-                                    if chunk:
-                                        full_reply += chunk
-                                        yield chunk
-                            except:
-                                continue
-                else:
-                    yield f"Ollama error: {response.status_code}"
-            except Exception as e:
-                yield f"Ollama connection error: {str(e)}"
-        
-        elif provider == "lmstudio":
-            try:
-                response = requests.post(
-                    f"{LM_STUDIO_BASE_URL}/chat/completions",
-                    json={
-                        "model": model_name,
-                        "messages": messages,
-                        "stream": True
-                    },
-                    stream=True,
-                    timeout=300
-                )
-                
-                if response.status_code == 200:
-                    for line in response.iter_lines():
-                        if line:
-                            try:
-                                line_str = line.decode('utf-8')
-                                if line_str.startswith('data: '):
-                                    data_str = line_str[6:]
-                                    if data_str.strip() == '[DONE]':
-                                        break
-                                    data = json.loads(data_str)
-                                    if 'choices' in data and len(data['choices']) > 0:
-                                        delta = data['choices'][0].get('delta', {})
-                                        if 'content' in delta:
-                                            chunk = delta['content']
-                                            if chunk:
-                                                full_reply += chunk
-                                                yield chunk
-                            except:
-                                continue
-                else:
-                    yield f"LM Studio error: {response.status_code}"
-            except Exception as e:
-                yield f"LM Studio connection error: {str(e)}"
-        
         memory_manager.add_message(chat_id, full_reply, "assistant")
     
     return StreamingResponse(generate(), media_type="text/plain")
@@ -450,11 +445,24 @@ async def chat_stream(
     thinking_level: str = Form(None),
     files: List[UploadFile] = File(None)
 ):
+    # Rate limiting
+    client_ip = request.client.host if request.client else "unknown"
+    if not check_rate_limit(client_ip, RATE_LIMIT_CHAT):
+        return JSONResponse(status_code=429, content={"detail": "Çok fazla istek. Lütfen biraz bekleyin."})
+    
+    # Auth - token varsa doğrula, yoksa anonim devam et
+    auth_header = request.headers.get("authorization", "")
+    user_id = "default"
+    if auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        payload = decode_token(token)
+        if payload:
+            user_id = payload.get("sub", "default")
+
     # Check if request is JSON
     content_type = request.headers.get("content-type", "")
     
     if "application/json" in content_type:
-        # Handle JSON request
         body = await request.json()
         message = body.get("message")
         model = body.get("model", "gpt-4o-mini")
@@ -462,7 +470,6 @@ async def chat_stream(
         thinking_level = body.get("thinking_level", "medium")
         file_contents = []
     else:
-        # Handle Form data request
         file_contents = []
         if files:
             for file in files:
@@ -474,7 +481,6 @@ async def chat_stream(
                 }
                 file_contents.append(file_info)
         
-        # Set defaults for Form data
         if not model:
             model = "gpt-4o-mini"
         if not chat_id:
@@ -482,7 +488,15 @@ async def chat_stream(
         if not thinking_level:
             thinking_level = "medium"
     
+    # Kullanıcı mesajını memory'ye kaydet
     memory_manager.add_message(chat_id, message, "user", persist=False)
+    
+    # Database'e kullanıcı mesajını kaydet
+    try:
+        user_images = [base64.b64encode(f["data"]).decode('utf-8') for f in file_contents if f["content_type"].startswith("image/")] if file_contents else None
+        db.add_message(chat_id, "user", message, model_name=model, images=user_images)
+    except Exception as e:
+        print(f"DB save user message error: {e}")
     
     # İlgili hafıza bilgisini al
     relevant_memory = memory_manager.get_relevant_memory(chat_id, message)
@@ -490,7 +504,6 @@ async def chat_stream(
     # Mesajları hazırla
     messages = [SYSTEM_MESSAGE]
     
-    # Önemli hafıza bilgisini ekle
     if relevant_memory:
         messages.append({
             "role": "system",
@@ -499,22 +512,19 @@ async def chat_stream(
     
     # Sohbet geçmişini ekle
     chat_history = memory_manager.get_chat_history_for_llm(chat_id)
-    messages.extend(chat_history[:-1])  # Son mesajı çıkar, dosyalarla birlikte ekleyeceğiz
+    messages.extend(chat_history[:-1])
     
     # Kullanıcı mesajını dosyalarla birlikte hazırla
     user_message_content = []
     
-    # Metin mesajı ekle
     if message:
         user_message_content.append({
             "type": "text",
             "text": message
         })
     
-    # Dosyaları ekle (görsel dosyalar için vision API kullan)
     for file_info in file_contents:
         if file_info["content_type"].startswith("image/"):
-            # Görseli base64'e çevir
             base64_image = base64.b64encode(file_info["data"]).decode('utf-8')
             user_message_content.append({
                 "type": "image_url",
@@ -523,7 +533,6 @@ async def chat_stream(
                 }
             })
         else:
-            # Metin dosyaları için içeriği oku
             try:
                 text_content = file_info["data"].decode('utf-8')
                 user_message_content.append({
@@ -536,15 +545,12 @@ async def chat_stream(
                     "text": f"\n\n[File: {file_info['filename']} - Binary file, cannot display content]"
                 })
     
-    # Kullanıcı mesajını ekle
     if len(user_message_content) == 1 and user_message_content[0]["type"] == "text":
-        # Sadece metin varsa basit format kullan
         messages.append({
             "role": "user",
             "content": user_message_content[0]["text"]
         })
     else:
-        # Dosya varsa veya çoklu içerik varsa array format kullan
         messages.append({
             "role": "user",
             "content": user_message_content
@@ -558,89 +564,90 @@ async def chat_stream(
 
         if provider == "openai":
             if not openai_client:
-                yield "OpenAI API key not configured. Please set OPENAI_API_KEY environment variable."
+                yield "OpenAI API key not configured."
                 return
-            
-            stream = openai_client.chat.completions.create(
-                model=model_name,
-                messages=messages,
-                stream=True
-            )
-
-            for chunk in stream:
-                delta = chunk.choices[0].delta.content
-                if delta:
-                    full_reply += delta
-                    yield delta
-
-        elif provider == "ollama":
             try:
-                response = requests.post(
-                    f"{OLLAMA_BASE_URL}/api/chat",
-                    json={
-                        "model": model_name,
-                        "messages": messages,
-                        "stream": True
-                    },
-                    stream=True,
-                    timeout=300
+                stream = openai_client.chat.completions.create(
+                    model=model_name,
+                    messages=messages,
+                    stream=True
                 )
-                
-                if response.status_code == 200:
-                    for line in response.iter_lines():
-                        if line:
-                            try:
-                                data = json.loads(line.decode('utf-8'))
-                                if 'message' in data and 'content' in data['message']:
-                                    chunk = data['message']['content']
-                                    if chunk:
-                                        full_reply += chunk
-                                        yield chunk
-                            except:
-                                continue
-                else:
-                    yield f"Ollama error: {response.status_code}"
+                for chunk in stream:
+                    delta = chunk.choices[0].delta.content
+                    if delta:
+                        full_reply += delta
+                        yield delta
             except Exception as e:
-                yield f"Ollama connection error: {str(e)}"
+                yield f"OpenAI error: {str(e)}"
 
-        elif provider == "lmstudio":
+        elif provider == "groq":
+            if not groq_client:
+                yield "Groq API key not configured."
+                return
             try:
-                response = requests.post(
-                    f"{LM_STUDIO_BASE_URL}/chat/completions",
-                    json={
-                        "model": model_name,
-                        "messages": messages,
-                        "stream": True
-                    },
-                    stream=True,
-                    timeout=300
+                stream = groq_client.chat.completions.create(
+                    model=model_name,
+                    messages=messages,
+                    stream=True
                 )
-                
-                if response.status_code == 200:
-                    for line in response.iter_lines():
-                        if line:
-                            try:
-                                line_str = line.decode('utf-8')
-                                if line_str.startswith('data: '):
-                                    data_str = line_str[6:]
-                                    if data_str.strip() == '[DONE]':
-                                        break
-                                    data = json.loads(data_str)
-                                    if 'choices' in data and len(data['choices']) > 0:
-                                        delta = data['choices'][0].get('delta', {})
-                                        if 'content' in delta:
-                                            chunk = delta['content']
-                                            if chunk:
-                                                full_reply += chunk
-                                                yield chunk
-                            except:
-                                continue
-                else:
-                    yield f"LM Studio error: {response.status_code}"
+                for chunk in stream:
+                    delta = chunk.choices[0].delta.content
+                    if delta:
+                        full_reply += delta
+                        yield delta
             except Exception as e:
-                yield f"LM Studio connection error: {str(e)}"
+                yield f"Groq error: {str(e)}"
 
+        elif provider == "gemini":
+            if not gemini_client:
+                yield "Gemini API key not configured."
+                return
+            try:
+                gemini_messages = []
+                for msg in messages:
+                    if msg['role'] == 'system':
+                        continue
+                    role = 'user' if msg['role'] == 'user' else 'model'
+                    gemini_messages.append({
+                        'role': role,
+                        'parts': [msg['content']]
+                    })
+                gemini_model = genai.GenerativeModel(model_name)
+                response = gemini_model.generate_content(
+                    gemini_messages[-1]['parts'][0] if gemini_messages else message,
+                    stream=True
+                )
+                for chunk in response:
+                    if chunk.text:
+                        full_reply += chunk.text
+                        yield chunk.text
+            except Exception as e:
+                yield f"Gemini error: {str(e)}"
+
+        elif provider == "openrouter":
+            if not openrouter_client:
+                yield "OpenRouter API key not configured."
+                return
+            try:
+                stream = openrouter_client.chat.completions.create(
+                    model=model_name,
+                    messages=messages,
+                    stream=True
+                )
+                for chunk in stream:
+                    delta = chunk.choices[0].delta.content
+                    if delta:
+                        full_reply += delta
+                        yield delta
+            except Exception as e:
+                yield f"OpenRouter error: {str(e)}"
+
+        # Bot cevabını memory ve database'e kaydet
         memory_manager.add_message(chat_id, full_reply, "assistant")
+        try:
+            db.add_message(chat_id, "assistant", full_reply, model_name=model)
+        except Exception as e:
+            print(f"DB save bot message error: {e}")
 
     return StreamingResponse(generate(), media_type="text/plain")
 
@@ -666,34 +673,46 @@ async def get_memory(chat_id: str):
 
 @app.get("/models")
 def get_available_models():
-    """Mevcut tüm modelleri getir"""
-    # Refresh kaldırıldı, sadece mevcut modelleri göster
+    """Mevcut tüm modelleri getir - hızlı, cache'den"""
+    models = []
     
-    models = [
-        {"id": "openai-group", "name": "OpenAI", "provider": "openai", "icon": "🌐", "is_group": True},
-        {"id": "gpt-4o-mini", "name": "gpt-4o-mini", "provider": "openai", "parent": "openai-group", "icon": "🌐"},
-        {"id": "gpt-4o", "name": "gpt-4o", "provider": "openai", "parent": "openai-group", "icon": "🌐"},
-        {"id": "gpt-3.5-turbo", "name": "gpt-3.5-turbo", "provider": "openai", "parent": "openai-group", "icon": "🌐"},
-        {"id": "gpt-4", "name": "gpt-4", "provider": "openai", "parent": "openai-group", "icon": "🌐"},
-    ]
+    # Cloud modelleri al (cache'den, hızlı)
+    cloud_models = list(llm_manager.available_models.values())
     
-    # Local modelleri ekle
-    local_models = list(llm_manager.available_models.values())
+    # Bambam modelleri önce ekle
+    bambam_models = [m for m in cloud_models if m.get('is_bambam')]
+    for model in bambam_models:
+        models.append(model)
     
-    # Ollama varsa grupla
-    ollama_models = [m for m in local_models if m['provider'] == 'ollama']
-    if ollama_models:
-        models.append({"id": "ollama-group", "name": "Ollama", "provider": "ollama", "icon": "🦙", "is_group": True})
-        for model in ollama_models:
-            model['parent'] = 'ollama-group'
+    # OpenAI modelleri
+    models.append({"id": "openai-group", "name": "OpenAI", "provider": "openai", "icon": "", "is_group": True})
+    models.append({"id": "gpt-4o-mini", "name": "gpt-4o-mini", "provider": "openai", "parent": "openai-group", "icon": ""})
+    models.append({"id": "gpt-4o", "name": "gpt-4o", "provider": "openai", "parent": "openai-group", "icon": ""})
+    models.append({"id": "gpt-3.5-turbo", "name": "gpt-3.5-turbo", "provider": "openai", "parent": "openai-group", "icon": ""})
+    models.append({"id": "gpt-4", "name": "gpt-4", "provider": "openai", "parent": "openai-group", "icon": ""})
+    
+    # Groq modelleri (Bambam olmayan)
+    groq_models = [m for m in cloud_models if m['provider'] == 'groq' and not m.get('is_bambam')]
+    if groq_models:
+        models.append({"id": "groq-group", "name": "Groq", "provider": "groq", "icon": "⚡", "is_group": True})
+        for model in groq_models:
+            model['parent'] = 'groq-group'
             models.append(model)
-
-    # LM Studio varsa grupla
-    lmstudio_models = [m for m in local_models if m['provider'] == 'lmstudio']
-    if lmstudio_models:
-        models.append({"id": "lmstudio-group", "name": "LM Studio", "provider": "lmstudio", "icon": "🖥️", "is_group": True})
-        for model in lmstudio_models:
-            model['parent'] = 'lmstudio-group'
+    
+    # Gemini modelleri (Bambam olmayan)
+    gemini_models = [m for m in cloud_models if m['provider'] == 'gemini' and not m.get('is_bambam')]
+    if gemini_models:
+        models.append({"id": "gemini-group", "name": "Google Gemini", "provider": "gemini", "icon": "🔷", "is_group": True})
+        for model in gemini_models:
+            model['parent'] = 'gemini-group'
+            models.append(model)
+    
+    # OpenRouter modelleri (Bambam olmayan)
+    openrouter_models = [m for m in cloud_models if m['provider'] == 'openrouter' and not m.get('is_bambam')]
+    if openrouter_models:
+        models.append({"id": "openrouter-group", "name": "OpenRouter", "provider": "openrouter", "icon": "🌐", "is_group": True})
+        for model in openrouter_models:
+            model['parent'] = 'openrouter-group'
             models.append(model)
     
     return {"models": models}
@@ -701,96 +720,16 @@ def get_available_models():
 
 @app.post("/models/refresh")
 def refresh_models():
-    """Local modelleri yenile"""
+    """Cloud modelleri yenile"""
     models = llm_manager.refresh_models()
     return {"models": models, "message": "Models refreshed successfully."}
 
 
-@app.get("/providers/ollama/status")
-def get_ollama_status():
-    """Ollama durumunu kontrol et"""
-    try:
-        response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=2)
-        if response.status_code == 200:
-            models = response.json().get('models', [])
-            return {
-                "available": True,
-                "models_count": len(models),
-                "url": OLLAMA_BASE_URL
-            }
-    except:
-        pass
-    return {"available": False, "models_count": 0}
-
-
-@app.post("/providers/ollama/connect")
-def connect_ollama():
-    """Ollama'ya bağlan ve modelleri yükle"""
-    try:
-        response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
-        if response.status_code == 200:
-            models = response.json().get('models', [])
-            llm_manager.refresh_models()
-            return {
-                "success": True,
-                "models_count": len(models),
-                "message": "Connected to Ollama successfully"
-            }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Failed to connect: {str(e)}"
-        }
-
-
-@app.get("/providers/lmstudio/status")
-def get_lmstudio_status():
-    """LM Studio durumunu kontrol et"""
-    try:
-        # LM Studio uses OpenAI-compatible API
-        response = requests.get(f"{LM_STUDIO_BASE_URL}/models", timeout=2)
-        if response.status_code == 200:
-            data = response.json()
-            models = data.get('data', [])
-            return {
-                "available": True,
-                "models_count": len(models),
-                "url": LM_STUDIO_BASE_URL
-            }
-    except Exception as e:
-        print(f"LM Studio status check error: {e}")
-        pass
-    return {"available": False, "models_count": 0}
-
-
-@app.post("/providers/lmstudio/connect")
-def connect_lmstudio():
-    """LM Studio'ya bağlan ve modelleri yükle"""
-    try:
-        print(f"Attempting to connect to LM Studio at {LM_STUDIO_BASE_URL}/models")
-        response = requests.get(f"{LM_STUDIO_BASE_URL}/models", timeout=5)
-        print(f"LM Studio response status: {response.status_code}")
-        
-        if response.status_code == 200:
-            data = response.json()
-            print(f"LM Studio response data: {data}")
-            models = data.get('data', [])
-            print(f"LM Studio models found: {len(models)}")
-            llm_manager.refresh_models()
-            return {
-                "success": True,
-                "models_count": len(models),
-                "message": "Connected to LM Studio successfully"
-            }
-        else:
-            print(f"LM Studio returned non-200 status: {response.status_code}")
-            return {
-                "success": False,
-                "message": f"LM Studio returned status {response.status_code}"
-            }
-    except Exception as e:
-        print(f"LM Studio connect error: {e}")
-        return {
-            "success": False,
-            "message": f"Failed to connect: {str(e)}"
-        }
+@app.get("/health")
+def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "version": "1.0.0",
+        "timestamp": datetime.now().isoformat()
+    }
