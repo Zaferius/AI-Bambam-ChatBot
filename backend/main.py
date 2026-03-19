@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, Form
+from fastapi import FastAPI, File, UploadFile, Form, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from openai import OpenAI
@@ -443,23 +443,44 @@ async def chat(req: ChatRequest):
 
 @app.post("/chat/stream")
 async def chat_stream(
-    message: str = Form(...),
-    model: str = Form("gpt-4o-mini"),
-    chat_id: str = Form("default"),
-    thinking_level: str = Form("medium"),
+    request: Request,
+    message: str = Form(None),
+    model: str = Form(None),
+    chat_id: str = Form(None),
+    thinking_level: str = Form(None),
     files: List[UploadFile] = File(None)
 ):
-    # Dosyaları işle
-    file_contents = []
-    if files:
-        for file in files:
-            content = await file.read()
-            file_info = {
-                "filename": file.filename,
-                "content_type": file.content_type,
-                "data": content
-            }
-            file_contents.append(file_info)
+    # Check if request is JSON
+    content_type = request.headers.get("content-type", "")
+    
+    if "application/json" in content_type:
+        # Handle JSON request
+        body = await request.json()
+        message = body.get("message")
+        model = body.get("model", "gpt-4o-mini")
+        chat_id = body.get("chat_id", "default")
+        thinking_level = body.get("thinking_level", "medium")
+        file_contents = []
+    else:
+        # Handle Form data request
+        file_contents = []
+        if files:
+            for file in files:
+                content = await file.read()
+                file_info = {
+                    "filename": file.filename,
+                    "content_type": file.content_type,
+                    "data": content
+                }
+                file_contents.append(file_info)
+        
+        # Set defaults for Form data
+        if not model:
+            model = "gpt-4o-mini"
+        if not chat_id:
+            chat_id = "default"
+        if not thinking_level:
+            thinking_level = "medium"
     
     memory_manager.add_message(chat_id, message, "user", persist=False)
     
@@ -667,9 +688,13 @@ def get_available_models():
             model['parent'] = 'ollama-group'
             models.append(model)
 
-    # Diğer local modelleri (LM Studio vb)
-    other_models = [m for m in local_models if m['provider'] != 'ollama']
-    models.extend(other_models)
+    # LM Studio varsa grupla
+    lmstudio_models = [m for m in local_models if m['provider'] == 'lmstudio']
+    if lmstudio_models:
+        models.append({"id": "lmstudio-group", "name": "LM Studio", "provider": "lmstudio", "icon": "🖥️", "is_group": True})
+        for model in lmstudio_models:
+            model['parent'] = 'lmstudio-group'
+            models.append(model)
     
     return {"models": models}
 
@@ -679,3 +704,93 @@ def refresh_models():
     """Local modelleri yenile"""
     models = llm_manager.refresh_models()
     return {"models": models, "message": "Models refreshed successfully."}
+
+
+@app.get("/providers/ollama/status")
+def get_ollama_status():
+    """Ollama durumunu kontrol et"""
+    try:
+        response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=2)
+        if response.status_code == 200:
+            models = response.json().get('models', [])
+            return {
+                "available": True,
+                "models_count": len(models),
+                "url": OLLAMA_BASE_URL
+            }
+    except:
+        pass
+    return {"available": False, "models_count": 0}
+
+
+@app.post("/providers/ollama/connect")
+def connect_ollama():
+    """Ollama'ya bağlan ve modelleri yükle"""
+    try:
+        response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
+        if response.status_code == 200:
+            models = response.json().get('models', [])
+            llm_manager.refresh_models()
+            return {
+                "success": True,
+                "models_count": len(models),
+                "message": "Connected to Ollama successfully"
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Failed to connect: {str(e)}"
+        }
+
+
+@app.get("/providers/lmstudio/status")
+def get_lmstudio_status():
+    """LM Studio durumunu kontrol et"""
+    try:
+        # LM Studio uses OpenAI-compatible API
+        response = requests.get(f"{LM_STUDIO_BASE_URL}/models", timeout=2)
+        if response.status_code == 200:
+            data = response.json()
+            models = data.get('data', [])
+            return {
+                "available": True,
+                "models_count": len(models),
+                "url": LM_STUDIO_BASE_URL
+            }
+    except Exception as e:
+        print(f"LM Studio status check error: {e}")
+        pass
+    return {"available": False, "models_count": 0}
+
+
+@app.post("/providers/lmstudio/connect")
+def connect_lmstudio():
+    """LM Studio'ya bağlan ve modelleri yükle"""
+    try:
+        print(f"Attempting to connect to LM Studio at {LM_STUDIO_BASE_URL}/models")
+        response = requests.get(f"{LM_STUDIO_BASE_URL}/models", timeout=5)
+        print(f"LM Studio response status: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print(f"LM Studio response data: {data}")
+            models = data.get('data', [])
+            print(f"LM Studio models found: {len(models)}")
+            llm_manager.refresh_models()
+            return {
+                "success": True,
+                "models_count": len(models),
+                "message": "Connected to LM Studio successfully"
+            }
+        else:
+            print(f"LM Studio returned non-200 status: {response.status_code}")
+            return {
+                "success": False,
+                "message": f"LM Studio returned status {response.status_code}"
+            }
+    except Exception as e:
+        print(f"LM Studio connect error: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to connect: {str(e)}"
+        }

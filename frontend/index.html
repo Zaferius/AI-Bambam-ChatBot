@@ -643,6 +643,164 @@
       display: none;
     }
 
+    .add-provider-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .add-provider-btn:hover {
+      background: rgba(255,255,255,0.08);
+    }
+
+    .provider-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .provider-modal.active {
+      display: flex;
+    }
+
+    .provider-modal-content {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .provider-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .provider-modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .provider-modal-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 20px;
+      transition: background 0.2s ease;
+    }
+
+    .provider-modal-close:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
+    .provider-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .provider-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.03);
+      transition: background 0.2s ease;
+    }
+
+    .provider-item:hover {
+      background: rgba(255,255,255,0.06);
+    }
+
+    .provider-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .provider-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .provider-desc {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .provider-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .provider-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+
+    .provider-status-dot.connected {
+      background: #22c55e;
+      box-shadow: 0 0 8px rgba(34,197,94,0.5);
+    }
+
+    .provider-connect-btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.2s ease;
+    }
+
+    .provider-connect-btn:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
+    .provider-connect-btn.connected {
+      background: rgba(34,197,94,0.15);
+      border-color: rgba(34,197,94,0.3);
+      color: #22c55e;
+    }
+
+    .provider-models-count {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
     .footer-note {
       font-size: 11px;
       color: var(--muted);
@@ -769,6 +927,10 @@
               <option value="gpt-4">gpt-4</option>
             </select>
           </div>
+          <button class="add-provider-btn" onclick="openProviderModal()">
+            <span>+</span>
+            <span>Add Provider</span>
+          </button>
         </div>
         <div class="footer-note">Enter sends · Shift+Enter line break</div>
       </div>
@@ -778,6 +940,39 @@
         <button id="retryButton" onclick="attemptReconnect()">Retry Connection</button>
       </div>
     </main>
+  </div>
+
+  <div class="provider-modal" id="providerModal">
+    <div class="provider-modal-content">
+      <div class="provider-modal-header">
+        <div class="provider-modal-title">Add Local Provider</div>
+        <button class="provider-modal-close" onclick="closeProviderModal()">×</button>
+      </div>
+      <div class="provider-list" id="providerList">
+        <div class="provider-item">
+          <div class="provider-info">
+            <div class="provider-name">🦙 Ollama</div>
+            <div class="provider-desc">Run large language models locally</div>
+            <div class="provider-models-count" id="ollamaModelsCount">Checking...</div>
+          </div>
+          <div class="provider-status">
+            <span class="provider-status-dot" id="ollamaStatusDot"></span>
+            <button class="provider-connect-btn" id="ollamaConnectBtn" onclick="connectOllama()">Connect</button>
+          </div>
+        </div>
+        <div class="provider-item">
+          <div class="provider-info">
+            <div class="provider-name">🖥️ LM Studio</div>
+            <div class="provider-desc">Local AI model runner</div>
+            <div class="provider-models-count" id="lmstudioModelsCount">Checking...</div>
+          </div>
+          <div class="provider-status">
+            <span class="provider-status-dot" id="lmstudioStatusDot"></span>
+            <button class="provider-connect-btn" id="lmstudioConnectBtn" onclick="connectLMStudio()">Connect</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -1126,6 +1321,117 @@
 
     let allModelsData = null;
     let selectedModelId = "gpt-4o-mini";
+    let connectedProviders = JSON.parse(localStorage.getItem("connectedProviders") || "{}");
+
+    // Provider Modal Functions
+    function openProviderModal() {
+      document.getElementById("providerModal").classList.add("active");
+      checkProviderStatus();
+    }
+
+    function closeProviderModal() {
+      document.getElementById("providerModal").classList.remove("active");
+    }
+
+    async function checkProviderStatus() {
+      // Check Ollama
+      try {
+        const response = await fetch("http://127.0.0.1:8000/providers/ollama/status");
+        const data = await response.json();
+        updateProviderUI("ollama", data.available, data.models_count || 0);
+      } catch (error) {
+        updateProviderUI("ollama", false, 0);
+      }
+
+      // Check LM Studio
+      try {
+        const response = await fetch("http://127.0.0.1:8000/providers/lmstudio/status");
+        const data = await response.json();
+        updateProviderUI("lmstudio", data.available, data.models_count || 0);
+      } catch (error) {
+        updateProviderUI("lmstudio", false, 0);
+      }
+    }
+
+    function updateProviderUI(provider, isConnected, modelsCount) {
+      const statusDot = document.getElementById(`${provider}StatusDot`);
+      const connectBtn = document.getElementById(`${provider}ConnectBtn`);
+      const modelsCountEl = document.getElementById(`${provider}ModelsCount`);
+
+      if (isConnected) {
+        statusDot.classList.add("connected");
+        connectBtn.classList.add("connected");
+        connectBtn.textContent = "Connected";
+        modelsCountEl.textContent = `${modelsCount} model${modelsCount !== 1 ? 's' : ''} available`;
+        connectedProviders[provider] = true;
+      } else {
+        statusDot.classList.remove("connected");
+        connectBtn.classList.remove("connected");
+        connectBtn.textContent = "Connect";
+        modelsCountEl.textContent = "Not available";
+        connectedProviders[provider] = false;
+      }
+      
+      localStorage.setItem("connectedProviders", JSON.stringify(connectedProviders));
+    }
+
+    async function connectOllama() {
+      const btn = document.getElementById("ollamaConnectBtn");
+      btn.textContent = "Connecting...";
+      btn.disabled = true;
+
+      try {
+        const response = await fetch("http://127.0.0.1:8000/providers/ollama/connect", {
+          method: "POST"
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          updateProviderUI("ollama", true, data.models_count || 0);
+          await loadAvailableModels();
+          setTimeout(() => {
+            closeProviderModal();
+          }, 1000);
+        } else {
+          alert("Failed to connect to Ollama. Make sure Ollama is running on http://localhost:11434");
+          updateProviderUI("ollama", false, 0);
+        }
+      } catch (error) {
+        alert("Failed to connect to Ollama. Make sure Ollama is running on http://localhost:11434");
+        updateProviderUI("ollama", false, 0);
+      }
+      
+      btn.disabled = false;
+    }
+
+    async function connectLMStudio() {
+      const btn = document.getElementById("lmstudioConnectBtn");
+      btn.textContent = "Connecting...";
+      btn.disabled = true;
+
+      try {
+        const response = await fetch("http://127.0.0.1:8000/providers/lmstudio/connect", {
+          method: "POST"
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          updateProviderUI("lmstudio", true, data.models_count || 0);
+          await loadAvailableModels();
+          setTimeout(() => {
+            closeProviderModal();
+          }, 1000);
+        } else {
+          alert("Failed to connect to LM Studio. Make sure LM Studio is running on http://localhost:1234");
+          updateProviderUI("lmstudio", false, 0);
+        }
+      } catch (error) {
+        alert("Failed to connect to LM Studio. Make sure LM Studio is running on http://localhost:1234");
+        updateProviderUI("lmstudio", false, 0);
+      }
+      
+      btn.disabled = false;
+    }
 
     thinkingLevelSelect.addEventListener("change", (e) => {
       thinkingLevel = e.target.value;
@@ -1306,13 +1612,8 @@
           selectedModelId = firstModel ? firstModel.id : "gpt-4o-mini";
         }
 
-        // Eğer bir model seçiliyse, onun grubunu göster
-        const selectedModel = getModelById(selectedModelId);
-        if (selectedModel && selectedModel.parent) {
-          showModelsForGroup(selectedModel.parent);
-        } else {
-          renderProviderOptions();
-        }
+        // Tüm modelleri göster (grupları hariç)
+        renderProviderOptions();
         
         if (!silent) {
           console.log("Models loaded:", data.models.length);
