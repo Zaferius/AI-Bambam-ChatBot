@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bambam AI - Takımlar</title>
+  <link rel="icon" type="image/png" href="b-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --surface2: #1a1a1a;
+      --border: #262626;
+      --text: #e5e5e5;
+      --muted: #888;
+      --accent: #646cff;
+      --accent-hover: #535bf2;
+      --danger: #ef4444;
+      --success: #22c55e;
+    }
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* Top Nav */
+    .topnav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .topnav-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .topnav-left img { width: 32px; height: 32px; border-radius: 8px; }
+    .topnav-left h1 { font-size: 18px; font-weight: 600; }
+    .topnav-right { display: flex; align-items: center; gap: 12px; }
+    .back-btn, .new-team-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .back-btn:hover { background: var(--border); }
+    .new-team-btn { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .new-team-btn:hover { background: var(--accent-hover); }
+
+    /* Layout */
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+    /* Team List */
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .team-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .team-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .team-card-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; }
+    .team-card h3 { font-size: 16px; font-weight: 600; }
+    .team-card p { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+    .team-card-members { display: flex; gap: 6px; flex-wrap: wrap; }
+    .member-badge {
+      padding: 4px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .team-card-delete {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .team-card-delete:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
+
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--muted);
+    }
+    .empty-state h2 { font-size: 20px; color: var(--text); margin-bottom: 8px; }
+    .empty-state p { font-size: 14px; margin-bottom: 24px; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 28px;
+    }
+    .modal h2 { font-size: 20px; font-weight: 600; margin-bottom: 20px; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus, .form-group textarea:focus { border-color: var(--accent); }
+    .form-group textarea { resize: vertical; min-height: 70px; }
+
+    .btn { padding: 10px 20px; border-radius: 8px; border: none; font-family: inherit; font-size: 14px; cursor: pointer; font-weight: 500; transition: all 0.2s; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-danger { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
+    .btn-danger:hover { background: rgba(239,68,68,0.1); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Member rows in wizard */
+    .member-rows { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+    .member-row {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      position: relative;
+    }
+    .member-row-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .member-row-header span { font-weight: 500; font-size: 14px; }
+    .member-row-remove {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 18px;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .member-row-remove:hover { color: var(--danger); }
+    .member-row .form-group { margin-bottom: 10px; }
+    .member-row .form-group:last-child { margin-bottom: 0; }
+    .add-member-btn {
+      width: 100%;
+      padding: 10px;
+      background: transparent;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .add-member-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Team View */
+    .team-view { display: none; }
+    .team-view.active { display: flex; height: calc(100vh - 65px); }
+    .team-sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+    .team-sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .team-sidebar-header h2 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+    .team-sidebar-header p { font-size: 12px; color: var(--muted); }
+    .member-list { padding: 8px; flex: 1; }
+    .member-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-bottom: 2px;
+    }
+    .member-item:hover { background: rgba(255,255,255,0.05); }
+    .member-item.active { background: rgba(100,108,255,0.15); border: 1px solid rgba(100,108,255,0.3); }
+    .member-icon { font-size: 22px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: var(--surface2); border-radius: 8px; }
+    .member-info { flex: 1; min-width: 0; }
+    .member-info .name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .member-info .desc { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Chat Area */
+    .team-chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+    }
+    .team-chat-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface);
+    }
+    .team-chat-header .role-icon { font-size: 20px; }
+    .team-chat-header .role-name { font-weight: 600; font-size: 15px; }
+    .team-chat-header .role-desc { font-size: 12px; color: var(--muted); margin-left: auto; }
+
+    .team-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .team-msg {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .team-msg.user {
+      align-self: flex-end;
+      background: var(--accent);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .team-msg.assistant {
+      align-self: flex-start;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .team-msg-empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 40px;
+      font-size: 14px;
+    }
+
+    .team-input-area {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      gap: 10px;
+    }
+    .team-input-area textarea {
+      flex: 1;
+      padding: 10px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      resize: none;
+      max-height: 120px;
+      min-height: 42px;
+    }
+    .team-input-area textarea:focus { border-color: var(--accent); }
+    .team-send-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .team-send-btn:hover { background: var(--accent-hover); }
+    .team-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Presets */
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .preset-card {
+      padding: 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .preset-card:hover { border-color: var(--accent); }
+    .preset-card.selected { border-color: var(--accent); background: rgba(100,108,255,0.1); }
+    .preset-card .preset-icon { font-size: 24px; margin-bottom: 6px; }
+    .preset-card .preset-name { font-size: 13px; font-weight: 500; }
+    .preset-card .preset-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; color: var(--muted); font-size: 12px; }
+    .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+  </style>
+</head>
+<body>
+  <!-- Top Navigation -->
+  <nav class="topnav">
+    <div class="topnav-left">
+      <img src="b-icon.png" alt="Bambam">
+      <h1>AI Takımları</h1>
+    </div>
+    <div class="topnav-right">
+      <button class="back-btn" onclick="location.href='index.html'">← Chat'e Dön</button>
+      <button class="new-team-btn" id="newTeamBtn" onclick="openCreateModal()">+ Yeni Takım</button>
+    </div>
+  </nav>
+
+  <!-- Team List View -->
+  <div class="container" id="teamListView">
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <h2>🤖 Henüz takımınız yok</h2>
+      <p>AI takımı oluşturun, roller verin ve birlikte çalıştırın!</p>
+      <button class="btn btn-primary" onclick="openCreateModal()">+ İlk Takımı Oluştur</button>
+    </div>
+    <div class="team-grid" id="teamGrid"></div>
+  </div>
+
+  <!-- Team View (chat with members) -->
+  <div class="team-view" id="teamView">
+    <div class="team-sidebar">
+      <div class="team-sidebar-header">
+        <h2 id="tvTeamName"></h2>
+        <p id="tvTeamDesc"></p>
+      </div>
+      <div class="member-list" id="tvMemberList"></div>
+      <div style="padding: 8px;">
+        <button class="back-btn" style="width:100%;justify-content:center;" onclick="backToList()">← Takımlara Dön</button>
+      </div>
+    </div>
+    <div class="team-chat">
+      <div class="team-chat-header" id="tvChatHeader">
+        <span class="role-icon" id="tvRoleIcon">🤖</span>
+        <span class="role-name" id="tvRoleName">Üye seçin</span>
+        <span class="role-desc" id="tvRoleDesc"></span>
+      </div>
+      <div class="team-messages" id="tvMessages">
+        <div class="team-msg-empty">Bir takım üyesi seçerek sohbete başlayın</div>
+      </div>
+      <div class="team-input-area">
+        <textarea id="tvInput" placeholder="Mesajınızı yazın..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTeamMessage();}"></textarea>
+        <button class="team-send-btn" id="tvSendBtn" onclick="sendTeamMessage()">↑</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Team Modal -->
+  <div class="modal-overlay" id="createModal">
+    <div class="modal">
+      <h2>🚀 Yeni AI Takımı Oluştur</h2>
+      
+      <div class="preset-grid" id="presetGrid">
+        <div class="preset-card" onclick="usePreset('mobile')">
+          <div class="preset-icon">📱</div>
+          <div class="preset-name">Mobile Dev Studio</div>
+          <div class="preset-desc">Uygulama geliştirme takımı</div>
+        </div>
+        <div class="preset-card" onclick="usePreset('web')">
+          <div class="preset-icon">🌐</div>
+          <div class="preset-name">Web Dev Team</div>
+          <div class="preset-desc">Full-stack web takımı</div>
+        </div>
+        <div class="preset-card" onclick="usePreset('startup')">
+          <div class="preset-icon">🚀</div>
+          <div class="preset-name">Startup Builder</div>
+          <div class="preset-desc">Startup kurucu takımı</div>
+        </div>
+        <div class="preset-card" onclick="usePreset('content')">
+          <div class="preset-icon">✍️</div>
+          <div class="preset-name">Content Team</div>
+          <div class="preset-desc">İçerik üretim takımı</div>
+        </div>
+      </div>
+
+      <div class="divider">veya özelleştir</div>
+
+      <div class="form-group">
+        <label>Takım Adı</label>
+        <input type="text" id="teamName" placeholder="ör: Mobile Dev Studio">
+      </div>
+      <div class="form-group">
+        <label>Açıklama (opsiyonel)</label>
+        <input type="text" id="teamDesc" placeholder="ör: iOS uygulama geliştirme takımı">
+      </div>
+
+      <label style="font-size:13px;color:var(--muted);font-weight:500;margin-bottom:8px;display:block;">Takım Üyeleri</label>
+      <div class="member-rows" id="memberRows"></div>
+      <button class="add-member-btn" onclick="addMemberRow()">+ Üye Ekle</button>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeCreateModal()">İptal</button>
+        <button class="btn btn-primary" id="createTeamBtn" onclick="createTeam()">Takımı Oluştur</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+  <script>
+    // ===== STATE =====
+    let teams = [];
+    let currentTeam = null;
+    let currentMember = null;
+    let isSending = false;
+
+    // ===== PRESETS =====
+    const PRESETS = {
+      mobile: {
+        name: "Mobile Dev Studio",
+        description: "Mobil uygulama geliştirme takımı",
+        members: [
+          { role_name: "Senior Developer", icon: "👨‍💻", description: "Uygulama mimarisi ve kod yazımı", system_prompt: "Sen deneyimli bir senior mobile developer'sın. Swift, Kotlin, React Native ve Flutter konularında uzmansın. Temiz, ölçeklenebilir ve bakımı kolay kod yazarsın. SOLID prensiplerini uygularsın. Kullanıcının istediği uygulamayı en iyi şekilde tasarla ve kodla. Türkçe yanıt ver." },
+          { role_name: "UI/UX Designer", icon: "🎨", description: "Arayüz tasarımı ve kullanıcı deneyimi", system_prompt: "Sen profesyonel bir UI/UX designer'sın. Modern, minimal ve kullanıcı dostu arayüzler tasarlarsın. Figma, renk teorisi, tipografi ve responsive tasarım konularında uzmansın. Kullanıcının istediği uygulama için detaylı UI/UX önerileri sun. Türkçe yanıt ver." },
+          { role_name: "QA Tester", icon: "🧪", description: "Test senaryoları ve kalite güvence", system_prompt: "Sen deneyimli bir QA tester'sın. Otomatik ve manuel test senaryoları yazarsın. Edge case'leri bulur, bug raporları oluşturursun. Test driven development (TDD) konusunda uzmansın. Kullanıcının uygulaması için kapsamlı test planları hazırla. Türkçe yanıt ver." },
+          { role_name: "Product Manager", icon: "📋", description: "Ürün stratejisi ve yol haritası", system_prompt: "Sen deneyimli bir product manager'sın. Kullanıcı hikayelerini yazar, sprint planlaması yapar, MVP tanımlarsın. Pazar analizi, rakip analizi ve ürün yol haritası oluşturursun. Kullanıcının uygulaması için ürün stratejisi belirle. Türkçe yanıt ver." }
+        ]
+      },
+      web: {
+        name: "Web Dev Team",
+        description: "Full-stack web geliştirme takımı",
+        members: [
+          { role_name: "Frontend Developer", icon: "⚛️", description: "React/Next.js ve modern frontend", system_prompt: "Sen uzman bir frontend developer'sın. React, Next.js, TypeScript, TailwindCSS konularında derin bilgin var. Performanslı, erişilebilir ve modern web uygulamaları geliştirirsin. Türkçe yanıt ver." },
+          { role_name: "Backend Developer", icon: "⚙️", description: "API tasarımı ve sunucu tarafı", system_prompt: "Sen deneyimli bir backend developer'sın. Node.js, Python, Go, veritabanları (SQL/NoSQL), REST/GraphQL API tasarımı konularında uzmansın. Güvenli, ölçeklenebilir ve performanslı backend sistemleri tasarlarsın. Türkçe yanıt ver." },
+          { role_name: "DevOps Engineer", icon: "🔧", description: "Deployment ve altyapı", system_prompt: "Sen deneyimli bir DevOps engineer'sın. Docker, Kubernetes, CI/CD, AWS/GCP/Azure, Nginx, monitoring konularında uzmansın. Güvenli ve otomatize edilmiş deployment pipeline'ları kurarsın. Türkçe yanıt ver." },
+          { role_name: "Designer", icon: "🎨", description: "Web tasarımı ve branding", system_prompt: "Sen profesyonel bir web designer'sın. Modern web tasarım trendleri, renk paletleri, tipografi, responsive tasarım ve branding konularında uzmansın. Etkileyici ve kullanıcı dostu web arayüzleri tasarlarsın. Türkçe yanıt ver." }
+        ]
+      },
+      startup: {
+        name: "Startup Builder",
+        description: "Startup kurucu ekibi",
+        members: [
+          { role_name: "CEO / Stratejist", icon: "🎯", description: "Vizyon ve iş stratejisi", system_prompt: "Sen deneyimli bir startup CEO'su ve stratejistsin. İş modeli oluşturma, pazar analizi, büyüme stratejisi, yatırımcı ilişkileri konularında uzmansın. Lean Startup metodolojisini uygularsın. Kullanıcının startup fikrini değerlendir ve stratejik öneriler sun. Türkçe yanıt ver." },
+          { role_name: "CTO", icon: "💻", description: "Teknik mimari ve teknoloji seçimi", system_prompt: "Sen deneyimli bir CTO'sun. Teknoloji stack seçimi, sistem mimarisi, ölçeklenebilirlik, güvenlik konularında uzmansın. MVP'den enterprise'a kadar teknik yol haritası çizersin. Kullanıcının projesi için en uygun teknik çözümleri öner. Türkçe yanıt ver." },
+          { role_name: "Marketing Lead", icon: "📢", description: "Pazarlama ve büyüme", system_prompt: "Sen deneyimli bir marketing lead'sin. Dijital pazarlama, SEO, sosyal medya, içerik stratejisi, growth hacking konularında uzmansın. Kullanıcının ürünü için etkili pazarlama stratejileri ve kampanya planları oluştur. Türkçe yanıt ver." },
+          { role_name: "Finance Lead", icon: "💰", description: "Finansal planlama ve bütçe", system_prompt: "Sen deneyimli bir startup finans uzmanısın. Finansal modelleme, bütçe planlama, yatırım turu hazırlığı, birim ekonomisi konularında uzmansın. Kullanıcının startup'ı için finansal analiz ve öneriler sun. Türkçe yanıt ver." }
+        ]
+      },
+      content: {
+        name: "Content Team",
+        description: "İçerik üretim takımı",
+        members: [
+          { role_name: "Content Writer", icon: "✍️", description: "Blog, makale ve metin yazımı", system_prompt: "Sen profesyonel bir content writer'sın. SEO uyumlu blog yazıları, makaleler, ürün açıklamaları ve landing page metinleri yazarsın. Akıcı, etkileyici ve hedef kitleye uygun içerikler üretirsin. Türkçe yanıt ver." },
+          { role_name: "Social Media Manager", icon: "📱", description: "Sosyal medya stratejisi", system_prompt: "Sen deneyimli bir social media manager'sın. Instagram, Twitter, LinkedIn, TikTok stratejileri, içerik takvimi, hashtag stratejisi ve topluluk yönetimi konularında uzmansın. Viral içerik fikirleri üretirsin. Türkçe yanıt ver." },
+          { role_name: "SEO Specialist", icon: "🔍", description: "Arama motoru optimizasyonu", system_prompt: "Sen deneyimli bir SEO uzmanısın. On-page SEO, off-page SEO, teknik SEO, anahtar kelime araştırması, link building konularında uzmansın. İçerikleri arama motorları için optimize edersin. Türkçe yanıt ver." },
+          { role_name: "Copywriter", icon: "💬", description: "Reklam ve satış metinleri", system_prompt: "Sen deneyimli bir copywriter'sın. İkna edici satış metinleri, reklam sloganları, e-posta kampanyaları ve CTA'lar yazarsın. AIDA ve PAS gibi copywriting formüllerini uygularsın. Türkçe yanıt ver." }
+        ]
+      }
+    };
+
+    // ===== INIT =====
+    (async function init() {
+      if (!api.isLoggedIn()) {
+        window.location.href = 'login.html';
+        return;
+      }
+      await loadTeams();
+    })();
+
+    async function loadTeams() {
+      teams = await api.listTeams();
+      renderTeamList();
+    }
+
+    function renderTeamList() {
+      const grid = document.getElementById('teamGrid');
+      const empty = document.getElementById('emptyState');
+
+      if (!teams || teams.length === 0) {
+        grid.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+
+      empty.style.display = 'none';
+      grid.innerHTML = teams.map(t => `
+        <div class="team-card" onclick="openTeam('${t.id}')">
+          <div class="team-card-header">
+            <h3>${t.name}</h3>
+            <button class="team-card-delete" onclick="event.stopPropagation();deleteTeam('${t.id}')" title="Sil">✕</button>
+          </div>
+          <p>${t.description || 'Açıklama yok'}</p>
+          <div class="team-card-members">
+            ${(t.members||[]).map(m => `<span class="member-badge">${m.icon || '🤖'} ${m.role_name}</span>`).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ===== CREATE TEAM =====
+    let memberCounter = 0;
+
+    function openCreateModal() {
+      document.getElementById('createModal').classList.add('show');
+      document.getElementById('teamName').value = '';
+      document.getElementById('teamDesc').value = '';
+      document.getElementById('memberRows').innerHTML = '';
+      memberCounter = 0;
+      addMemberRow();
+    }
+
+    function closeCreateModal() {
+      document.getElementById('createModal').classList.remove('show');
+    }
+
+    function usePreset(key) {
+      const p = PRESETS[key];
+      document.getElementById('teamName').value = p.name;
+      document.getElementById('teamDesc').value = p.description;
+      document.getElementById('memberRows').innerHTML = '';
+      memberCounter = 0;
+      
+      document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('selected'));
+      event.currentTarget.classList.add('selected');
+      
+      p.members.forEach(m => {
+        addMemberRow(m.role_name, m.description, m.system_prompt, m.icon);
+      });
+    }
+
+    function addMemberRow(name = '', desc = '', prompt = '', icon = '🤖') {
+      const id = memberCounter++;
+      const row = document.createElement('div');
+      row.className = 'member-row';
+      row.id = `member-row-${id}`;
+      row.innerHTML = `
+        <div class="member-row-header">
+          <span>${icon} Üye #${id + 1}</span>
+          <button class="member-row-remove" onclick="removeMemberRow(${id})">✕</button>
+        </div>
+        <div class="form-group">
+          <label>Rol Adı</label>
+          <input type="text" class="mr-name" value="${name}" placeholder="ör: Senior Developer">
+        </div>
+        <div class="form-group">
+          <label>Açıklama</label>
+          <input type="text" class="mr-desc" value="${desc}" placeholder="ör: Uygulama mimarisi ve kodlama">
+        </div>
+        <div class="form-group">
+          <label>İkon</label>
+          <input type="text" class="mr-icon" value="${icon}" placeholder="🤖" style="max-width:80px;">
+        </div>
+        <div class="form-group">
+          <label>System Prompt</label>
+          <textarea class="mr-prompt" placeholder="Bu rolün AI'ya nasıl davranacağını söyleyen talimat...">${prompt}</textarea>
+        </div>
+      `;
+      document.getElementById('memberRows').appendChild(row);
+    }
+
+    function removeMemberRow(id) {
+      const row = document.getElementById(`member-row-${id}`);
+      if (row) row.remove();
+    }
+
+    async function createTeam() {
+      const name = document.getElementById('teamName').value.trim();
+      const desc = document.getElementById('teamDesc').value.trim();
+      
+      if (!name) { alert('Takım adı gerekli'); return; }
+
+      const rows = document.querySelectorAll('.member-row');
+      const members = [];
+      for (const row of rows) {
+        const rn = row.querySelector('.mr-name').value.trim();
+        const rd = row.querySelector('.mr-desc').value.trim();
+        const ri = row.querySelector('.mr-icon').value.trim() || '🤖';
+        const rp = row.querySelector('.mr-prompt').value.trim();
+        if (!rn || !rp) { alert('Her üye için rol adı ve system prompt gerekli'); return; }
+        members.push({ role_name: rn, description: rd, icon: ri, system_prompt: rp });
+      }
+
+      if (members.length === 0) { alert('En az bir üye ekleyin'); return; }
+
+      const btn = document.getElementById('createTeamBtn');
+      btn.disabled = true;
+      btn.textContent = 'Oluşturuluyor...';
+
+      try {
+        await api.createTeam(name, desc, members);
+        closeCreateModal();
+        await loadTeams();
+      } catch (e) {
+        alert('Hata: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Takımı Oluştur';
+      }
+    }
+
+    async function deleteTeam(teamId) {
+      if (!confirm('Bu takımı silmek istediğinize emin misiniz?')) return;
+      await api.deleteTeam(teamId);
+      await loadTeams();
+    }
+
+    // ===== TEAM VIEW =====
+    async function openTeam(teamId) {
+      currentTeam = await api.getTeam(teamId);
+      if (!currentTeam) return;
+
+      document.getElementById('teamListView').style.display = 'none';
+      document.getElementById('newTeamBtn').style.display = 'none';
+      document.getElementById('teamView').classList.add('active');
+
+      document.getElementById('tvTeamName').textContent = currentTeam.name;
+      document.getElementById('tvTeamDesc').textContent = currentTeam.description || '';
+
+      const list = document.getElementById('tvMemberList');
+      list.innerHTML = (currentTeam.members || []).map(m => `
+        <div class="member-item" id="mi-${m.id}" onclick="selectMember('${m.id}')">
+          <div class="member-icon">${m.icon || '🤖'}</div>
+          <div class="member-info">
+            <div class="name">${m.role_name}</div>
+            <div class="desc">${m.description || ''}</div>
+          </div>
+        </div>
+      `).join('');
+
+      currentMember = null;
+      document.getElementById('tvMessages').innerHTML = '<div class="team-msg-empty">Bir takım üyesi seçerek sohbete başlayın</div>';
+    }
+
+    function backToList() {
+      document.getElementById('teamView').classList.remove('active');
+      document.getElementById('teamListView').style.display = 'block';
+      document.getElementById('newTeamBtn').style.display = '';
+      currentTeam = null;
+      currentMember = null;
+    }
+
+    async function selectMember(memberId) {
+      const member = (currentTeam.members || []).find(m => m.id === memberId);
+      if (!member) return;
+      currentMember = member;
+
+      // Active state
+      document.querySelectorAll('.member-item').forEach(el => el.classList.remove('active'));
+      document.getElementById(`mi-${memberId}`).classList.add('active');
+
+      // Header güncelle
+      document.getElementById('tvRoleIcon').textContent = member.icon || '🤖';
+      document.getElementById('tvRoleName').textContent = member.role_name;
+      document.getElementById('tvRoleDesc').textContent = member.description || '';
+
+      // Mesajları yükle
+      const messages = await api.getMemberMessages(currentTeam.id, memberId);
+      const container = document.getElementById('tvMessages');
+
+      if (!messages || messages.length === 0) {
+        container.innerHTML = `<div class="team-msg-empty">${member.icon || '🤖'} ${member.role_name} ile sohbete başlayın</div>`;
+      } else {
+        container.innerHTML = messages.map(m => `
+          <div class="team-msg ${m.role}">${m.content}</div>
+        `).join('');
+        container.scrollTop = container.scrollHeight;
+      }
+
+      document.getElementById('tvInput').focus();
+    }
+
+    async function sendTeamMessage() {
+      if (isSending || !currentTeam || !currentMember) return;
+      const input = document.getElementById('tvInput');
+      const message = input.value.trim();
+      if (!message) return;
+
+      isSending = true;
+      input.value = '';
+      document.getElementById('tvSendBtn').disabled = true;
+
+      const container = document.getElementById('tvMessages');
+      // Boş durumu temizle
+      const emptyEl = container.querySelector('.team-msg-empty');
+      if (emptyEl) emptyEl.remove();
+
+      // Kullanıcı mesajını ekle
+      const userDiv = document.createElement('div');
+      userDiv.className = 'team-msg user';
+      userDiv.textContent = message;
+      container.appendChild(userDiv);
+
+      // Bot mesaj alanı
+      const botDiv = document.createElement('div');
+      botDiv.className = 'team-msg assistant';
+      botDiv.textContent = '';
+      container.appendChild(botDiv);
+      container.scrollTop = container.scrollHeight;
+
+      try {
+        const response = await api.sendTeamChat(currentTeam.id, currentMember.id, message);
+        
+        if (!response.ok) {
+          botDiv.textContent = 'Hata: ' + (await response.text());
+          return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const text = decoder.decode(value, { stream: true });
+          botDiv.textContent += text;
+          container.scrollTop = container.scrollHeight;
+        }
+      } catch (error) {
+        botDiv.textContent = 'Bağlantı hatası: ' + error.message;
+      } finally {
+        isSending = false;
+        document.getElementById('tvSendBtn').disabled = false;
+        input.focus();
+      }
+    }
+  </script>
+</body>
+</html>

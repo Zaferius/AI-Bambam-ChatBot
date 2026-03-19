@@ -25,12 +25,12 @@
           </svg>
           <span>Yeni görev</span>
         </button>
-        <button class="nav-item" title="Agents">
+        <button class="nav-item" title="Teams" onclick="location.href='teams.html'">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M12 1v6m0 6v6M1 12h6m6 0h6"></path>
           </svg>
-          <span>Agents</span>
+          <span>Teams</span>
         </button>
         <button class="nav-item" title="Ara" onclick="handleNavClick(() => toggleSearch(true))">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -45,6 +45,16 @@
             <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
           </svg>
           <span>Kütüphane</span>
+        </button>
+      </div>
+
+      <div class="sidebar-section" id="teamSection">
+        <div class="section-header">
+          <span class="section-title">Takımlar</span>
+        </div>
+        <div class="chat-list" id="teamList"></div>
+        <button class="chat-item" onclick="location.href='teams.html'" style="color:var(--muted); margin-top:6px;">
+          <span class="chat-item-title">+ Takım ekle</span>
         </button>
       </div>
 
@@ -146,6 +156,27 @@
       <div class="offline-banner" id="offlineBanner">
         <span>Backend is offline</span>
         <button id="retryButton" onclick="attemptReconnect()">Retry Connection</button>
+      </div>
+
+      <!-- Team Workspace -->
+      <div id="teamWorkspace" style="display:none;position:absolute;inset:0;background:var(--bg);z-index:40;flex-direction:column;">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--sidebar-bg);">
+          <button onclick="closeTeamWorkspace()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;">←</button>
+          <span id="twTeamName" style="font-weight:600;font-size:16px;"></span>
+          <span id="twTeamDesc" style="font-size:12px;color:var(--muted);margin-left:8px;"></span>
+        </div>
+        <div style="padding:16px 20px;border-bottom:1px solid var(--border);background:var(--sidebar-bg);display:flex;gap:10px;align-items:end;">
+          <textarea id="twMasterInput" placeholder="Master prompt girin... (ör: Bir araba blog sitesi kur)" rows="2" style="flex:1;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;font-size:14px;resize:none;outline:none;"></textarea>
+          <button id="twSendBtn" onclick="sendMasterPrompt()" style="padding:10px 20px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-family:inherit;font-weight:600;cursor:pointer;white-space:nowrap;">Hepsine Gönder ↑</button>
+        </div>
+        <div id="twPanels" style="flex:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1px;background:var(--border);overflow-y:auto;"></div>
+        <div id="twCombined" style="display:none;border-top:2px solid var(--accent);background:var(--sidebar-bg);max-height:40vh;overflow-y:auto;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);">
+            <span style="font-weight:600;font-size:14px;">📋 Birleştirilmiş Sonuç</span>
+            <button onclick="document.getElementById('twCombined').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;">✕</button>
+          </div>
+          <div id="twCombinedContent" style="padding:16px 20px;font-size:14px;line-height:1.6;white-space:pre-wrap;"></div>
+        </div>
       </div>
     </main>
   </div>

@@ -73,6 +73,35 @@ class DatabaseManager:
             )
         """)
         
+        # Teams tablosu
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS teams (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT,
+                user_id TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        """)
+        
+        # Team Members tablosu (her üye bir AI rolü)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS team_members (
+                id TEXT PRIMARY KEY,
+                team_id TEXT NOT NULL,
+                role_name TEXT NOT NULL,
+                description TEXT,
+                system_prompt TEXT NOT NULL,
+                icon TEXT DEFAULT '🤖',
+                chat_id TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (team_id) REFERENCES teams (id) ON DELETE CASCADE,
+                FOREIGN KEY (chat_id) REFERENCES chats (id)
+            )
+        """)
+        
         # Index'ler
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages(chat_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at)")
@@ -80,6 +109,8 @@ class DatabaseManager:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_chats_updated_at ON chats(updated_at)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_teams_user_id ON teams(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_team_members_team_id ON team_members(team_id)")
         
         conn.commit()
         conn.close()
@@ -434,3 +465,172 @@ class DatabaseManager:
         
         conn.commit()
         conn.close()
+    
+    # ===== TEAM OPERATIONS =====
+    
+    def create_team(self, name: str, user_id: str, description: str = None) -> Dict:
+        """Yeni takım oluştur"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        team_id = str(uuid.uuid4())
+        now = datetime.now().isoformat()
+        
+        cursor.execute("""
+            INSERT INTO teams (id, name, description, user_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (team_id, name, description, user_id, now, now))
+        
+        conn.commit()
+        conn.close()
+        
+        return {
+            "id": team_id,
+            "name": name,
+            "description": description,
+            "user_id": user_id,
+            "created_at": now,
+            "updated_at": now
+        }
+    
+    def get_teams_by_user(self, user_id: str) -> List[Dict]:
+        """Kullanıcının takımlarını getir"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT * FROM teams WHERE user_id = ? ORDER BY updated_at DESC
+        """, (user_id,))
+        rows = cursor.fetchall()
+        conn.close()
+        
+        return [dict(row) for row in rows]
+    
+    def get_team(self, team_id: str) -> Optional[Dict]:
+        """Takım detayını getir"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM teams WHERE id = ?", (team_id,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            return dict(row)
+        return None
+    
+    def delete_team(self, team_id: str) -> bool:
+        """Takımı ve üyelerini sil"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("DELETE FROM team_members WHERE team_id = ?", (team_id,))
+        cursor.execute("DELETE FROM teams WHERE id = ?", (team_id,))
+        
+        conn.commit()
+        conn.close()
+        return True
+    
+    def update_team(self, team_id: str, name: str = None, description: str = None) -> Optional[Dict]:
+        """Takım bilgilerini güncelle"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        updates = []
+        params = []
+        if name is not None:
+            updates.append("name = ?")
+            params.append(name)
+        if description is not None:
+            updates.append("description = ?")
+            params.append(description)
+        
+        if not updates:
+            conn.close()
+            return self.get_team(team_id)
+        
+        updates.append("updated_at = ?")
+        params.append(datetime.now().isoformat())
+        params.append(team_id)
+        
+        cursor.execute(f"UPDATE teams SET {', '.join(updates)} WHERE id = ?", params)
+        conn.commit()
+        conn.close()
+        
+        return self.get_team(team_id)
+    
+    # ===== TEAM MEMBER OPERATIONS =====
+    
+    def add_team_member(self, team_id: str, role_name: str, system_prompt: str, 
+                        description: str = None, icon: str = "🤖") -> Dict:
+        """Takıma yeni üye (AI rolü) ekle"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        member_id = str(uuid.uuid4())
+        now = datetime.now().isoformat()
+        
+        # Bu üye için otomatik bir chat oluştur
+        chat_id = str(uuid.uuid4())
+        cursor.execute("""
+            INSERT INTO chats (id, title, created_at, updated_at, user_id)
+            VALUES (?, ?, ?, ?, ?)
+        """, (chat_id, f"{role_name} Chat", now, now, "default"))
+        
+        cursor.execute("""
+            INSERT INTO team_members (id, team_id, role_name, description, system_prompt, icon, chat_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (member_id, team_id, role_name, description, system_prompt, icon, chat_id, now))
+        
+        # Takımın updated_at güncelle
+        cursor.execute("UPDATE teams SET updated_at = ? WHERE id = ?", (now, team_id))
+        
+        conn.commit()
+        conn.close()
+        
+        return {
+            "id": member_id,
+            "team_id": team_id,
+            "role_name": role_name,
+            "description": description,
+            "system_prompt": system_prompt,
+            "icon": icon,
+            "chat_id": chat_id,
+            "created_at": now
+        }
+    
+    def get_team_members(self, team_id: str) -> List[Dict]:
+        """Takım üyelerini getir"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT * FROM team_members WHERE team_id = ? ORDER BY created_at ASC
+        """, (team_id,))
+        rows = cursor.fetchall()
+        conn.close()
+        
+        return [dict(row) for row in rows]
+    
+    def get_team_member(self, member_id: str) -> Optional[Dict]:
+        """Tek bir üyeyi getir"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM team_members WHERE id = ?", (member_id,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            return dict(row)
+        return None
+    
+    def delete_team_member(self, member_id: str) -> bool:
+        """Takım üyesini sil"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("DELETE FROM team_members WHERE id = ?", (member_id,))
+        conn.commit()
+        conn.close()
+        return True

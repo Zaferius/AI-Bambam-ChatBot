@@ -16,6 +16,7 @@ import io
 import google.generativeai as genai
 from database import DatabaseManager
 from auth import router as auth_router, init_auth, get_current_user, get_optional_user, decode_token
+from team_endpoints import router as team_router, init_teams
 from collections import defaultdict
 import time
 
@@ -29,6 +30,10 @@ db = DatabaseManager()
 # Auth modülünü başlat
 init_auth(db)
 app.include_router(auth_router)
+
+# Team modülünü başlat
+init_teams(db)
+app.include_router(team_router)
 
 # CORS
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")

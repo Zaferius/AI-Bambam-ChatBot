@@ -217,6 +217,128 @@ class BambamAPI {
     }
   }
 
+  // ===== TEAM OPERATIONS =====
+
+  async createTeam(name, description, members) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/teams`, {
+        method: "POST",
+        headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ name, description, members })
+      });
+      if (!response.ok) { const err = await response.json(); throw new Error(err.detail || "Failed"); }
+      return await response.json();
+    } catch (error) {
+      console.error("Create team error:", error);
+      throw error;
+    }
+  }
+
+  async listTeams() {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/teams`, {
+        headers: this.getAuthHeaders()
+      });
+      if (!response.ok) throw new Error("Failed to list teams");
+      return await response.json();
+    } catch (error) {
+      console.error("List teams error:", error);
+      return [];
+    }
+  }
+
+  async getTeam(teamId) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/teams/${teamId}`, {
+        headers: this.getAuthHeaders()
+      });
+      if (!response.ok) throw new Error("Failed to get team");
+      return await response.json();
+    } catch (error) {
+      console.error("Get team error:", error);
+      return null;
+    }
+  }
+
+  async deleteTeam(teamId) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/teams/${teamId}`, {
+        method: "DELETE",
+        headers: this.getAuthHeaders()
+      });
+      if (!response.ok) throw new Error("Failed to delete team");
+      return await response.json();
+    } catch (error) {
+      console.error("Delete team error:", error);
+      return null;
+    }
+  }
+
+  async addTeamMember(teamId, member) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/members`, {
+        method: "POST",
+        headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(member)
+      });
+      if (!response.ok) throw new Error("Failed to add member");
+      return await response.json();
+    } catch (error) {
+      console.error("Add member error:", error);
+      return null;
+    }
+  }
+
+  async removeTeamMember(teamId, memberId) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/members/${memberId}`, {
+        method: "DELETE",
+        headers: this.getAuthHeaders()
+      });
+      if (!response.ok) throw new Error("Failed to remove member");
+      return await response.json();
+    } catch (error) {
+      console.error("Remove member error:", error);
+      return null;
+    }
+  }
+
+  async getMemberMessages(teamId, memberId) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/members/${memberId}/messages`, {
+        headers: this.getAuthHeaders()
+      });
+      if (!response.ok) throw new Error("Failed to get messages");
+      return await response.json();
+    } catch (error) {
+      console.error("Get member messages error:", error);
+      return [];
+    }
+  }
+
+  async sendTeamChat(teamId, memberId, message, model = "gpt-4o-mini") {
+    return await fetch(`${this.baseUrl}/api/teams/${teamId}/members/${memberId}/chat`, {
+      method: "POST",
+      headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ message, model })
+    });
+  }
+
+  async sendMasterPrompt(teamId, message, model = "gpt-4o-mini") {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/master`, {
+        method: "POST",
+        headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ message, model })
+      });
+      if (!response.ok) { const err = await response.json(); throw new Error(err.detail || "Failed"); }
+      return await response.json();
+    } catch (error) {
+      console.error("Master prompt error:", error);
+      throw error;
+    }
+  }
+
   // ===== CONNECTIVITY =====
 
   async checkConnection() {

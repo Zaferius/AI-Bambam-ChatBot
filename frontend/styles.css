@@ -210,15 +210,19 @@ body {
   align-items: center;
   justify-content: space-between;
   font-size: 14px;
-  color: var(--muted);
+  color: var(--text);
+  background: #3a3a3b;
+  border: 1px solid var(--border);
+  width: 100%;
+  text-align: left;
 }
 
 .chat-item:hover {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.08);
 }
 
 .chat-item.active {
-  background: rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.12);
   color: var(--text);
 }
 

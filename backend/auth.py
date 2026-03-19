@@ -97,6 +97,14 @@ def decode_token(token: str) -> Optional[dict]:
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """JWT token'dan mevcut kullanıcıyı al"""
+    # Dev bypass (env: BYPASS_AUTH=true)
+    if os.getenv("BYPASS_AUTH", "false").lower() == "true":
+        return {
+            "id": "dev-bypass",
+            "email": "dev@bambam.local",
+            "username": "dev"
+        }
+
     if credentials is None:
         raise HTTPException(status_code=401, detail="Token gerekli")
     
@@ -124,6 +132,14 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 
 async def get_optional_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Opsiyonel auth - token yoksa None döner"""
+    # Dev bypass (env: BYPASS_AUTH=true)
+    if os.getenv("BYPASS_AUTH", "false").lower() == "true":
+        return {
+            "id": "dev-bypass",
+            "email": "dev@bambam.local",
+            "username": "dev"
+        }
+    
     if credentials is None:
         return None
     

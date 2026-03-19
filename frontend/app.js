@@ -701,12 +701,16 @@ async function refreshModels() {
 
 // Initialization
 async function initializeApp() {
-  // Auth guard - login kontrolü
+  // Auth guard - login kontrolü (dev bypass: token yoksa dummy token set et)
   if (!api.isLoggedIn()) {
-    window.location.href = 'login.html';
-    return;
+    localStorage.setItem('bambam_token', 'dev-bypass-token');
+    localStorage.setItem('bambam_user', JSON.stringify({ id: 'dev-bypass', username: 'dev', email: 'dev@bambam.local' }));
   }
-  
+
+  // Sidebar default açık
+  sidebar.classList.add('open');
+  mainContent.classList.add('sidebar-open');
+
   // User menu göster
   const username = api.getUsername();
   if (username) {
@@ -745,6 +749,7 @@ async function initializeApp() {
   
   updateChatList();
   await loadAvailableModels();
+  loadTeamList();
 }
 
 messageInput.addEventListener("input", autoResizeTextarea);
@@ -757,3 +762,114 @@ messageInput.addEventListener("keydown", function(event) {
 
 initializeApp();
 autoResizeTextarea();
+
+// ===== TEAM WORKSPACE =====
+let twCurrentTeam = null;
+let twSending = false;
+
+async function loadTeamList() {
+  const list = document.getElementById('teamList');
+  if (!list) return;
+  try {
+    const teams = await api.listTeams();
+    if (!teams || teams.length === 0) {
+      list.innerHTML = '';
+      return;
+    }
+    list.innerHTML = teams.map(t => 
+      `<button class="chat-item" onclick="openTeamWorkspace('${t.id}')" title="${t.description || t.name}">
+        <span class="chat-item-title">${t.name}</span>
+      </button>`
+    ).join('');
+  } catch (e) {
+    console.error('Load team list error:', e);
+  }
+}
+
+async function openTeamWorkspace(teamId) {
+  const team = await api.getTeam(teamId);
+  if (!team) return;
+  twCurrentTeam = team;
+
+  document.getElementById('twTeamName').textContent = team.name;
+  document.getElementById('twTeamDesc').textContent = team.description || '';
+  document.getElementById('twMasterInput').value = '';
+  document.getElementById('twCombined').style.display = 'none';
+
+  // Üye panellerini oluştur
+  const panels = document.getElementById('twPanels');
+  panels.innerHTML = (team.members || []).map(m => `
+    <div id="tw-panel-${m.id}" style="background:var(--bg);display:flex;flex-direction:column;min-height:200px;">
+      <div style="padding:10px 14px;border-bottom:1px solid var(--border);background:var(--sidebar-bg);display:flex;align-items:center;gap:8px;">
+        <span style="font-size:18px;">${m.icon || '🤖'}</span>
+        <div>
+          <div style="font-weight:600;font-size:13px;">${m.role_name}</div>
+          <div style="font-size:11px;color:var(--muted);">${m.description || ''}</div>
+        </div>
+      </div>
+      <div id="tw-content-${m.id}" style="flex:1;padding:14px;font-size:13px;line-height:1.6;color:var(--muted);overflow-y:auto;white-space:pre-wrap;">
+        Bekleniyor...
+      </div>
+    </div>
+  `).join('');
+
+  const ws = document.getElementById('teamWorkspace');
+  ws.style.display = 'flex';
+}
+
+function closeTeamWorkspace() {
+  document.getElementById('teamWorkspace').style.display = 'none';
+  twCurrentTeam = null;
+}
+
+async function sendMasterPrompt() {
+  if (twSending || !twCurrentTeam) return;
+  const input = document.getElementById('twMasterInput');
+  const message = input.value.trim();
+  if (!message) return;
+
+  twSending = true;
+  const btn = document.getElementById('twSendBtn');
+  btn.disabled = true;
+  btn.textContent = 'Çalışıyor...';
+
+  // Tüm panelleri "çalışıyor" yap
+  (twCurrentTeam.members || []).forEach(m => {
+    const content = document.getElementById(`tw-content-${m.id}`);
+    if (content) {
+      content.textContent = '⏳ Çalışıyor...';
+      content.style.color = 'var(--muted)';
+    }
+  });
+
+  try {
+    const data = await api.sendMasterPrompt(twCurrentTeam.id, message);
+
+    // Her üyenin sonucunu paneline yaz
+    (data.results || []).forEach(r => {
+      const content = document.getElementById(`tw-content-${r.member_id}`);
+      if (content) {
+        content.textContent = r.content;
+        content.style.color = r.error ? 'var(--danger)' : 'var(--text)';
+      }
+    });
+
+    // Birleştirilmiş sonucu göster
+    if (data.combined) {
+      document.getElementById('twCombinedContent').textContent = data.combined;
+      document.getElementById('twCombined').style.display = 'block';
+    }
+  } catch (error) {
+    (twCurrentTeam.members || []).forEach(m => {
+      const content = document.getElementById(`tw-content-${m.id}`);
+      if (content) {
+        content.textContent = 'Hata: ' + error.message;
+        content.style.color = 'var(--danger)';
+      }
+    });
+  } finally {
+    twSending = false;
+    btn.disabled = false;
+    btn.textContent = 'Hepsine Gönder ↑';
+  }
+}
