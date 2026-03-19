@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from openai import OpenAI
@@ -7,8 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 import json
 import re
+import requests
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
+import asyncio
+import base64
+import io
 
 load_dotenv()
 
@@ -22,12 +26,155 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# OpenAI Client (sadece API key varsa oluştur)
+openai_client = None
+if os.getenv("OPENAI_API_KEY"):
+    openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Local LLM Configuration
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+LM_STUDIO_BASE_URL = os.getenv("LM_STUDIO_BASE_URL", "http://localhost:1234/v1")
+
+class LocalLLMManager:
+    def __init__(self):
+        self.available_models = {}
+        # Sadece başlangıçta bir kere yükle
+        self.refresh_models()
+    
+    def refresh_models(self):
+        """Mevcut local modelleri güncelle"""
+        models = []
+        
+        # Ollama modelleri
+        try:
+            response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
+            if response.status_code == 200:
+                ollama_models = response.json().get('models', [])
+                for model in ollama_models:
+                    models.append({
+                        'id': f"ollama:{model['name']}",
+                        'name': model['name'],
+                        'provider': 'ollama',
+                        'model_name': model['name'],
+                        'icon': ''
+                    })
+        except:
+            pass
+        
+        # LM Studio modelleri
+        try:
+            response = requests.get(f"{LM_STUDIO_BASE_URL}/models", timeout=2)
+            if response.status_code == 200:
+                lm_models = response.json().get('data', [])
+                for model in lm_models:
+                    models.append({
+                        'id': f"lmstudio:{model['id']}",
+                        'name': model['id'],
+                        'provider': 'lmstudio',
+                        'model_name': model['id'],
+                        'icon': ''
+                    })
+        except:
+            pass
+        
+        self.available_models = {model['id']: model for model in models}
+        return models
+    
+    def get_provider_and_model(self, model_id: str):
+        """Model ID'sinden provider ve gerçek model adını al"""
+        if model_id.startswith("ollama:"):
+            return "ollama", model_id.replace("ollama:", "")
+        elif model_id.startswith("lmstudio:"):
+            return "lmstudio", model_id.replace("lmstudio:", "")
+        else:
+            return "openai", model_id
+    
+    async def chat_with_ollama(self, model_name: str, messages: List[Dict]):
+        """Ollama ile sohbet"""
+        payload = {
+            "model": model_name,
+            "messages": messages,
+            "stream": True
+        }
+        
+        response = requests.post(
+            f"{OLLAMA_BASE_URL}/api/chat",
+            json=payload,
+            stream=True,
+            timeout=300
+        )
+        
+        if response.status_code == 200:
+            for line in response.iter_lines():
+                if line:
+                    try:
+                        data = json.loads(line.decode('utf-8'))
+                        if 'message' in data and 'content' in data['message']:
+                            yield data['message']['content']
+                    except:
+                        continue
+        else:
+            yield f"Ollama error: {response.status_code}"
+    
+    async def chat_with_lmstudio(self, model_name: str, messages: List[Dict]):
+        """LM Studio ile sohbet"""
+        payload = {
+            "model": model_name,
+            "messages": messages,
+            "stream": True
+        }
+        
+        response = requests.post(
+            f"{LM_STUDIO_BASE_URL}/chat/completions",
+            json=payload,
+            stream=True,
+            timeout=300
+        )
+        
+        if response.status_code == 200:
+            for line in response.iter_lines():
+                if line:
+                    try:
+                        line_str = line.decode('utf-8')
+                        if line_str.startswith('data: '):
+                            data_str = line_str[6:]
+                            if data_str.strip() == '[DONE]':
+                                break
+                            data = json.loads(data_str)
+                            if 'choices' in data and len(data['choices']) > 0:
+                                delta = data['choices'][0].get('delta', {})
+                                if 'content' in delta:
+                                    yield delta['content']
+                    except:
+                        continue
+        else:
+            yield f"LM Studio error: {response.status_code}"
+    
+    async def chat_with_openai(self, model_name: str, messages: List[Dict]):
+        """OpenAI ile sohbet"""
+        if not openai_client:
+            yield "OpenAI API key not configured. Please set OPENAI_API_KEY environment variable."
+            return
+        
+        stream = openai_client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            stream=True
+        )
+        
+        for chunk in stream:
+            delta = chunk.choices[0].delta.content
+            if delta:
+                yield delta
+
+# Local LLM Manager'ı başlat
+llm_manager = LocalLLMManager()
 
 class ChatRequest(BaseModel):
     message: str
     model: str = "gpt-4o-mini"
     chat_id: Optional[str] = None
+    thinking_level: Optional[str] = "medium"
 
 class MemoryManager:
     def __init__(self):
@@ -100,7 +247,6 @@ class MemoryManager:
                 memory['important_topics'].append(info)
         
         memory['last_updated'] = datetime.now().isoformat()
-        self.save_memory()
     
     def get_relevant_memory(self, chat_id: str, current_message: str) -> str:
         """Mevcut mesajla ilgili hafıza bilgisini getir"""
@@ -123,7 +269,7 @@ class MemoryManager:
         
         return ""
     
-    def add_message(self, chat_id: str, message: str, role: str):
+    def add_message(self, chat_id: str, message: str, role: str, persist: bool = True):
         """Yeni mesaj ekle"""
         if chat_id not in self.chat_histories:
             self.chat_histories[chat_id] = []
@@ -142,13 +288,25 @@ class MemoryManager:
         # Uzun süreli hafızayı güncelle
         self.update_long_term_memory(chat_id, message, role)
         
-        self.save_memory()
+        if persist:
+            self.save_memory()
     
     def get_chat_history(self, chat_id: str) -> List[Dict]:
         """Sohbet geçmişini getir"""
         if chat_id not in self.chat_histories:
             self.chat_histories[chat_id] = []
         return self.chat_histories[chat_id]
+    
+    def get_chat_history_for_llm(self, chat_id: str) -> List[Dict]:
+        """LLM'e gönderilecek temiz sohbet geçmişini getir"""
+        history = self.get_chat_history(chat_id)
+        return [
+            {
+                "role": message["role"],
+                "content": message["content"]
+            }
+            for message in history
+        ]
     
     def reset_chat(self, chat_id: str):
         """Belirli bir sohbeti sıfırla"""
@@ -169,7 +327,7 @@ SYSTEM_MESSAGE = {
 @app.post("/chat")
 async def chat(req: ChatRequest):
     chat_id = req.chat_id if req.chat_id else "default"
-    memory_manager.add_message(chat_id, req.message, "user")
+    memory_manager.add_message(chat_id, req.message, "user", persist=False)
     
     # İlgili hafıza bilgisini al
     relevant_memory = memory_manager.get_relevant_memory(chat_id, req.message)
@@ -185,27 +343,128 @@ async def chat(req: ChatRequest):
         })
     
     # Sohbet geçmişini ekle
-    chat_history = memory_manager.get_chat_history(chat_id)
+    chat_history = memory_manager.get_chat_history_for_llm(chat_id)
     messages.extend(chat_history)
-
-    response = client.chat.completions.create(
-        model=req.model,
-        messages=messages
-    )
-
-    reply = response.choices[0].message.content or ""
-    memory_manager.add_message(chat_id, reply, "assistant")
-
-    return {"reply": reply}
+    
+    # Provider ve model belirle
+    provider, model_name = llm_manager.get_provider_and_model(req.model)
+    
+    def generate():
+        full_reply = ""
+        
+        if provider == "openai":
+            if not openai_client:
+                yield "OpenAI API key not configured. Please set OPENAI_API_KEY environment variable."
+                return
+            
+            stream = openai_client.chat.completions.create(
+                model=model_name,
+                messages=messages,
+                stream=True
+            )
+            
+            for chunk in stream:
+                delta = chunk.choices[0].delta.content
+                if delta:
+                    full_reply += delta
+                    yield delta
+        
+        elif provider == "ollama":
+            try:
+                response = requests.post(
+                    f"{OLLAMA_BASE_URL}/api/chat",
+                    json={
+                        "model": model_name,
+                        "messages": messages,
+                        "stream": True
+                    },
+                    stream=True,
+                    timeout=300
+                )
+                
+                if response.status_code == 200:
+                    for line in response.iter_lines():
+                        if line:
+                            try:
+                                data = json.loads(line.decode('utf-8'))
+                                if 'message' in data and 'content' in data['message']:
+                                    chunk = data['message']['content']
+                                    if chunk:
+                                        full_reply += chunk
+                                        yield chunk
+                            except:
+                                continue
+                else:
+                    yield f"Ollama error: {response.status_code}"
+            except Exception as e:
+                yield f"Ollama connection error: {str(e)}"
+        
+        elif provider == "lmstudio":
+            try:
+                response = requests.post(
+                    f"{LM_STUDIO_BASE_URL}/chat/completions",
+                    json={
+                        "model": model_name,
+                        "messages": messages,
+                        "stream": True
+                    },
+                    stream=True,
+                    timeout=300
+                )
+                
+                if response.status_code == 200:
+                    for line in response.iter_lines():
+                        if line:
+                            try:
+                                line_str = line.decode('utf-8')
+                                if line_str.startswith('data: '):
+                                    data_str = line_str[6:]
+                                    if data_str.strip() == '[DONE]':
+                                        break
+                                    data = json.loads(data_str)
+                                    if 'choices' in data and len(data['choices']) > 0:
+                                        delta = data['choices'][0].get('delta', {})
+                                        if 'content' in delta:
+                                            chunk = delta['content']
+                                            if chunk:
+                                                full_reply += chunk
+                                                yield chunk
+                            except:
+                                continue
+                else:
+                    yield f"LM Studio error: {response.status_code}"
+            except Exception as e:
+                yield f"LM Studio connection error: {str(e)}"
+        
+        memory_manager.add_message(chat_id, full_reply, "assistant")
+    
+    return StreamingResponse(generate(), media_type="text/plain")
 
 
 @app.post("/chat/stream")
-async def chat_stream(req: ChatRequest):
-    chat_id = req.chat_id if req.chat_id else "default"
-    memory_manager.add_message(chat_id, req.message, "user")
+async def chat_stream(
+    message: str = Form(...),
+    model: str = Form("gpt-4o-mini"),
+    chat_id: str = Form("default"),
+    thinking_level: str = Form("medium"),
+    files: List[UploadFile] = File(None)
+):
+    # Dosyaları işle
+    file_contents = []
+    if files:
+        for file in files:
+            content = await file.read()
+            file_info = {
+                "filename": file.filename,
+                "content_type": file.content_type,
+                "data": content
+            }
+            file_contents.append(file_info)
+    
+    memory_manager.add_message(chat_id, message, "user", persist=False)
     
     # İlgili hafıza bilgisini al
-    relevant_memory = memory_manager.get_relevant_memory(chat_id, req.message)
+    relevant_memory = memory_manager.get_relevant_memory(chat_id, message)
     
     # Mesajları hazırla
     messages = [SYSTEM_MESSAGE]
@@ -218,23 +477,147 @@ async def chat_stream(req: ChatRequest):
         })
     
     # Sohbet geçmişini ekle
-    chat_history = memory_manager.get_chat_history(chat_id)
-    messages.extend(chat_history)
+    chat_history = memory_manager.get_chat_history_for_llm(chat_id)
+    messages.extend(chat_history[:-1])  # Son mesajı çıkar, dosyalarla birlikte ekleyeceğiz
+    
+    # Kullanıcı mesajını dosyalarla birlikte hazırla
+    user_message_content = []
+    
+    # Metin mesajı ekle
+    if message:
+        user_message_content.append({
+            "type": "text",
+            "text": message
+        })
+    
+    # Dosyaları ekle (görsel dosyalar için vision API kullan)
+    for file_info in file_contents:
+        if file_info["content_type"].startswith("image/"):
+            # Görseli base64'e çevir
+            base64_image = base64.b64encode(file_info["data"]).decode('utf-8')
+            user_message_content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{file_info['content_type']};base64,{base64_image}"
+                }
+            })
+        else:
+            # Metin dosyaları için içeriği oku
+            try:
+                text_content = file_info["data"].decode('utf-8')
+                user_message_content.append({
+                    "type": "text",
+                    "text": f"\n\n[File: {file_info['filename']}]\n{text_content}"
+                })
+            except:
+                user_message_content.append({
+                    "type": "text",
+                    "text": f"\n\n[File: {file_info['filename']} - Binary file, cannot display content]"
+                })
+    
+    # Kullanıcı mesajını ekle
+    if len(user_message_content) == 1 and user_message_content[0]["type"] == "text":
+        # Sadece metin varsa basit format kullan
+        messages.append({
+            "role": "user",
+            "content": user_message_content[0]["text"]
+        })
+    else:
+        # Dosya varsa veya çoklu içerik varsa array format kullan
+        messages.append({
+            "role": "user",
+            "content": user_message_content
+        })
+
+    # Provider ve model belirle
+    provider, model_name = llm_manager.get_provider_and_model(model)
 
     def generate():
         full_reply = ""
 
-        stream = client.chat.completions.create(
-            model=req.model,
-            messages=messages,
-            stream=True
-        )
+        if provider == "openai":
+            if not openai_client:
+                yield "OpenAI API key not configured. Please set OPENAI_API_KEY environment variable."
+                return
+            
+            stream = openai_client.chat.completions.create(
+                model=model_name,
+                messages=messages,
+                stream=True
+            )
 
-        for chunk in stream:
-            delta = chunk.choices[0].delta.content
-            if delta:
-                full_reply += delta
-                yield delta
+            for chunk in stream:
+                delta = chunk.choices[0].delta.content
+                if delta:
+                    full_reply += delta
+                    yield delta
+
+        elif provider == "ollama":
+            try:
+                response = requests.post(
+                    f"{OLLAMA_BASE_URL}/api/chat",
+                    json={
+                        "model": model_name,
+                        "messages": messages,
+                        "stream": True
+                    },
+                    stream=True,
+                    timeout=300
+                )
+                
+                if response.status_code == 200:
+                    for line in response.iter_lines():
+                        if line:
+                            try:
+                                data = json.loads(line.decode('utf-8'))
+                                if 'message' in data and 'content' in data['message']:
+                                    chunk = data['message']['content']
+                                    if chunk:
+                                        full_reply += chunk
+                                        yield chunk
+                            except:
+                                continue
+                else:
+                    yield f"Ollama error: {response.status_code}"
+            except Exception as e:
+                yield f"Ollama connection error: {str(e)}"
+
+        elif provider == "lmstudio":
+            try:
+                response = requests.post(
+                    f"{LM_STUDIO_BASE_URL}/chat/completions",
+                    json={
+                        "model": model_name,
+                        "messages": messages,
+                        "stream": True
+                    },
+                    stream=True,
+                    timeout=300
+                )
+                
+                if response.status_code == 200:
+                    for line in response.iter_lines():
+                        if line:
+                            try:
+                                line_str = line.decode('utf-8')
+                                if line_str.startswith('data: '):
+                                    data_str = line_str[6:]
+                                    if data_str.strip() == '[DONE]':
+                                        break
+                                    data = json.loads(data_str)
+                                    if 'choices' in data and len(data['choices']) > 0:
+                                        delta = data['choices'][0].get('delta', {})
+                                        if 'content' in delta:
+                                            chunk = delta['content']
+                                            if chunk:
+                                                full_reply += chunk
+                                                yield chunk
+                            except:
+                                continue
+                else:
+                    yield f"LM Studio error: {response.status_code}"
+            except Exception as e:
+                yield f"LM Studio connection error: {str(e)}"
 
         memory_manager.add_message(chat_id, full_reply, "assistant")
 
@@ -258,3 +641,41 @@ async def get_memory(chat_id: str):
         "memory": memory_manager.long_term_memory[chat_id],
         "chat_length": len(memory_manager.get_chat_history(chat_id))
     }
+
+
+@app.get("/models")
+def get_available_models():
+    """Mevcut tüm modelleri getir"""
+    # Refresh kaldırıldı, sadece mevcut modelleri göster
+    
+    models = [
+        {"id": "openai-group", "name": "OpenAI", "provider": "openai", "icon": "🌐", "is_group": True},
+        {"id": "gpt-4o-mini", "name": "gpt-4o-mini", "provider": "openai", "parent": "openai-group", "icon": "🌐"},
+        {"id": "gpt-4o", "name": "gpt-4o", "provider": "openai", "parent": "openai-group", "icon": "🌐"},
+        {"id": "gpt-3.5-turbo", "name": "gpt-3.5-turbo", "provider": "openai", "parent": "openai-group", "icon": "🌐"},
+        {"id": "gpt-4", "name": "gpt-4", "provider": "openai", "parent": "openai-group", "icon": "🌐"},
+    ]
+    
+    # Local modelleri ekle
+    local_models = list(llm_manager.available_models.values())
+    
+    # Ollama varsa grupla
+    ollama_models = [m for m in local_models if m['provider'] == 'ollama']
+    if ollama_models:
+        models.append({"id": "ollama-group", "name": "Ollama", "provider": "ollama", "icon": "🦙", "is_group": True})
+        for model in ollama_models:
+            model['parent'] = 'ollama-group'
+            models.append(model)
+
+    # Diğer local modelleri (LM Studio vb)
+    other_models = [m for m in local_models if m['provider'] != 'ollama']
+    models.extend(other_models)
+    
+    return {"models": models}
+
+
+@app.post("/models/refresh")
+def refresh_models():
+    """Local modelleri yenile"""
+    models = llm_manager.refresh_models()
+    return {"models": models, "message": "Models refreshed successfully."}
