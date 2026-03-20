@@ -400,6 +400,15 @@
         <span class="role-icon" id="tvRoleIcon">🤖</span>
         <span class="role-name" id="tvRoleName">Üye seçin</span>
         <span class="role-desc" id="tvRoleDesc"></span>
+        <select id="tvModelSelect" onchange="changeMemberModel(this.value)" style="margin-left:auto;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:12px;outline:none;cursor:pointer;">
+          <option value="gpt-4o-mini">GPT-4o Mini</option>
+          <option value="gpt-4o">GPT-4o</option>
+          <option value="groq:llama-3.1-8b-instant">Groq Llama 3.1 8B</option>
+          <option value="groq:llama-3.3-70b-versatile">Groq Llama 3.3 70B</option>
+          <option value="groq:mixtral-8x7b-32768">Groq Mixtral 8x7B</option>
+          <option value="openrouter:anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+          <option value="openrouter:google/gemini-pro-1.5">Gemini Pro 1.5</option>
+        </select>
       </div>
       <div class="team-messages" id="tvMessages">
         <div class="team-msg-empty">Bir takım üyesi seçerek sohbete başlayın</div>
@@ -579,11 +588,11 @@
       event.currentTarget.classList.add('selected');
       
       p.members.forEach(m => {
-        addMemberRow(m.role_name, m.description, m.system_prompt, m.icon);
+        addMemberRow(m.role_name, m.description, m.system_prompt, m.icon, m.model || 'gpt-4o-mini');
       });
     }
 
-    function addMemberRow(name = '', desc = '', prompt = '', icon = '🤖') {
+    function addMemberRow(name = '', desc = '', prompt = '', icon = '🤖', model = 'gpt-4o-mini') {
       const id = memberCounter++;
       const row = document.createElement('div');
       row.className = 'member-row';
@@ -593,17 +602,31 @@
           <span>${icon} Üye #${id + 1}</span>
           <button class="member-row-remove" onclick="removeMemberRow(${id})">✕</button>
         </div>
-        <div class="form-group">
-          <label>Rol Adı</label>
-          <input type="text" class="mr-name" value="${name}" placeholder="ör: Senior Developer">
+        <div style="display:flex;gap:10px;">
+          <div class="form-group" style="flex:1;">
+            <label>Rol Adı</label>
+            <input type="text" class="mr-name" value="${name}" placeholder="ör: Senior Developer">
+          </div>
+          <div class="form-group" style="width:80px;">
+            <label>İkon</label>
+            <input type="text" class="mr-icon" value="${icon}" placeholder="🤖">
+          </div>
         </div>
         <div class="form-group">
           <label>Açıklama</label>
           <input type="text" class="mr-desc" value="${desc}" placeholder="ör: Uygulama mimarisi ve kodlama">
         </div>
         <div class="form-group">
-          <label>İkon</label>
-          <input type="text" class="mr-icon" value="${icon}" placeholder="🤖" style="max-width:80px;">
+          <label>AI Model</label>
+          <select class="mr-model">
+            <option value="gpt-4o-mini" ${model==='gpt-4o-mini'?'selected':''}>GPT-4o Mini</option>
+            <option value="gpt-4o" ${model==='gpt-4o'?'selected':''}>GPT-4o</option>
+            <option value="groq:llama-3.1-8b-instant" ${model==='groq:llama-3.1-8b-instant'?'selected':''}>Groq Llama 3.1 8B</option>
+            <option value="groq:llama-3.3-70b-versatile" ${model==='groq:llama-3.3-70b-versatile'?'selected':''}>Groq Llama 3.3 70B</option>
+            <option value="groq:mixtral-8x7b-32768" ${model==='groq:mixtral-8x7b-32768'?'selected':''}>Groq Mixtral 8x7B</option>
+            <option value="openrouter:anthropic/claude-3.5-sonnet" ${model==='openrouter:anthropic/claude-3.5-sonnet'?'selected':''}>Claude 3.5 Sonnet</option>
+            <option value="openrouter:google/gemini-pro-1.5" ${model==='openrouter:google/gemini-pro-1.5'?'selected':''}>Gemini Pro 1.5</option>
+          </select>
         </div>
         <div class="form-group">
           <label>System Prompt</label>
@@ -631,8 +654,9 @@
         const rd = row.querySelector('.mr-desc').value.trim();
         const ri = row.querySelector('.mr-icon').value.trim() || '🤖';
         const rp = row.querySelector('.mr-prompt').value.trim();
+        const rm = row.querySelector('.mr-model').value;
         if (!rn || !rp) { alert('Her üye için rol adı ve system prompt gerekli'); return; }
-        members.push({ role_name: rn, description: rd, icon: ri, system_prompt: rp });
+        members.push({ role_name: rn, description: rd, icon: ri, system_prompt: rp, model: rm });
       }
 
       if (members.length === 0) { alert('En az bir üye ekleyin'); return; }
@@ -707,6 +731,7 @@
       document.getElementById('tvRoleIcon').textContent = member.icon || '🤖';
       document.getElementById('tvRoleName').textContent = member.role_name;
       document.getElementById('tvRoleDesc').textContent = member.description || '';
+      document.getElementById('tvModelSelect').value = member.model || 'gpt-4o-mini';
 
       // Mesajları yükle
       const messages = await api.getMemberMessages(currentTeam.id, memberId);
@@ -722,6 +747,19 @@
       }
 
       document.getElementById('tvInput').focus();
+    }
+
+    async function changeMemberModel(newModel) {
+      if (!currentTeam || !currentMember) return;
+      try {
+        await api.updateMemberModel(currentTeam.id, currentMember.id, newModel);
+        currentMember.model = newModel;
+        // Lokal team data'yı da güncelle
+        const m = (currentTeam.members || []).find(x => x.id === currentMember.id);
+        if (m) m.model = newModel;
+      } catch (e) {
+        console.error('Model güncelleme hatası:', e);
+      }
     }
 
     async function sendTeamMessage() {
@@ -753,7 +791,8 @@
       container.scrollTop = container.scrollHeight;
 
       try {
-        const response = await api.sendTeamChat(currentTeam.id, currentMember.id, message);
+        const memberModel = currentMember.model || 'gpt-4o-mini';
+        const response = await api.sendTeamChat(currentTeam.id, currentMember.id, message, memberModel);
         
         if (!response.ok) {
           botDiv.textContent = 'Hata: ' + (await response.text());

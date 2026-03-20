@@ -1,0 +1,32 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build Docker Image
+        run: |
+          docker build -t png-to-jpeg .
+
+      - name: Run tests
+        run: |
+          # Burada test komutlarınızı çalıştırabilirsiniz, örneğin:
+          docker run png-to-jpeg pytest
+
+      - name: Push to Docker Hub
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          docker tag png-to-jpeg ${{ secrets.DOCKER_USERNAME }}/png-to-jpeg:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/png-to-jpeg:latest

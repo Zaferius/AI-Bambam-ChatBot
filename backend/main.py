@@ -17,6 +17,7 @@ import google.generativeai as genai
 from database import DatabaseManager
 from auth import router as auth_router, init_auth, get_current_user, get_optional_user, decode_token
 from team_endpoints import router as team_router, init_teams
+from project_files import router as project_router, init_projects
 from collections import defaultdict
 import time
 
@@ -34,6 +35,10 @@ app.include_router(auth_router)
 # Team modülünü başlat
 init_teams(db)
 app.include_router(team_router)
+
+# Project files modülünü başlat
+init_projects(db)
+app.include_router(project_router)
 
 # CORS
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
@@ -738,3 +743,43 @@ def health_check():
         "version": "1.0.0",
         "timestamp": datetime.now().isoformat()
     }
+
+# Preview: Proje dosyalarını iframe'de serve et (auth gerektirmez, doğrudan erişim)
+from fastapi.staticfiles import StaticFiles
+import pathlib
+
+@app.get("/preview/{team_id}/{file_path:path}")
+async def serve_preview(team_id: str, file_path: str):
+    """Proje dosyasını doğrudan serve et (iframe preview için)"""
+    from project_files import get_project_dir
+    project_dir = get_project_dir(team_id)
+    fpath = project_dir / file_path
+    try:
+        fpath.resolve().relative_to(project_dir.resolve())
+    except ValueError:
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+    if not fpath.exists() or not fpath.is_file():
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    
+    from fastapi.responses import FileResponse as FR
+    return FR(fpath)
+
+# Frontend statik dosyalarını serve et
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import pathlib
+
+FRONTEND_DIR = pathlib.Path(__file__).parent.parent / "frontend"
+
+@app.get("/")
+async def serve_index():
+    return FileResponse(FRONTEND_DIR / "index.html")
+
+@app.get("/{filename}.html")
+async def serve_html(filename: str):
+    filepath = FRONTEND_DIR / f"{filename}.html"
+    if filepath.exists():
+        return FileResponse(filepath)
+    return JSONResponse({"error": "Not found"}, status_code=404)
+
+app.mount("/", StaticFiles(directory=str(FRONTEND_DIR)), name="frontend")

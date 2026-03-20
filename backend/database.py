@@ -95,6 +95,7 @@ class DatabaseManager:
                 description TEXT,
                 system_prompt TEXT NOT NULL,
                 icon TEXT DEFAULT '🤖',
+                model TEXT DEFAULT 'gpt-4o-mini',
                 chat_id TEXT,
                 created_at TEXT NOT NULL,
                 FOREIGN KEY (team_id) REFERENCES teams (id) ON DELETE CASCADE,
@@ -562,7 +563,7 @@ class DatabaseManager:
     # ===== TEAM MEMBER OPERATIONS =====
     
     def add_team_member(self, team_id: str, role_name: str, system_prompt: str, 
-                        description: str = None, icon: str = "🤖") -> Dict:
+                        description: str = None, icon: str = "🤖", model: str = "gpt-4o-mini") -> Dict:
         """Takıma yeni üye (AI rolü) ekle"""
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -578,9 +579,9 @@ class DatabaseManager:
         """, (chat_id, f"{role_name} Chat", now, now, "default"))
         
         cursor.execute("""
-            INSERT INTO team_members (id, team_id, role_name, description, system_prompt, icon, chat_id, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (member_id, team_id, role_name, description, system_prompt, icon, chat_id, now))
+            INSERT INTO team_members (id, team_id, role_name, description, system_prompt, icon, model, chat_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (member_id, team_id, role_name, description, system_prompt, icon, model, chat_id, now))
         
         # Takımın updated_at güncelle
         cursor.execute("UPDATE teams SET updated_at = ? WHERE id = ?", (now, team_id))
@@ -595,9 +596,32 @@ class DatabaseManager:
             "description": description,
             "system_prompt": system_prompt,
             "icon": icon,
+            "model": model,
             "chat_id": chat_id,
             "created_at": now
         }
+    
+    def update_team_member(self, member_id: str, model: str = None) -> Optional[Dict]:
+        """Takım üyesinin modelini güncelle"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        updates = []
+        params = []
+        if model is not None:
+            updates.append("model = ?")
+            params.append(model)
+        
+        if not updates:
+            conn.close()
+            return self.get_team_member(member_id)
+        
+        params.append(member_id)
+        cursor.execute(f"UPDATE team_members SET {', '.join(updates)} WHERE id = ?", params)
+        conn.commit()
+        conn.close()
+        
+        return self.get_team_member(member_id)
     
     def get_team_members(self, team_id: str) -> List[Dict]:
         """Takım üyelerini getir"""

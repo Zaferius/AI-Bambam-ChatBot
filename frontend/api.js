@@ -324,6 +324,21 @@ class BambamAPI {
     });
   }
 
+  async updateMemberModel(teamId, memberId, model) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/members/${memberId}`, {
+        method: "PATCH",
+        headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ model })
+      });
+      if (!response.ok) { const err = await response.json(); throw new Error(err.detail || "Failed"); }
+      return await response.json();
+    } catch (error) {
+      console.error("Update member model error:", error);
+      throw error;
+    }
+  }
+
   async sendMasterPrompt(teamId, message, model = "gpt-4o-mini") {
     try {
       const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/master`, {
@@ -337,6 +352,82 @@ class BambamAPI {
       console.error("Master prompt error:", error);
       throw error;
     }
+  }
+
+  // ===== PROJECT FILES =====
+
+  async listProjectFiles(teamId) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/projects/${teamId}/files`, {
+        headers: this.getAuthHeaders()
+      });
+      if (!response.ok) { const err = await response.json(); throw new Error(err.detail || "Failed"); }
+      const data = await response.json();
+      return data.files || [];
+    } catch (error) {
+      console.error("List project files error:", error);
+      return [];
+    }
+  }
+
+  async readProjectFile(teamId, filePath) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/projects/${teamId}/files/${filePath}`, {
+        headers: this.getAuthHeaders()
+      });
+      if (!response.ok) { const err = await response.json(); throw new Error(err.detail || "Failed"); }
+      return await response.json();
+    } catch (error) {
+      console.error("Read project file error:", error);
+      throw error;
+    }
+  }
+
+  async writeProjectFile(teamId, path, content) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/projects/${teamId}/files`, {
+        method: "POST",
+        headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ path, content })
+      });
+      if (!response.ok) { const err = await response.json(); throw new Error(err.detail || "Failed"); }
+      return await response.json();
+    } catch (error) {
+      console.error("Write project file error:", error);
+      throw error;
+    }
+  }
+
+  async extractProjectFiles(teamId) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/projects/${teamId}/extract`, {
+        method: "POST",
+        headers: this.getAuthHeaders()
+      });
+      if (!response.ok) { const err = await response.json(); throw new Error(err.detail || "Failed"); }
+      return await response.json();
+    } catch (error) {
+      console.error("Extract project files error:", error);
+      throw error;
+    }
+  }
+
+  async resetProject(teamId) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/projects/${teamId}/reset`, {
+        method: "DELETE",
+        headers: this.getAuthHeaders()
+      });
+      if (!response.ok) { const err = await response.json(); throw new Error(err.detail || "Failed"); }
+      return await response.json();
+    } catch (error) {
+      console.error("Reset project error:", error);
+      throw error;
+    }
+  }
+
+  getPreviewUrl(teamId, filePath = "index.html") {
+    return `${this.baseUrl}/preview/${teamId}/${filePath}`;
   }
 
   // ===== CONNECTIVITY =====

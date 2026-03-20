@@ -8,6 +8,7 @@ import os
 import json
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from project_files import extract_files_from_text, save_extracted_files
 
 router = APIRouter(prefix="/api/teams", tags=["Teams"])
 
@@ -36,6 +37,7 @@ class MemberInput(BaseModel):
     description: Optional[str] = None
     system_prompt: str
     icon: Optional[str] = "🤖"
+    model: Optional[str] = "gpt-4o-mini"
 
 class CreateTeamRequest(BaseModel):
     name: str
@@ -51,6 +53,10 @@ class AddMemberRequest(BaseModel):
     description: Optional[str] = None
     system_prompt: str
     icon: Optional[str] = "🤖"
+    model: Optional[str] = "gpt-4o-mini"
+
+class UpdateMemberRequest(BaseModel):
+    model: Optional[str] = None
 
 
 # ===== ENDPOINTS =====
@@ -70,7 +76,8 @@ async def create_team(req: CreateTeamRequest, current_user: dict = Depends(get_c
             role_name=m.role_name,
             system_prompt=m.system_prompt,
             description=m.description,
-            icon=m.icon or "🤖"
+            icon=m.icon or "🤖",
+            model=m.model or "gpt-4o-mini"
         )
         members.append(member)
     
@@ -143,9 +150,27 @@ async def add_member(team_id: str, req: AddMemberRequest, current_user: dict = D
         role_name=req.role_name,
         system_prompt=req.system_prompt,
         description=req.description,
-        icon=req.icon or "🤖"
+        icon=req.icon or "🤖",
+        model=req.model or "gpt-4o-mini"
     )
     return member
+
+
+@router.patch("/{team_id}/members/{member_id}")
+async def update_member(team_id: str, member_id: str, req: UpdateMemberRequest, current_user: dict = Depends(get_current_user)):
+    """Takım üyesinin modelini güncelle"""
+    team = db.get_team(team_id)
+    if not team:
+        raise HTTPException(status_code=404, detail="Takım bulunamadı")
+    if team["user_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Bu takıma erişiminiz yok")
+    
+    member = db.get_team_member(member_id)
+    if not member or member["team_id"] != team_id:
+        raise HTTPException(status_code=404, detail="Üye bulunamadı")
+    
+    updated = db.update_team_member(member_id, model=req.model)
+    return updated
 
 
 @router.delete("/{team_id}/members/{member_id}")
@@ -214,8 +239,15 @@ async def team_member_chat(
     history = db.get_messages(chat_id)
     
     # LLM mesajlarını hazırla
+    member_system = (
+        f"KOD YAZARKEN: Dosya oluşturmak istediğinde kod bloklarını şu formatta yaz:\n"
+        f"```dil:dosya_adi.uzanti\n// kod içeriği\n```\n"
+        f"Örnek: ```html:index.html veya ```css:style.css veya ```js:script.js\n"
+        f"Bu format sayesinde kodların otomatik olarak proje dosyalarına kaydedilecek.\n\n"
+        f"{member['system_prompt']}"
+    )
     llm_messages = [
-        {"role": "system", "content": member["system_prompt"]}
+        {"role": "system", "content": member_system}
     ]
     
     # Son 20 mesajı ekle
@@ -226,8 +258,8 @@ async def team_member_chat(
             "content": msg["content"]
         })
     
-    # Model provider belirle
-    model_id = req.model or "gpt-4o-mini"
+    # Model provider belirle (request'ten gelen varsa onu, yoksa üyenin kayıtlı modelini kullan)
+    model_id = req.model or member.get("model") or "gpt-4o-mini"
     
     if model_id.startswith("groq:"):
         provider = "groq"
@@ -273,13 +305,21 @@ async def team_member_chat(
                 db.add_message(chat_id, "assistant", full_reply, model_name=req.model)
             except Exception as e:
                 print(f"DB save team bot message error: {e}")
+            # Otomatik dosya çıkarma
+            try:
+                extracted = extract_files_from_text(full_reply)
+                if extracted:
+                    saved = save_extracted_files(team_id, extracted)
+                    print(f"[AutoExtract] {len(saved)} dosya çıkarıldı: {saved}")
+            except Exception as e:
+                print(f"AutoExtract error: {e}")
     
     return StreamingResponse(generate(), media_type="text/plain")
 
 
 class MasterPromptRequest(BaseModel):
     message: str
-    model: Optional[str] = "gpt-4o-mini"
+    model: Optional[str] = None
 
 
 def _resolve_model(model_id: str):
@@ -321,8 +361,19 @@ def _run_member_chat(member, message, model_id, clients):
     # Mesaj geçmişini al
     history = db.get_messages(chat_id)
     
+    team_system = (
+        f"Sen bir takımda '{member['role_name']}' rolündesin. "
+        f"Takımda başka üyeler de var ve herkes kendi uzmanlık alanında çalışıyor. "
+        f"SADECE senin rolünle ilgili olan kısmı yap. Diğer rollerin işine karışma. "
+        f"Projenin tamamını kurma, sadece kendi sorumluluğundaki parçayı detaylı şekilde ele al.\n\n"
+        f"KOD YAZARKEN: Dosya oluşturmak istediğinde kod bloklarını şu formatta yaz:\n"
+        f"```dil:dosya_adi.uzanti\n// kod içeriği\n```\n"
+        f"Örnek: ```html:index.html veya ```css:style.css veya ```js:script.js\n"
+        f"Bu format sayesinde kodların otomatik olarak proje dosyalarına kaydedilecek.\n\n"
+        f"{member['system_prompt']}"
+    )
     llm_messages = [
-        {"role": "system", "content": member["system_prompt"]}
+        {"role": "system", "content": team_system}
     ]
     recent = history[-20:] if len(history) > 20 else history
     for msg in recent:
@@ -383,11 +434,20 @@ async def master_prompt(
     executor = ThreadPoolExecutor(max_workers=len(members))
     
     tasks = [
-        loop.run_in_executor(executor, _run_member_chat, member, req.message, req.model, clients)
+        loop.run_in_executor(executor, _run_member_chat, member, req.message, req.model or member.get("model") or "gpt-4o-mini", clients)
         for member in members
     ]
     
     results = await asyncio.gather(*tasks)
+    
+    # Otomatik dosya çıkarma: her üyenin cevabından kod bloklarını çıkar ve kaydet
+    all_extracted = []
+    for r in results:
+        if not r.get("error") and r.get("content"):
+            extracted = extract_files_from_text(r["content"])
+            if extracted:
+                saved = save_extracted_files(team_id, extracted)
+                all_extracted.extend(saved)
     
     # Birleştirme: Tüm sonuçları topla
     combined_parts = []
@@ -398,5 +458,6 @@ async def master_prompt(
     
     return {
         "results": results,
-        "combined": combined
+        "combined": combined,
+        "extracted_files": all_extracted
     }
