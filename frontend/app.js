@@ -1138,9 +1138,28 @@ async function sendMasterPrompt() {
 let twPreviewMode = false;
 let twSelectedFile = null;
 
+function twToggleProjectPanel() {
+  const panel = document.getElementById('twProjectPanel');
+  const btn = document.getElementById('twProjectBtn');
+  const isOpen = panel.style.display === 'flex';
+  if (isOpen) {
+    panel.style.display = 'none';
+    btn.style.background = 'var(--bg)';
+    btn.style.color = 'var(--text)';
+  } else {
+    panel.style.display = 'flex';
+    btn.style.background = 'var(--accent)';
+    btn.style.color = '#fff';
+    twRefreshFiles();
+  }
+}
+
 async function twShowProjectPanel() {
   const panel = document.getElementById('twProjectPanel');
+  const btn = document.getElementById('twProjectBtn');
   panel.style.display = 'flex';
+  btn.style.background = 'var(--accent)';
+  btn.style.color = '#fff';
   await twRefreshFiles();
 }
 
