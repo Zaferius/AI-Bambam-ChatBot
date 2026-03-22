@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Görsel Yükleme Sitesi</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Görsel Yükleme Sitesi</h1>
+    </header>
+    <main>
+        <form id="upload-form" onsubmit="return false;">
+            <label for="image-input" class="hidden">Görsel Yükle</label>
+            <input type="file" accept="image/*" id="image-input" onchange="previewImage(event)" aria-describedby="file-input-help">
+            <button id="upload-button">Yükle</button>
+        </form>
+        <div id="preview-area" aria-live="polite">
+            <h2>Önizleme:</h2>
+            <img id="image-preview" src="" alt="Görsel Önizleme" style="display:none;">
+            <p id="error-message" class="hidden" style="color: red;"></p>
+        </div>
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>

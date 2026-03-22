@@ -163,28 +163,6 @@
           </div>
         </div>
 
-        <!-- Sağ: Takım üyesi sohbet paneli (genişletilebilir) -->
-        <div id="memberChatPanel" style="display:none;width:420px;min-width:280px;max-width:70vw;border-left:1px solid var(--border);flex-shrink:0;flex-direction:column;background:var(--bg);position:relative;">
-          <!-- Resize handle -->
-          <div id="memberResizeHandle" style="position:absolute;left:-3px;top:0;bottom:0;width:6px;cursor:col-resize;z-index:10;"></div>
-          <!-- Header -->
-          <div id="memberChatHeader" style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--sidebar-bg);">
-            <span id="memberChatIcon" style="font-size:20px;"></span>
-            <div style="flex:1;min-width:0;">
-              <div id="memberChatName" style="font-weight:600;font-size:14px;"></div>
-              <div id="memberChatDesc" style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
-            </div>
-            <button onclick="closeMemberChat()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px;" title="Kapat">✕</button>
-          </div>
-          <!-- Messages -->
-          <div id="memberChatMessages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;"></div>
-          <!-- Composer -->
-          <div style="padding:10px 12px;border-top:1px solid var(--border);background:var(--sidebar-bg);display:flex;gap:8px;">
-            <textarea id="memberChatInput" placeholder="Mesaj yaz..." rows="1" style="flex:1;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:13px;resize:none;outline:none;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMemberChatMsg();}"></textarea>
-            <button onclick="sendMemberChatMsg()" style="padding:8px 14px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:inherit;font-weight:600;cursor:pointer;font-size:14px;">↑</button>
-          </div>
-        </div>
-
       </div>
 
       <!-- Team Workspace -->
@@ -193,8 +171,10 @@
         <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid var(--border);background:var(--sidebar-bg);">
           <button onclick="closeTeamWorkspace()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;">←</button>
           <span id="twTeamName" style="font-weight:600;font-size:16px;"></span>
+          <span id="twProjectName" style="font-size:13px;color:var(--muted);"></span>
           <span id="twTeamDesc" style="font-size:12px;color:var(--muted);margin-left:8px;flex:1;"></span>
-          <button id="twProjectBtn" onclick="twToggleProjectPanel()" style="padding:6px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;">📁 Proje</button>
+          <button id="twCollabBtn" onclick="twToggleCollabPanel()" style="padding:6px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;">🧠 Collaboration</button>
+          <button id="twProjectBtn" onclick="twToggleProjectsManager()" style="padding:6px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;">📁 Projeler</button>
         </div>
         <!-- Master Prompt Bar -->
         <div id="twMasterBar" style="padding:12px 20px;border-bottom:1px solid var(--border);background:var(--sidebar-bg);display:flex;gap:10px;align-items:end;">
@@ -243,6 +223,56 @@
           </div>
           <iframe id="twPreviewFrame" style="flex:1;border:none;background:#fff;" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-popups-to-escape-sandbox" allow="camera;microphone;fullscreen;clipboard-read;clipboard-write"></iframe>
         </div>
+
+        <div id="twCollabPanel" class="tw-collab-panel" style="display:none;">
+          <div class="tw-collab-header">
+            <div>
+              <div class="tw-collab-title">Collaboration Run</div>
+              <div id="twCollabMeta" class="tw-collab-meta">Henüz run yok.</div>
+            </div>
+            <div class="tw-collab-actions">
+              <button onclick="twRefreshCollabPanel()" class="tw-collab-action-btn">↻ Yenile</button>
+              <button onclick="twToggleCollabPanel()" class="tw-collab-close">✕</button>
+            </div>
+          </div>
+          <div class="tw-collab-grid">
+            <section class="tw-collab-section">
+              <div class="tw-collab-section-title">Shared Memory</div>
+              <div id="twCollabMemory" class="tw-collab-list"></div>
+            </section>
+            <section class="tw-collab-section">
+              <div class="tw-collab-section-title">Handoff Messages</div>
+              <div id="twCollabMessages" class="tw-collab-list"></div>
+            </section>
+            <section class="tw-collab-section">
+              <div class="tw-collab-section-title">Dependencies</div>
+              <div id="twCollabDeps" class="tw-collab-list"></div>
+            </section>
+            <section class="tw-collab-section">
+              <div class="tw-collab-section-title">File Proposals</div>
+              <div id="twCollabProposals" class="tw-collab-list"></div>
+            </section>
+          </div>
+        </div>
+
+        <div id="twProjectGate" style="display:none;position:absolute;inset:0;background:rgba(10,10,10,0.82);z-index:45;align-items:center;justify-content:center;padding:24px;">
+          <div style="width:min(760px,92vw);background:var(--bg);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.45);">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border);background:var(--sidebar-bg);display:flex;justify-content:space-between;align-items:center;gap:12px;">
+              <div>
+                <div style="font-weight:600;font-size:16px;">Takım Projeleri</div>
+                <div id="twProjectGateHint" style="font-size:12px;color:var(--muted);margin-top:4px;">Workspace'e girmeden önce bu takım için bir proje seç veya oluştur.</div>
+              </div>
+              <button onclick="twToggleProjectsManager(false)" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">✕</button>
+            </div>
+            <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px;max-height:70vh;overflow:auto;">
+              <div style="display:flex;gap:8px;">
+                <input id="twNewProjectInput" type="text" placeholder="Yeni proje adı" style="flex:1;padding:10px 12px;background:var(--sidebar-bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;">
+                <button onclick="twCreateProject()" style="padding:10px 14px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-family:inherit;cursor:pointer;">+ Oluştur</button>
+              </div>
+              <div id="twProjectSelectList" style="display:flex;flex-direction:column;gap:10px;"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   </div>
@@ -268,6 +298,61 @@
           Yeni sohbet
         </button>
         <div class="search-results-list" id="searchResultsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="search-overlay" id="memberSettingsOverlay">
+    <div class="member-settings-modal" role="dialog" aria-modal="true">
+      <div class="member-settings-header">
+        <div class="member-settings-title-wrap">
+          <span id="memberChatIcon" class="member-settings-icon">🤖</span>
+          <div>
+            <div id="memberChatName" class="member-settings-title">Takım Üyesi</div>
+            <div id="memberChatDesc" class="member-settings-subtitle"></div>
+          </div>
+        </div>
+        <button class="search-close-btn" onclick="closeMemberChat()" aria-label="Kapat">×</button>
+      </div>
+      <div id="memberSettingsBody" class="member-settings-body">
+        <div class="member-settings-grid">
+          <label class="member-settings-field member-settings-field-wide">
+            <span>Rol Adı</span>
+            <input id="memberSettingsRole" type="text" />
+          </label>
+          <label class="member-settings-field">
+            <span>İkon</span>
+            <input id="memberSettingsIcon" type="text" />
+          </label>
+          <label class="member-settings-field">
+            <span>Model</span>
+            <select id="memberSettingsModel">
+              <option value="gpt-4o-mini">GPT-4o Mini</option>
+              <option value="gpt-4o">GPT-4o</option>
+              <option value="groq:llama-3.1-8b-instant">Groq Llama 3.1 8B</option>
+              <option value="groq:llama-3.3-70b-versatile">Groq Llama 3.3 70B</option>
+              <option value="groq:mixtral-8x7b-32768">Groq Mixtral 8x7B</option>
+              <option value="openrouter:anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+              <option value="openrouter:google/gemini-pro-1.5">Gemini Pro 1.5</option>
+            </select>
+          </label>
+          <label class="member-settings-field member-settings-field-wide">
+            <span>Açıklama</span>
+            <input id="memberSettingsDesc" type="text" />
+          </label>
+          <div class="member-settings-field member-settings-field-wide">
+            <span>Bağımlılıklar</span>
+            <div id="memberSettingsDeps" class="member-settings-deps"></div>
+          </div>
+          <label class="member-settings-field member-settings-field-wide">
+            <span>System Prompt</span>
+            <textarea id="memberSettingsPrompt" rows="12"></textarea>
+          </label>
+        </div>
+      </div>
+      <div class="member-settings-footer">
+        <button class="search-new-chat" onclick="closeMemberChat()">Kapat</button>
+        <button class="member-settings-save" onclick="saveMemberSettings()">Kaydet</button>
       </div>
     </div>
   </div>

@@ -167,6 +167,222 @@ function getModelShortName() {
   return parts.length > 0 ? parts.join(" ") : "Lite";
 }
 
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function parseAgentResponse(rawText) {
+  const source = String(rawText || "");
+  const normalizedSource = normalizeInlineFileMarkers(source);
+  const codeBlocks = [];
+  const codeRegex = /```([a-zA-Z0-9_+\-]*)?(?::([^\n`]+))?\n([\s\S]*?)```/g;
+
+  let text = normalizedSource.replace(codeRegex, (_, lang = "", path = "", code = "") => {
+    const cleanLang = (lang || "text").trim() || "text";
+    const cleanPath = (path || "").trim();
+    codeBlocks.push({
+      lang: cleanLang,
+      path: cleanPath,
+      code: String(code || "").replace(/\s+$/, "")
+    });
+    return "\n";
+  });
+
+  let brainstorm = "";
+  const brainstormMatch = text.match(
+    /(?:^|\n)\s*(?:\*\*)?\s*(Brainstorming|Beyin\s*F[ıi]rt[ıi]nas[ıi]|D[üu]s[üu]nce(?:\s*Notu)?|Yaklasim|Yaklaşım)\s*:?\s*(?:\*\*)?\s*([\s\S]*?)(?=\n\s*(?:\*\*)?\s*(?:Deliverable|Teslim|Sonu[cç]|Output)\s*:|$)/i
+  );
+
+  if (brainstormMatch) {
+    brainstorm = brainstormMatch[2].trim();
+    text = text.replace(brainstormMatch[0], "\n");
+  }
+
+  text = text.replace(/(?:^|\n)\s*(?:\*\*)?\s*(Deliverable|Teslim|Sonu[cç]|Output)\s*:?\s*(?:\*\*)?/gi, "\n");
+  text = text.replace(/(?:^|\n)\s*(?:\*\*)?\s*Durum\s*:?\s*(?:\*\*)?/gi, "\n");
+
+  const narrative = text.replace(/\n{3,}/g, "\n\n").trim();
+  const publicSummary = extractPublicSummary(normalizedSource, narrative);
+
+  if (!brainstorm) {
+    const fallback = extractLiveProgressText(normalizedSource, 180);
+    if (fallback) {
+      brainstorm = fallback;
+    } else if (codeBlocks.length > 0) {
+      brainstorm = "Gorev adimlari tamamlandi, kod degisiklikleri dosyalara aktariyorum.";
+    }
+  }
+
+  return { brainstorm, narrative: publicSummary || narrative, codeBlocks };
+}
+
+function normalizeInlineFileMarkers(rawText) {
+  const lines = String(rawText || "").split("\n");
+  const markerRegex = /^\s*`?([a-zA-Z0-9_+\-]+):([a-zA-Z0-9_./\-]+\.[a-zA-Z0-9]+)`?\s*$/;
+  const out = [];
+
+  let i = 0;
+  while (i < lines.length) {
+    const marker = lines[i].match(markerRegex);
+    if (!marker) {
+      out.push(lines[i]);
+      i += 1;
+      continue;
+    }
+
+    const lang = marker[1];
+    const filePath = marker[2];
+    let j = i + 1;
+    while (j < lines.length && !lines[j].match(markerRegex)) {
+      j += 1;
+    }
+
+    const codeContent = lines
+      .slice(i + 1, j)
+      .join("\n")
+      .replace(/^\n+/, "")
+      .replace(/\n+$/, "");
+
+    out.push("");
+    out.push("```" + lang + ":" + filePath);
+    out.push(codeContent);
+    out.push("```");
+    out.push("");
+
+    i = j;
+  }
+
+  return out.join("\n");
+}
+
+function extractLiveProgressText(rawText, maxLen = 260) {
+  const normalized = normalizeInlineFileMarkers(rawText);
+  let text = String(normalized || "");
+
+  text = text.replace(/```[a-zA-Z0-9_+\-]*(?::[^\n`]+)?\n[\s\S]*?```/g, "\n");
+  text = text.replace(/(?:^|\n)\s*(?:\*\*)?\s*(Deliverable|Teslim|Sonu[cç]|Output|Durum)\s*:?\s*(?:\*\*)?/gi, "\n");
+  text = text.replace(/(?:^|\n)\s*#{1,6}\s+/g, "\n");
+  text = text.replace(/\n{3,}/g, "\n\n").trim();
+
+  if (!text) return "";
+
+  const stepMatch = text.match(/Ad[ıi]m\s*\d+\s*:[^\n.]*/i);
+  if (stepMatch && stepMatch[0]) {
+    const s = stepMatch[0].replace(/\s+/g, " ").trim();
+    return s.length > maxLen ? `${s.slice(0, maxLen).trim()}...` : s;
+  }
+
+  const compact = text.replace(/\s+/g, " ").trim();
+  return compact.length > maxLen ? `${compact.slice(0, maxLen).trim()}...` : compact;
+}
+
+function extractPublicSummary(rawText, fallback = "") {
+  const normalized = normalizeInlineFileMarkers(rawText);
+  let text = String(normalized || "");
+
+  text = text.replace(/```[a-zA-Z0-9_+\-]*(?::[^\n`]+)?\n[\s\S]*?```/g, "\n");
+  text = text.replace(/\r/g, "");
+
+  const preferred = text.match(/(Bu g[üu]ncellemeler(?:le)? birlikte[\s\S]*)/i);
+  if (preferred && preferred[1]) {
+    return preferred[1].replace(/\n{3,}/g, "\n\n").trim();
+  }
+
+  const paragraphs = text
+    .split(/\n\s*\n/)
+    .map((p) => p.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .filter((p) => !/^(Brainstorming|Durum|Deliverable|Ad[ıi]m\s*\d+|#+\s|G[üu]ncellenmi[sş])/i.test(p));
+
+  if (paragraphs.length > 0) return paragraphs[paragraphs.length - 1];
+  return String(fallback || "").trim();
+}
+
+function getBrainstormSummary(text) {
+  const normalized = String(text || "").replace(/\s+/g, " ").trim();
+  if (!normalized) return "Brainstorming";
+  return normalized.length > 96 ? `${normalized.slice(0, 96).trim()}...` : normalized;
+}
+
+function renderAgentStructuredContent(container, rawText, collapsed = true) {
+  if (!container) return;
+  const parsed = parseAgentResponse(rawText);
+  container.textContent = "";
+
+  if (parsed.brainstorm && !parsed.narrative) {
+    const brainstormDetails = document.createElement("details");
+    brainstormDetails.className = "agent-brainstorm-details";
+    if (!collapsed) brainstormDetails.open = true;
+
+    const brainstormSummary = document.createElement("summary");
+    brainstormSummary.className = "agent-brainstorm-summary";
+    brainstormSummary.textContent = `Brainstorming: ${getBrainstormSummary(parsed.brainstorm)}`;
+
+    const brainstormBody = document.createElement("div");
+    brainstormBody.className = "agent-brainstorm-body";
+    brainstormBody.textContent = parsed.brainstorm;
+
+    brainstormDetails.appendChild(brainstormSummary);
+    brainstormDetails.appendChild(brainstormBody);
+    container.appendChild(brainstormDetails);
+  }
+
+  if (parsed.narrative) {
+    const narrativeEl = document.createElement("div");
+    narrativeEl.className = "agent-narrative";
+    narrativeEl.textContent = parsed.narrative;
+    container.appendChild(narrativeEl);
+  }
+
+  if (parsed.codeBlocks.length > 0) {
+    const group = document.createElement("div");
+    group.className = "agent-code-group";
+
+    parsed.codeBlocks.forEach((block, idx) => {
+      const details = document.createElement("details");
+      details.className = "agent-code-details";
+      if (!collapsed) details.open = true;
+
+      const summary = document.createElement("summary");
+      summary.className = "agent-code-summary";
+
+      const summaryTitle = document.createElement("span");
+      summaryTitle.className = "agent-code-title";
+      summaryTitle.textContent = block.path || `Kod Bloğu ${idx + 1}`;
+
+      const summaryMeta = document.createElement("span");
+      summaryMeta.className = "agent-code-meta";
+      summaryMeta.textContent = block.lang;
+
+      summary.appendChild(summaryTitle);
+      summary.appendChild(summaryMeta);
+
+      const panel = document.createElement("div");
+      panel.className = "agent-code-panel";
+      const pre = document.createElement("pre");
+      const code = document.createElement("code");
+      code.textContent = block.code;
+      pre.appendChild(code);
+      panel.appendChild(pre);
+
+      details.appendChild(summary);
+      details.appendChild(panel);
+      group.appendChild(details);
+    });
+
+    container.appendChild(group);
+  }
+
+  if (!parsed.brainstorm && !parsed.narrative && parsed.codeBlocks.length === 0) {
+    container.textContent = String(rawText || "");
+  }
+}
+
 function createMessageElement(text, sender, isTyping = false, images = [], modelName = null) {
   const row = document.createElement("div");
   row.className = `message-row ${sender === "user" ? "user-row" : "bot-row"}`;
@@ -774,6 +990,10 @@ autoResizeTextarea();
 // ===== TEAM WORKSPACE =====
 let twCurrentTeam = null;
 let twSending = false;
+let twCurrentRunId = null;
+let twCollabPanelOpen = false;
+let twCurrentProject = null;
+let twProjectsManagerOpen = false;
 
 async function loadTeamList() {
   const list = document.getElementById('teamList');
@@ -819,6 +1039,103 @@ function toggleTeamMembers(teamId) {
   if (arrow) arrow.style.transform = isOpen ? '' : 'rotate(90deg)';
 }
 
+function twRenderProjectGate(projects = [], activeProject = null) {
+  const gate = document.getElementById('twProjectGate');
+  const list = document.getElementById('twProjectSelectList');
+  const label = document.getElementById('twProjectName');
+  const hint = document.getElementById('twProjectGateHint');
+  const projectBtn = document.getElementById('twProjectBtn');
+  if (!gate || !list) return;
+
+  twCurrentProject = activeProject || null;
+  label.textContent = twCurrentProject ? `/ ${twCurrentProject.name}` : '/ Proje seçilmedi';
+  if (hint) {
+    hint.textContent = twCurrentProject
+      ? 'Bu takım için projeleri yönetebilir, aktif projeyi değiştirebilir veya silebilirsin.'
+      : 'Workspace kullanmadan önce bu takım için bir proje seç veya oluştur.';
+  }
+  gate.style.display = (!twCurrentProject || twProjectsManagerOpen) ? 'flex' : 'none';
+  if (projectBtn) {
+    projectBtn.style.background = twProjectsManagerOpen ? 'var(--accent)' : 'var(--bg)';
+    projectBtn.style.color = twProjectsManagerOpen ? '#fff' : 'var(--text)';
+  }
+  if (!projects.length) {
+    list.innerHTML = '<div style="padding:14px;border:1px dashed var(--border);border-radius:12px;color:var(--muted);font-size:13px;">Henüz proje yok. Aşağıdan ilk projeni oluştur.</div>';
+    return;
+  }
+
+  list.innerHTML = projects.map((project) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--sidebar-bg);">
+      <div>
+        <div style="font-weight:600;font-size:13px;">${project.name}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">${project.is_active ? 'Aktif proje' : 'Projeyi workspace için seçebilirsin'}</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="twSelectProject('${project.id}')" style="padding:8px 12px;background:var(--accent);border:none;border-radius:8px;color:#fff;cursor:pointer;font-family:inherit;font-size:12px;">Projeye Gir</button>
+        <button onclick="twDeleteProject('${project.id}')" style="padding:8px 12px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;font-family:inherit;font-size:12px;">Sil</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function twToggleProjectsManager(forceOpen) {
+  const nextOpen = typeof forceOpen === 'boolean' ? forceOpen : !twProjectsManagerOpen;
+  if (!twCurrentProject && !nextOpen) return;
+  twProjectsManagerOpen = nextOpen;
+  twRenderProjectGate(twCurrentTeam?.projects || [], twCurrentProject);
+}
+
+async function twLoadProjectGate() {
+  if (!twCurrentTeam) return;
+  const result = await api.listTeamProjects(twCurrentTeam.id);
+  if (!result.active_project && (result.projects || []).length > 0) {
+    const activated = await api.activateTeamProject(twCurrentTeam.id, result.projects[0].id);
+    twCurrentTeam.projects = activated.projects || [];
+    twCurrentTeam.active_project = activated.project || null;
+    twRenderProjectGate(twCurrentTeam.projects, twCurrentTeam.active_project);
+    return;
+  }
+  twCurrentTeam.projects = result.projects || [];
+  twCurrentTeam.active_project = result.active_project || null;
+  twRenderProjectGate(twCurrentTeam.projects, twCurrentTeam.active_project);
+}
+
+async function twCreateProject() {
+  if (!twCurrentTeam) return;
+  const input = document.getElementById('twNewProjectInput');
+  const name = input.value.trim();
+  if (!name) return;
+  const result = await api.createTeamProject(twCurrentTeam.id, name);
+  twCurrentTeam.projects = result.projects || [];
+  twCurrentProject = result.project || null;
+  twCurrentTeam.active_project = twCurrentProject;
+  twProjectsManagerOpen = false;
+  input.value = '';
+  twRenderProjectGate(twCurrentTeam.projects, twCurrentProject);
+  twRefreshPreview();
+}
+
+async function twSelectProject(projectId) {
+  if (!twCurrentTeam) return;
+  const result = await api.activateTeamProject(twCurrentTeam.id, projectId);
+  twCurrentTeam.projects = result.projects || [];
+  twCurrentProject = result.project || null;
+  twCurrentTeam.active_project = twCurrentProject;
+  twProjectsManagerOpen = false;
+  twRenderProjectGate(twCurrentTeam.projects, twCurrentProject);
+  twRefreshPreview();
+}
+
+async function twDeleteProject(projectId) {
+  if (!twCurrentTeam) return;
+  const result = await api.deleteTeamProject(twCurrentTeam.id, projectId);
+  twCurrentTeam.projects = result.projects || [];
+  twCurrentProject = result.active_project || null;
+  twCurrentTeam.active_project = twCurrentProject;
+  twProjectsManagerOpen = !twCurrentProject;
+  twRenderProjectGate(twCurrentTeam.projects, twCurrentProject);
+}
+
 async function switchToMemberChat(teamId, memberId) {
   let team;
   try { team = await api.getTeam(teamId); } catch(e) { console.error(e); return; }
@@ -841,150 +1158,101 @@ async function switchToMemberChat(teamId, memberId) {
   const btn = document.getElementById(`tmb-${memberId}`);
   if (btn) btn.style.background = 'rgba(100,108,255,0.15)';
 
-  // Sağ paneli aç
-  const panel = document.getElementById('memberChatPanel');
-  panel.style.display = 'flex';
+  const overlay = document.getElementById('memberSettingsOverlay');
+  if (overlay) overlay.classList.add('active');
   document.getElementById('memberChatIcon').textContent = member.icon || '🤖';
   document.getElementById('memberChatName').textContent = member.role_name;
   document.getElementById('memberChatDesc').textContent = member.description || member.model || '';
-
-  // Mesajları temizle ve yükle
-  const msgContainer = document.getElementById('memberChatMessages');
-  msgContainer.innerHTML = '';
-
-  try {
-    const messages = await api.getMemberMessages(teamId, memberId);
-    if (messages && messages.length > 0) {
-      messages.forEach(msg => {
-        createMemberBubble(msg.content, msg.role === 'user' ? 'user' : 'bot');
-      });
-    } else {
-      msgContainer.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px;font-size:13px;">Henüz mesaj yok. Aşağıdan yazın.</div>';
-    }
-  } catch(e) { console.error('Load member messages error:', e); }
-
-  document.getElementById('memberChatInput').focus();
+  renderMemberSettings(member, team.members || []);
+  const roleInput = document.getElementById('memberSettingsRole');
+  if (roleInput) roleInput.focus();
 }
 
 function closeMemberChat() {
   activeTeamMember = null;
-  document.getElementById('memberChatPanel').style.display = 'none';
+  const overlay = document.getElementById('memberSettingsOverlay');
+  if (overlay) overlay.classList.remove('active');
   document.querySelectorAll('.team-member-btn').forEach(b => b.style.background = 'transparent');
 }
 
-function createMemberBubble(text, sender) {
-  const msgContainer = document.getElementById('memberChatMessages');
-  // Placeholder mesajı varsa kaldır
-  const placeholder = msgContainer.querySelector('[data-placeholder]');
-  if (placeholder) placeholder.remove();
+function renderMemberSettings(member, members) {
+  const roleEl = document.getElementById('memberSettingsRole');
+  const iconEl = document.getElementById('memberSettingsIcon');
+  const descEl = document.getElementById('memberSettingsDesc');
+  const modelEl = document.getElementById('memberSettingsModel');
+  const promptEl = document.getElementById('memberSettingsPrompt');
+  const depsEl = document.getElementById('memberSettingsDeps');
+  if (!roleEl || !depsEl) return;
 
-  const row = document.createElement('div');
-  row.style.cssText = `display:flex;${sender === 'user' ? 'justify-content:flex-end;' : 'justify-content:flex-start;'}`;
-
-  const bubble = document.createElement('div');
-  bubble.style.cssText = `max-width:85%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word;${
-    sender === 'user'
-      ? 'background:var(--accent);color:#fff;border-bottom-right-radius:4px;'
-      : 'background:var(--sidebar-bg);color:var(--text);border-bottom-left-radius:4px;border:1px solid var(--border);'
-  }`;
-  bubble.textContent = text;
-
-  row.appendChild(bubble);
-  msgContainer.appendChild(row);
-  msgContainer.scrollTop = msgContainer.scrollHeight;
-  return bubble;
+  roleEl.value = member.role_name || '';
+  iconEl.value = member.icon || '🤖';
+  descEl.value = member.description || '';
+  modelEl.value = member.model || 'gpt-4o-mini';
+  promptEl.value = member.system_prompt || '';
+  const selected = new Set(member.depends_on || []);
+  const options = (members || []).filter((m) => m.id !== member.id);
+  depsEl.innerHTML = options.length ? options.map((m) => `
+    <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border);border-radius:999px;background:rgba(255,255,255,0.03);font-size:12px;">
+      <input type="checkbox" value="${m.id}" ${selected.has(m.id) ? 'checked' : ''}>
+      ${m.icon || '🤖'} ${m.role_name}
+    </label>
+  `).join('') : '<div style="font-size:12px;color:var(--muted);">Bu üye için seçilebilir bağımlılık yok.</div>';
 }
 
-let memberSending = false;
-async function sendMemberChatMsg() {
-  if (!activeTeamMember || memberSending) return;
-  const input = document.getElementById('memberChatInput');
-  const text = input.value.trim();
-  if (!text) return;
-
-  memberSending = true;
-  input.value = '';
-
-  // Kullanıcı balonu
-  createMemberBubble(text, 'user');
-
-  // Bot balonu (typing)
-  const botBubble = createMemberBubble('⏳ Düşünüyor...', 'bot');
-
+async function saveMemberSettings() {
+  if (!activeTeamMember) return;
+  const payload = {
+    role_name: document.getElementById('memberSettingsRole').value.trim(),
+    icon: document.getElementById('memberSettingsIcon').value.trim() || '🤖',
+    description: document.getElementById('memberSettingsDesc').value.trim(),
+    model: document.getElementById('memberSettingsModel').value,
+    system_prompt: document.getElementById('memberSettingsPrompt').value.trim(),
+  };
+  const depends_on = [...document.querySelectorAll('#memberSettingsDeps input:checked')].map((el) => el.value);
   try {
-    const response = await api.sendTeamChat(
-      activeTeamMember.teamId,
-      activeTeamMember.memberId,
-      text,
-      activeTeamMember.model
-    );
-
-    if (!response.ok) {
-      botBubble.textContent = 'Hata: ' + (await response.text());
-      return;
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder('utf-8');
-    botBubble.textContent = '';
-
-    let fullResponse = '';
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      botBubble.textContent += chunk;
-      fullResponse += chunk;
-      document.getElementById('memberChatMessages').scrollTop = document.getElementById('memberChatMessages').scrollHeight;
-    }
-  } catch (error) {
-    botBubble.textContent = 'Bağlantı hatası: ' + error.message;
-    console.error(error);
-  } finally {
-    memberSending = false;
-    input.focus();
+    const updated = await api.updateMemberModel(activeTeamMember.teamId, activeTeamMember.memberId, payload.model, depends_on, payload);
+    activeTeamMember.roleName = updated.role_name;
+    activeTeamMember.icon = updated.icon;
+    activeTeamMember.model = updated.model;
+    activeTeamMember.description = updated.description || '';
+    document.getElementById('memberChatIcon').textContent = updated.icon || '🤖';
+    document.getElementById('memberChatName').textContent = updated.role_name;
+    document.getElementById('memberChatDesc').textContent = updated.description || updated.model || '';
+    await loadTeamsToSidebar();
+    await switchToMemberChat(activeTeamMember.teamId, activeTeamMember.memberId);
+  } catch (e) {
+    console.error('Save member settings error:', e);
   }
 }
 
-// Resize handle for member chat panel
-(function initMemberResize() {
-  const handle = document.getElementById('memberResizeHandle');
-  const panel = document.getElementById('memberChatPanel');
-  if (!handle || !panel) return;
-  let isResizing = false;
+(function initMemberSettingsOverlayHandlers() {
+  const overlay = document.getElementById('memberSettingsOverlay');
+  if (!overlay) return;
 
-  handle.addEventListener('mousedown', (e) => {
-    isResizing = true;
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-    e.preventDefault();
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) closeMemberChat();
   });
 
-  document.addEventListener('mousemove', (e) => {
-    if (!isResizing) return;
-    const mainWrap = document.getElementById('mainChatWrap');
-    const wrapRect = mainWrap.getBoundingClientRect();
-    let newWidth = wrapRect.right - e.clientX;
-    newWidth = Math.max(280, Math.min(newWidth, wrapRect.width * 0.7));
-    panel.style.width = newWidth + 'px';
-  });
-
-  document.addEventListener('mouseup', () => {
-    if (isResizing) {
-      isResizing = false;
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && overlay.classList.contains('active')) {
+      closeMemberChat();
     }
   });
 })();
 
 async function openTeamWorkspace(teamId) {
   try {
+  closeMemberChat();
   const team = await api.getTeam(teamId);
   if (!team) return;
   twCurrentTeam = team;
+  twCurrentProject = team.active_project || null;
+  twCurrentRunId = null;
+  twToggleCollabPanel(false);
+  twProjectsManagerOpen = !twCurrentProject;
 
   document.getElementById('twTeamName').textContent = team.name;
+  document.getElementById('twProjectName').textContent = team.active_project ? `/ ${team.active_project.name}` : '/ Proje seç';
   document.getElementById('twTeamDesc').textContent = team.description || '';
   document.getElementById('twMasterInput').value = '';
 
@@ -1031,6 +1299,7 @@ async function openTeamWorkspace(teamId) {
 
   const ws = document.getElementById('teamWorkspace');
   ws.style.display = 'flex';
+  await twLoadProjectGate();
 
   // Her üyenin önceki mesajlarını yükle
   for (const m of (team.members || [])) {
@@ -1039,9 +1308,7 @@ async function openTeamWorkspace(teamId) {
       const content = document.getElementById(`tw-content-${m.id}`);
       if (content && messages && messages.length > 0) {
         content.style.color = 'var(--text)';
-        content.textContent = messages.map(msg =>
-          (msg.role === 'user' ? '👤 ' : '🤖 ') + msg.content
-        ).join('\n\n');
+        twRenderMemberHistory(content, messages);
         content.scrollTop = content.scrollHeight;
       } else if (content) {
         content.textContent = 'Henüz mesaj yok.';
@@ -1092,6 +1359,24 @@ function twInitMembersResize() {
   });
 }
 
+function twRenderMemberHistory(container, messages) {
+  if (!container) return;
+  container.textContent = '';
+
+  messages.forEach((msg) => {
+    const row = document.createElement('div');
+    row.className = `tw-inline-msg ${msg.role === 'user' ? 'user' : 'assistant'}`;
+
+    if (msg.role === 'user') {
+      row.textContent = msg.content;
+    } else {
+      renderAgentStructuredContent(row, msg.content, true);
+    }
+
+    container.appendChild(row);
+  });
+}
+
 function twAddFlowMessage(icon, title, content, type) {
   const flow = document.getElementById('twFlowMessages');
   // İlk placeholder'ı kaldır
@@ -1103,12 +1388,28 @@ function twAddFlowMessage(icon, title, content, type) {
 
   const msg = document.createElement('div');
   msg.style.cssText = `padding:12px 16px;border-left:3px solid ${borderColor};background:var(--sidebar-bg);border-radius:0 8px 8px 0;font-size:13px;line-height:1.6;`;
-  msg.innerHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-    <span style="font-size:14px;">${icon}</span>
-    <span style="font-weight:600;font-size:12px;">${title}</span>
-    <span style="font-size:10px;color:var(--muted);margin-left:auto;">${new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})}</span>
-  </div>
-  <div style="white-space:pre-wrap;word-break:break-word;color:var(--text);font-size:12px;">${content}</div>`;
+
+  const header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:6px;';
+  const iconEl = document.createElement('span');
+  iconEl.style.fontSize = '14px';
+  iconEl.textContent = icon;
+  const titleEl = document.createElement('span');
+  titleEl.style.cssText = 'font-weight:600;font-size:12px;';
+  titleEl.textContent = title;
+  const timeEl = document.createElement('span');
+  timeEl.style.cssText = 'font-size:10px;color:var(--muted);margin-left:auto;';
+  timeEl.textContent = new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+  header.appendChild(iconEl);
+  header.appendChild(titleEl);
+  header.appendChild(timeEl);
+
+  const body = document.createElement('div');
+  body.style.cssText = 'white-space:pre-wrap;word-break:break-word;color:var(--text);font-size:12px;';
+  body.textContent = content;
+
+  msg.appendChild(header);
+  msg.appendChild(body);
   flow.appendChild(msg);
   flow.scrollTop = flow.scrollHeight;
 }
@@ -1134,23 +1435,68 @@ function twAddFlowFileCard(icon, roleName, files, step) {
   if (updated.length) summary.push(`~${updated.length} güncelleme`);
   const stepLabel = step ? ` · Adım ${step}` : '';
 
-  card.innerHTML = `
-    <div class="tw-flow-card-header" onclick="document.getElementById('${cardId}').classList.toggle('open')">
-      <span style="font-size:14px;">${icon}</span>
-      <span style="font-weight:600;font-size:12px;flex:1;">${roleName} — Dosyalar</span>
-      <span style="font-size:10px;color:var(--muted);">${summary.join(' · ')}${stepLabel}</span>
-      <span style="font-size:10px;color:var(--muted);margin-left:4px;">${new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})}</span>
-      <span style="font-size:10px;color:var(--muted);margin-left:4px;">▶</span>
-    </div>
-    <div class="tw-flow-card-body" id="${cardId}">
-      ${added.map(f => `<div class="tw-flow-file-row"><span class="file-badge added">+ yeni</span><span style="font-family:monospace;">${f.path}</span></div>`).join('')}
-      ${updated.map(f => `<div class="tw-flow-file-row"><span class="file-badge updated">~ güncellendi</span><span style="font-family:monospace;">${f.path}</span></div>`).join('')}
-    </div>`;
+  const header = document.createElement('div');
+  header.className = 'tw-flow-card-header';
+  const iconEl = document.createElement('span');
+  iconEl.style.fontSize = '14px';
+  iconEl.textContent = icon;
+  const roleEl = document.createElement('span');
+  roleEl.style.cssText = 'font-weight:600;font-size:12px;flex:1;';
+  roleEl.textContent = `${roleName} — Dosyalar`;
+  const summaryEl = document.createElement('span');
+  summaryEl.style.cssText = 'font-size:10px;color:var(--muted);';
+  summaryEl.textContent = `${summary.join(' · ')}${stepLabel}`;
+  const timeEl = document.createElement('span');
+  timeEl.style.cssText = 'font-size:10px;color:var(--muted);margin-left:4px;';
+  timeEl.textContent = new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+  const arrow = document.createElement('span');
+  arrow.style.cssText = 'font-size:10px;color:var(--muted);margin-left:4px;';
+  arrow.textContent = '▶';
+  header.appendChild(iconEl);
+  header.appendChild(roleEl);
+  header.appendChild(summaryEl);
+  header.appendChild(timeEl);
+  header.appendChild(arrow);
 
-  // Toggle arrow on click
-  const header = card.querySelector('.tw-flow-card-header');
-  const arrow = header.querySelector('span:last-child');
-  header.addEventListener('click', () => { arrow.textContent = arrow.textContent === '▶' ? '▼' : '▶'; });
+  const body = document.createElement('div');
+  body.className = 'tw-flow-card-body';
+  body.id = cardId;
+
+  added.forEach((f) => {
+    const row = document.createElement('div');
+    row.className = 'tw-flow-file-row';
+    const badge = document.createElement('span');
+    badge.className = 'file-badge added';
+    badge.textContent = '+ yeni';
+    const path = document.createElement('span');
+    path.style.fontFamily = 'monospace';
+    path.textContent = f.path;
+    row.appendChild(badge);
+    row.appendChild(path);
+    body.appendChild(row);
+  });
+
+  updated.forEach((f) => {
+    const row = document.createElement('div');
+    row.className = 'tw-flow-file-row';
+    const badge = document.createElement('span');
+    badge.className = 'file-badge updated';
+    badge.textContent = '~ güncellendi';
+    const path = document.createElement('span');
+    path.style.fontFamily = 'monospace';
+    path.textContent = f.path;
+    row.appendChild(badge);
+    row.appendChild(path);
+    body.appendChild(row);
+  });
+
+  header.addEventListener('click', () => {
+    body.classList.toggle('open');
+    arrow.textContent = body.classList.contains('open') ? '▼' : '▶';
+  });
+
+  card.appendChild(header);
+  card.appendChild(body);
 
   flow.appendChild(card);
   flow.scrollTop = flow.scrollHeight;
@@ -1159,6 +1505,10 @@ function twAddFlowFileCard(icon, roleName, files, step) {
 function closeTeamWorkspace() {
   document.getElementById('teamWorkspace').style.display = 'none';
   twCurrentTeam = null;
+  twCurrentProject = null;
+  twCurrentRunId = null;
+  twProjectsManagerOpen = false;
+  twToggleCollabPanel(false);
 }
 
 let twPromptExpanded = false;
@@ -1199,11 +1549,21 @@ async function twSendMemberChat(memberId) {
 
   input.value = '';
   const content = document.getElementById(`tw-content-${memberId}`);
-  
-  // Mevcut içeriğe kullanıcı mesajını ekle
-  const prev = content.textContent === 'Bekleniyor...' ? '' : content.textContent;
-  content.style.color = 'var(--text)';
-  content.textContent = prev + (prev ? '\n\n' : '') + '👤 ' + message + '\n\n🤖 ';
+
+  if (content.textContent === 'Bekleniyor...' || content.textContent === 'Henüz mesaj yok.') {
+    content.textContent = '';
+  }
+
+  const userRow = document.createElement('div');
+  userRow.className = 'tw-inline-msg user';
+  userRow.textContent = message;
+  content.appendChild(userRow);
+
+  const botRow = document.createElement('div');
+  botRow.className = 'tw-inline-msg assistant';
+  botRow.textContent = 'Düşünüyor...';
+  content.appendChild(botRow);
+  twAutoScroll(content);
 
   const member = (twCurrentTeam.members || []).find(x => x.id === memberId);
   const model = member?.model || 'gpt-4o-mini';
@@ -1211,19 +1571,25 @@ async function twSendMemberChat(memberId) {
   try {
     const response = await api.sendTeamChat(twCurrentTeam.id, memberId, message, model);
     if (!response.ok) {
-      content.textContent += 'Hata: ' + (await response.text());
+      botRow.textContent = 'Hata: ' + (await response.text());
       return;
     }
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
+    botRow.textContent = 'Uye su an ciktiyi hazirliyor...';
+    let fullResponse = '';
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      content.textContent += decoder.decode(value, { stream: true });
-      content.scrollTop = content.scrollHeight;
+      const chunk = decoder.decode(value, { stream: true });
+      fullResponse += chunk;
+      const live = extractLiveProgressText(fullResponse, 140);
+      botRow.textContent = live ? `Thinking... ${live}` : 'Thinking...';
+      twAutoScroll(content);
     }
+    renderAgentStructuredContent(botRow, fullResponse, true);
   } catch (e) {
-    content.textContent += 'Hata: ' + e.message;
+    botRow.textContent = 'Hata: ' + e.message;
   }
 }
 
@@ -1244,12 +1610,27 @@ function twGetOrCreateStep(memberId, stepNum, totalSteps, desc) {
     stepEl = document.createElement('div');
     stepEl.id = `tw-step-${memberId}-${stepNum}`;
     stepEl.className = 'tw-step running';
-    stepEl.innerHTML = `
-      <div class="tw-step-header">
-        <span class="tw-spinner" style="width:10px;height:10px;border-width:1.5px;"></span>
-        <span>Adım ${stepNum}/${totalSteps}: ${desc || ''}</span>
-      </div>
-      <div class="tw-step-content" id="tw-step-text-${memberId}-${stepNum}"></div>`;
+
+    const header = document.createElement('div');
+    header.className = 'tw-step-header';
+    const spinner = document.createElement('span');
+    spinner.className = 'tw-spinner';
+    spinner.style.width = '10px';
+    spinner.style.height = '10px';
+    spinner.style.borderWidth = '1.5px';
+    const title = document.createElement('span');
+    title.textContent = `Adım ${stepNum}/${totalSteps}: ${desc || ''}`;
+    header.appendChild(spinner);
+    header.appendChild(title);
+
+    const body = document.createElement('div');
+    body.className = 'tw-step-content';
+    body.id = `tw-step-text-${memberId}-${stepNum}`;
+    body.textContent = 'Cikti hazirlaniyor...';
+    body.dataset.raw = '';
+
+    stepEl.appendChild(header);
+    stepEl.appendChild(body);
     content.appendChild(stepEl);
     twAutoScroll(content);
   }
@@ -1287,8 +1668,125 @@ function twUpdateTaskBadge(memberId, current, total, state) {
   }
 }
 
+function twSetCollabEmpty(containerId, text) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = `<div class="tw-collab-empty">${text}</div>`;
+}
+
+function twRenderCollabCards(containerId, items, mapper) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!items || items.length === 0) {
+    el.innerHTML = '<div class="tw-collab-empty">Kayıt yok.</div>';
+    return;
+  }
+  el.innerHTML = items.map(mapper).join('');
+}
+
+async function twHandleProposalAction(action, proposalId) {
+  if (!twCurrentTeam || !proposalId) return;
+  try {
+    if (action === 'approve') {
+      await api.approveProposal(twCurrentTeam.id, proposalId);
+      twAddFlowMessage('✅', 'Reviewer', `Proposal onaylandı: ${proposalId.slice(0, 8)}`, 'success');
+    } else {
+      await api.rejectProposal(twCurrentTeam.id, proposalId);
+      twAddFlowMessage('🗑️', 'Reviewer', `Proposal reddedildi: ${proposalId.slice(0, 8)}`, 'info');
+    }
+    await twRefreshCollabPanel();
+    twRefreshPreview();
+  } catch (error) {
+    twAddFlowMessage('❌', 'Reviewer', error.message, 'error');
+  }
+}
+
+function twToggleCollabPanel(forceOpen) {
+  const panel = document.getElementById('twCollabPanel');
+  if (!panel) return;
+  const nextOpen = typeof forceOpen === 'boolean' ? forceOpen : !twCollabPanelOpen;
+  twCollabPanelOpen = nextOpen;
+  panel.style.display = nextOpen ? 'flex' : 'none';
+  if (nextOpen) {
+    twRefreshCollabPanel();
+  }
+}
+
+async function twRefreshCollabPanel() {
+  if (!twCurrentTeam) return;
+  if (!twCurrentRunId) {
+    document.getElementById('twCollabMeta').textContent = 'Henüz run yok.';
+    twSetCollabEmpty('twCollabMemory', 'Master prompt çalıştırıldığında shared memory burada görünecek.');
+    twSetCollabEmpty('twCollabMessages', 'Agent handoff mesajları burada görünecek.');
+    twSetCollabEmpty('twCollabDeps', 'Dependency graph burada görünecek.');
+    twSetCollabEmpty('twCollabProposals', 'File proposal kayıtları burada görünecek.');
+    return;
+  }
+
+  try {
+    const run = await api.getTeamRun(twCurrentTeam.id, twCurrentRunId);
+    document.getElementById('twCollabMeta').textContent = `Run ${String(run.id || '').slice(0, 8)} • ${run.status || 'running'}`;
+
+    twRenderCollabCards('twCollabMemory', run.memory || [], (item) => `
+      <div class="tw-collab-card">
+        <div class="tw-collab-card-head">
+          <span class="tw-collab-card-title">${item.title || item.memory_type || 'Not'}</span>
+          <span class="tw-collab-badge">${item.memory_type || 'memory'}</span>
+        </div>
+        <div class="tw-collab-card-body">${escapeHtml(item.content || '')}</div>
+      </div>
+    `);
+
+    twRenderCollabCards('twCollabMessages', run.messages || [], (item) => `
+      <div class="tw-collab-card">
+        <div class="tw-collab-card-head">
+          <span class="tw-collab-card-title">${escapeHtml(item.subject || item.message_type || 'Mesaj')}</span>
+          <span class="tw-collab-badge">${escapeHtml(item.message_type || 'message')}</span>
+        </div>
+        <div class="tw-collab-card-body">${escapeHtml(item.content || '')}</div>
+      </div>
+    `);
+
+    twRenderCollabCards('twCollabDeps', run.dependencies || [], (item) => {
+      const task = (run.tasks || []).find((t) => t.id === item.task_id);
+      const dep = (run.tasks || []).find((t) => t.id === item.depends_on_task_id);
+      return `
+        <div class="tw-collab-card">
+          <div class="tw-collab-card-head">
+            <span class="tw-collab-card-title">${escapeHtml(task?.title || 'Task')}</span>
+            <span class="tw-collab-badge">${escapeHtml(item.dependency_type || 'hard')}</span>
+          </div>
+          <div class="tw-collab-card-meta">Bekliyor: ${escapeHtml(dep?.title || item.depends_on_task_id || '-')}</div>
+        </div>
+      `;
+    });
+
+    twRenderCollabCards('twCollabProposals', run.proposals || [], (item) => `
+      <div class="tw-collab-card">
+        <div class="tw-collab-card-head">
+          <span class="tw-collab-card-title">${escapeHtml(item.file_path || 'Dosya')}</span>
+          <span class="tw-collab-badge ${item.status === 'conflict' ? 'conflict' : item.status === 'applied' ? 'applied' : ''}">${escapeHtml(item.status || 'pending')}</span>
+        </div>
+        <div class="tw-collab-card-meta">Task: ${escapeHtml(item.task_id ? item.task_id.slice(0, 8) : '-')}</div>
+        ${['pending', 'conflict'].includes(item.status) ? `
+          <div class="tw-collab-card-actions">
+            <button class="approve" onclick="twHandleProposalAction('approve','${item.id}')">Approve</button>
+            <button class="reject" onclick="twHandleProposalAction('reject','${item.id}')">Reject</button>
+          </div>
+        ` : ''}
+      </div>
+    `);
+  } catch (error) {
+    document.getElementById('twCollabMeta').textContent = `Run verisi yüklenemedi: ${error.message}`;
+  }
+}
+
 async function sendMasterPrompt() {
   if (twSending || !twCurrentTeam) return;
+  if (!twCurrentProject) {
+    twRenderProjectGate(twCurrentTeam.projects || [], null);
+    return;
+  }
   const input = document.getElementById('twMasterInput');
   const message = input.value.trim();
   if (!message) return;
@@ -1309,7 +1807,8 @@ async function sendMasterPrompt() {
   (teamRef.members || []).forEach(m => {
     const content = document.getElementById(`tw-content-${m.id}`);
     if (content) {
-      content.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:4px 0;">🧠 Plan oluşturuluyor...</div>';
+      content.textContent = 'Plan oluşturuluyor...';
+      content.style.color = 'var(--muted)';
     }
     twSetMemberWorking(m.id, true);
     twUpdateTaskBadge(m.id, 0, '?', 'active');
@@ -1351,16 +1850,73 @@ async function sendMasterPrompt() {
             (event.members || []).forEach(m => {
               memberInfo[m.id] = { role_name: m.role_name, icon: m.icon || '🤖' };
             });
+            twCurrentRunId = event.run_id || null;
+            if (event.run_id) {
+              twAddFlowMessage('🧭', 'Coordinator', `Run başlatıldı: ${event.run_id.slice(0, 8)}`, 'info');
+            }
+            if (twCollabPanelOpen) twRefreshCollabPanel();
             break;
 
           case 'planning':
             // Zaten "Plan oluşturuluyor" yazıyor
             break;
 
+          case 'task_blocked': {
+            const content = document.getElementById(`tw-content-${mid}`);
+            if (content) {
+              content.textContent = `Waiting... ${event.blocked_reason || 'Bağımlılık bekleniyor.'}`;
+              content.style.color = 'var(--muted)';
+            }
+            twSetMemberWorking(mid, false);
+            twUpdateTaskBadge(mid, 0, 0, '');
+            const statusEl = document.getElementById(`tw-status-${mid}`);
+            if (statusEl) {
+              statusEl.style.color = '#f59e0b';
+              statusEl.textContent = '⏸';
+            }
+            if (info) twAddFlowMessage('⛔', info.role_name, event.blocked_reason || 'Bağımlılık bekleniyor', 'info');
+            if (twCollabPanelOpen) twRefreshCollabPanel();
+            break;
+          }
+
+          case 'task_unblocked': {
+            const content = document.getElementById(`tw-content-${mid}`);
+            if (content) {
+              content.textContent = 'Plan oluşturuluyor...';
+              content.style.color = 'var(--muted)';
+            }
+            twSetMemberWorking(mid, true);
+            const statusEl = document.getElementById(`tw-status-${mid}`);
+            if (statusEl) {
+              statusEl.style.color = 'var(--accent)';
+              statusEl.textContent = '●';
+            }
+            if (info) twAddFlowMessage('🔓', info.role_name, 'Bağımlılık açıldı, görev başlıyor.', 'info');
+            if (twCollabPanelOpen) twRefreshCollabPanel();
+            break;
+          }
+
+          case 'agent_message':
+            if (info) {
+              const fromInfo = event.from_member_id ? memberInfo[event.from_member_id] : null;
+              const label = fromInfo ? `${fromInfo.role_name} -> ${info.role_name}` : info.role_name;
+              twAddFlowMessage('📨', label, event.content || event.subject || 'Yeni iç mesaj', 'info');
+            }
+            if (twCollabPanelOpen) twRefreshCollabPanel();
+            break;
+
+          case 'task_started':
+            twSetMemberWorking(mid, true);
+            break;
+
           case 'skipped': {
             const content = document.getElementById(`tw-content-${mid}`);
             if (content) {
-              content.innerHTML = `<div style="padding:8px;color:var(--muted);font-size:11px;">⏭ Atlandı: ${event.reason || 'Bu görev benim rolümle ilgili değil.'}</div>`;
+              content.textContent = '';
+              const skipEl = document.createElement('div');
+              skipEl.style.cssText = 'padding:8px;color:var(--muted);font-size:11px;';
+              skipEl.textContent = `Atlandı: ${event.reason || 'Bu görev benim rolümle ilgili değil.'}`;
+              content.appendChild(skipEl);
             }
             twSetMemberWorking(mid, false);
             const skipStatus = document.getElementById(`tw-status-${mid}`);
@@ -1377,13 +1933,24 @@ async function sendMasterPrompt() {
           case 'plan': {
             const content = document.getElementById(`tw-content-${mid}`);
             if (content) {
-              content.innerHTML = '';
+              content.textContent = '';
               // Plan özeti göster
               const planDiv = document.createElement('div');
               planDiv.style.cssText = 'padding:4px 0;margin-bottom:6px;';
-              planDiv.innerHTML = `<div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:4px;">📋 Plan (${event.total} adım):</div>` +
-                (event.steps || []).map((s, i) => `<div style="font-size:11px;color:var(--muted);padding:1px 0;">  ${i+1}. ${s}</div>`).join('');
+              const head = document.createElement('div');
+              head.style.cssText = 'font-size:11px;color:var(--accent);font-weight:600;margin-bottom:4px;';
+              head.textContent = `Plan (${event.total} adım):`;
+              planDiv.appendChild(head);
+
+              (event.steps || []).forEach((stepText, index) => {
+                const stepLine = document.createElement('div');
+                stepLine.style.cssText = 'font-size:11px;color:var(--muted);padding:1px 0;';
+                stepLine.textContent = `${index + 1}. ${stepText}`;
+                planDiv.appendChild(stepLine);
+              });
+
               content.appendChild(planDiv);
+              content.style.color = 'var(--text)';
             }
             twUpdateTaskBadge(mid, 0, event.total, 'active');
             if (info) twAddFlowMessage(info.icon, info.role_name + ' — Plan', (event.steps || []).map((s,i)=>`${i+1}. ${s}`).join('\n'), 'info');
@@ -1408,7 +1975,11 @@ async function sendMasterPrompt() {
           case 'delta': {
             const textEl = document.getElementById(`tw-step-text-${mid}-${event.step}`);
             if (textEl) {
-              textEl.textContent += event.content;
+              const prevRaw = textEl.dataset.raw || '';
+              const nextRaw = prevRaw + (event.content || '');
+              textEl.dataset.raw = nextRaw;
+              const liveText = extractLiveProgressText(nextRaw, 160);
+              textEl.textContent = liveText ? `Thinking... ${liveText}` : 'Thinking...';
               twAutoScroll(document.getElementById(`tw-content-${mid}`));
             }
             break;
@@ -1422,6 +1993,12 @@ async function sendMasterPrompt() {
               if (header) {
                 const spinnerEl = header.querySelector('.tw-spinner');
                 if (spinnerEl) spinnerEl.outerHTML = '<span style="color:#22c55e;font-size:10px;">✓</span>';
+              }
+
+              const textEl = stepEl.querySelector('.tw-step-content');
+              if (textEl) {
+                const raw = textEl.dataset.raw || textEl.textContent || '';
+                renderAgentStructuredContent(textEl, raw, true);
               }
             }
             twUpdateTaskBadge(mid, event.step, event.total, event.step === event.total ? 'done' : 'active');
@@ -1440,14 +2017,28 @@ async function sendMasterPrompt() {
 
           case 'files':
             if (event.files && event.files.length > 0) {
-              hasExtracted = true;
-              if (info) twAddFlowFileCard(info.icon, info.role_name, event.files, event.step);
+              const appliedFiles = event.files.filter(f => f.status !== 'conflict');
+              const conflictedFiles = event.files.filter(f => f.status === 'conflict');
+              if (appliedFiles.length > 0) {
+                hasExtracted = true;
+                if (info) twAddFlowFileCard(info.icon, info.role_name, appliedFiles, event.step);
+              }
+              if (conflictedFiles.length > 0 && info) {
+                twAddFlowMessage('⚠️', `${info.role_name} — Conflict`, conflictedFiles.map(f => `${f.path} kilitli`).join('\n'), 'error');
+              }
             }
+            if (twCollabPanelOpen) twRefreshCollabPanel();
+            break;
+
+          case 'file_conflict':
+            if (info) twAddFlowMessage('🔒', `${info.role_name} — Dosya Kilidi`, `${event.path || 'Dosya'} başka bir görev tarafından kilitli. Proposal kaydedildi.`, 'error');
+            if (twCollabPanelOpen) twRefreshCollabPanel();
             break;
 
           case 'member_done':
             twSetMemberWorking(mid, false);
             if (info) twAddFlowMessage(info.icon, info.role_name, 'Tamamlandı ✓', 'result');
+            if (twCollabPanelOpen) twRefreshCollabPanel();
             break;
 
           case 'error': {
@@ -1457,14 +2048,27 @@ async function sendMasterPrompt() {
             const taskBadge = document.getElementById(`tw-tasks-${mid}`);
             if (taskBadge) { taskBadge.className = 'tw-task-badge error'; }
             const errContent = document.getElementById(`tw-content-${mid}`);
-            if (errContent) errContent.innerHTML = `<div style="color:var(--danger);padding:8px;">❌ ${event.error || 'Hata'}</div>`;
+            if (errContent) {
+              errContent.textContent = '';
+              const errLine = document.createElement('div');
+              errLine.style.cssText = 'color:var(--danger);padding:8px;';
+              errLine.textContent = `Hata: ${event.error || 'Hata'}`;
+              errContent.appendChild(errLine);
+            }
             if (info) twAddFlowMessage('❌', info.role_name, event.error || 'Hata', 'error');
+            if (twCollabPanelOpen) twRefreshCollabPanel();
             break;
           }
+
+          case 'run_error':
+            twAddFlowMessage('❌', 'Coordinator', event.error || 'Run hatası', 'error');
+            if (twCollabPanelOpen) twRefreshCollabPanel();
+            break;
 
           case 'all_done':
             twAddFlowMessage('🎉', 'Tamamlandı', 'Tüm takım üyeleri görevlerini bitirdi.', 'success');
             if (hasExtracted) twShowProjectPanel();
+            if (twCollabPanelOpen) twRefreshCollabPanel();
             break;
 
           case 'heartbeat':
@@ -1515,19 +2119,19 @@ async function twShowProjectPanel() {
 }
 
 function twRefreshPreview() {
-  if (!twCurrentTeam) return;
+  if (!twCurrentTeam || !twCurrentProject) return;
   const frame = document.getElementById('twPreviewFrame');
   frame.src = api.getPreviewUrl(twCurrentTeam.id, 'index.html');
 }
 
 function twOpenFullPreview() {
-  if (!twCurrentTeam) return;
+  if (!twCurrentTeam || !twCurrentProject) return;
   const url = api.getPreviewUrl(twCurrentTeam.id, 'index.html');
   window.open(url, '_blank');
 }
 
 async function twDownloadProject() {
-  if (!twCurrentTeam) return;
+  if (!twCurrentTeam || !twCurrentProject) return;
   const btn = document.getElementById('twDownloadBtn');
   btn.textContent = '⏳ Hazırlanıyor...';
   btn.disabled = true;

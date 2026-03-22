@@ -260,6 +260,19 @@ class BambamAPI {
     }
   }
 
+  async updateTeam(teamId, payload) {
+    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}`, {
+      method: "PUT",
+      headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || "Failed to update team");
+    }
+    return await response.json();
+  }
+
   async deleteTeam(teamId) {
     try {
       const response = await fetch(`${this.baseUrl}/api/teams/${teamId}`, {
@@ -324,12 +337,15 @@ class BambamAPI {
     });
   }
 
-  async updateMemberModel(teamId, memberId, model) {
+  async updateMemberModel(teamId, memberId, model, depends_on, extra = {}) {
     try {
+      const payload = { ...extra };
+      if (typeof model !== "undefined") payload.model = model;
+      if (typeof depends_on !== "undefined") payload.depends_on = depends_on;
       const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/members/${memberId}`, {
         method: "PATCH",
         headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ model })
+        body: JSON.stringify(payload)
       });
       if (!response.ok) { const err = await response.json(); throw new Error(err.detail || "Failed"); }
       return await response.json();
@@ -337,6 +353,51 @@ class BambamAPI {
       console.error("Update member model error:", error);
       throw error;
     }
+  }
+
+  async listTeamProjects(teamId) {
+    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/projects`, {
+      headers: this.getAuthHeaders()
+    });
+    if (!response.ok) throw new Error("Failed to list team projects");
+    return await response.json();
+  }
+
+  async createTeamProject(teamId, name) {
+    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/projects`, {
+      method: "POST",
+      headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ name })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || "Failed to create project");
+    }
+    return await response.json();
+  }
+
+  async activateTeamProject(teamId, projectId) {
+    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/projects/${projectId}/activate`, {
+      method: "POST",
+      headers: this.getAuthHeaders()
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || "Failed to activate project");
+    }
+    return await response.json();
+  }
+
+  async deleteTeamProject(teamId, projectId) {
+    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/projects/${projectId}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders()
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || "Failed to delete project");
+    }
+    return await response.json();
   }
 
   async sendMasterPrompt(teamId, message, model = "gpt-4o-mini") {
@@ -365,6 +426,48 @@ class BambamAPI {
       throw new Error(err.detail || "Stream failed");
     }
     return response;
+  }
+
+  async getTeamRun(teamId, runId) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/runs/${runId}`, {
+        headers: this.getAuthHeaders()
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail || "Failed to get run");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Get team run error:", error);
+      throw error;
+    }
+  }
+
+  async approveProposal(teamId, proposalId) {
+    const response = await fetch(`${this.baseUrl}/api/projects/${teamId}/proposals/approve`, {
+      method: "POST",
+      headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ proposal_id: proposalId })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || "Failed to approve proposal");
+    }
+    return await response.json();
+  }
+
+  async rejectProposal(teamId, proposalId) {
+    const response = await fetch(`${this.baseUrl}/api/projects/${teamId}/proposals/reject`, {
+      method: "POST",
+      headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ proposal_id: proposalId })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || "Failed to reject proposal");
+    }
+    return await response.json();
   }
 
   // ===== PROJECT FILES =====

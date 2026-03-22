@@ -190,6 +190,37 @@
     .member-row-remove:hover { color: var(--danger); }
     .member-row .form-group { margin-bottom: 10px; }
     .member-row .form-group:last-child { margin-bottom: 0; }
+    .dependency-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .dependency-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      font-size: 12px;
+      color: var(--text);
+    }
+    .dependency-pill input { width: auto; margin: 0; }
+    .dependency-empty { font-size: 12px; color: var(--muted); padding: 8px 0 2px; }
+    .settings-member-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .settings-member-head {
+      display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;
+    }
+    .settings-member-title { font-size:14px;font-weight:600; }
+    .settings-inline-actions { display:flex;gap:8px;flex-wrap:wrap; }
     .add-member-btn {
       width: 100%;
       padding: 10px;
@@ -203,136 +234,6 @@
       transition: all 0.2s;
     }
     .add-member-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-    /* Team View */
-    .team-view { display: none; }
-    .team-view.active { display: flex; height: calc(100vh - 65px); }
-    .team-sidebar {
-      width: 260px;
-      min-width: 260px;
-      background: var(--surface);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto;
-    }
-    .team-sidebar-header {
-      padding: 16px;
-      border-bottom: 1px solid var(--border);
-    }
-    .team-sidebar-header h2 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-    .team-sidebar-header p { font-size: 12px; color: var(--muted); }
-    .member-list { padding: 8px; flex: 1; }
-    .member-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.15s;
-      margin-bottom: 2px;
-    }
-    .member-item:hover { background: rgba(255,255,255,0.05); }
-    .member-item.active { background: rgba(100,108,255,0.15); border: 1px solid rgba(100,108,255,0.3); }
-    .member-icon { font-size: 22px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: var(--surface2); border-radius: 8px; }
-    .member-info { flex: 1; min-width: 0; }
-    .member-info .name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .member-info .desc { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-    /* Chat Area */
-    .team-chat {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      background: var(--bg);
-    }
-    .team-chat-header {
-      padding: 14px 20px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: var(--surface);
-    }
-    .team-chat-header .role-icon { font-size: 20px; }
-    .team-chat-header .role-name { font-weight: 600; font-size: 15px; }
-    .team-chat-header .role-desc { font-size: 12px; color: var(--muted); margin-left: auto; }
-
-    .team-messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    .team-msg {
-      max-width: 80%;
-      padding: 12px 16px;
-      border-radius: 12px;
-      font-size: 14px;
-      line-height: 1.5;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
-    .team-msg.user {
-      align-self: flex-end;
-      background: var(--accent);
-      color: #fff;
-      border-bottom-right-radius: 4px;
-    }
-    .team-msg.assistant {
-      align-self: flex-start;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-bottom-left-radius: 4px;
-    }
-    .team-msg-empty {
-      text-align: center;
-      color: var(--muted);
-      padding: 40px;
-      font-size: 14px;
-    }
-
-    .team-input-area {
-      padding: 16px 20px;
-      border-top: 1px solid var(--border);
-      background: var(--surface);
-      display: flex;
-      gap: 10px;
-    }
-    .team-input-area textarea {
-      flex: 1;
-      padding: 10px 14px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      color: var(--text);
-      font-family: inherit;
-      font-size: 14px;
-      outline: none;
-      resize: none;
-      max-height: 120px;
-      min-height: 42px;
-    }
-    .team-input-area textarea:focus { border-color: var(--accent); }
-    .team-send-btn {
-      width: 42px;
-      height: 42px;
-      border-radius: 10px;
-      background: var(--accent);
-      border: none;
-      color: #fff;
-      font-size: 18px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.2s;
-    }
-    .team-send-btn:hover { background: var(--accent-hover); }
-    .team-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* Presets */
     .preset-grid {
@@ -381,43 +282,6 @@
       <button class="btn btn-primary" onclick="openCreateModal()">+ İlk Takımı Oluştur</button>
     </div>
     <div class="team-grid" id="teamGrid"></div>
-  </div>
-
-  <!-- Team View (chat with members) -->
-  <div class="team-view" id="teamView">
-    <div class="team-sidebar">
-      <div class="team-sidebar-header">
-        <h2 id="tvTeamName"></h2>
-        <p id="tvTeamDesc"></p>
-      </div>
-      <div class="member-list" id="tvMemberList"></div>
-      <div style="padding: 8px;">
-        <button class="back-btn" style="width:100%;justify-content:center;" onclick="backToList()">← Takımlara Dön</button>
-      </div>
-    </div>
-    <div class="team-chat">
-      <div class="team-chat-header" id="tvChatHeader">
-        <span class="role-icon" id="tvRoleIcon">🤖</span>
-        <span class="role-name" id="tvRoleName">Üye seçin</span>
-        <span class="role-desc" id="tvRoleDesc"></span>
-        <select id="tvModelSelect" onchange="changeMemberModel(this.value)" style="margin-left:auto;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:12px;outline:none;cursor:pointer;">
-          <option value="gpt-4o-mini">GPT-4o Mini</option>
-          <option value="gpt-4o">GPT-4o</option>
-          <option value="groq:llama-3.1-8b-instant">Groq Llama 3.1 8B</option>
-          <option value="groq:llama-3.3-70b-versatile">Groq Llama 3.3 70B</option>
-          <option value="groq:mixtral-8x7b-32768">Groq Mixtral 8x7B</option>
-          <option value="openrouter:anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
-          <option value="openrouter:google/gemini-pro-1.5">Gemini Pro 1.5</option>
-        </select>
-      </div>
-      <div class="team-messages" id="tvMessages">
-        <div class="team-msg-empty">Bir takım üyesi seçerek sohbete başlayın</div>
-      </div>
-      <div class="team-input-area">
-        <textarea id="tvInput" placeholder="Mesajınızı yazın..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTeamMessage();}"></textarea>
-        <button class="team-send-btn" id="tvSendBtn" onclick="sendTeamMessage()">↑</button>
-      </div>
-    </div>
   </div>
 
   <!-- Create Team Modal -->
@@ -470,13 +334,33 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="teamSettingsModal">
+    <div class="modal" style="max-width:820px;">
+      <h2>Takım Ayarları</h2>
+      <div class="form-group">
+        <label>Takım Adı</label>
+        <input type="text" id="settingsTeamName">
+      </div>
+      <div class="form-group">
+        <label>Açıklama</label>
+        <input type="text" id="settingsTeamDesc">
+      </div>
+      <div class="form-group">
+        <label>Takım Üyeleri</label>
+        <div id="settingsMembers"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeTeamSettingsModal()">Kapat</button>
+        <button class="btn btn-primary" onclick="saveTeamSettings()">Takım Bilgilerini Kaydet</button>
+      </div>
+    </div>
+  </div>
+
   <script src="api.js"></script>
   <script>
     // ===== STATE =====
     let teams = [];
     let currentTeam = null;
-    let currentMember = null;
-    let isSending = false;
 
     // ===== PRESETS =====
     const PRESETS = {
@@ -484,40 +368,40 @@
         name: "Mobile Dev Studio",
         description: "Mobil uygulama geliştirme takımı",
         members: [
-          { role_name: "Senior Developer", icon: "👨‍💻", description: "Uygulama mimarisi ve kod yazımı", system_prompt: "Sen deneyimli bir senior mobile developer'sın. Swift, Kotlin, React Native ve Flutter konularında uzmansın. Temiz, ölçeklenebilir ve bakımı kolay kod yazarsın. SOLID prensiplerini uygularsın. Kullanıcının istediği uygulamayı en iyi şekilde tasarla ve kodla. Türkçe yanıt ver." },
-          { role_name: "UI/UX Designer", icon: "🎨", description: "Arayüz tasarımı ve kullanıcı deneyimi", system_prompt: "Sen profesyonel bir UI/UX designer'sın. Modern, minimal ve kullanıcı dostu arayüzler tasarlarsın. Figma, renk teorisi, tipografi ve responsive tasarım konularında uzmansın. Kullanıcının istediği uygulama için detaylı UI/UX önerileri sun. Türkçe yanıt ver." },
-          { role_name: "QA Tester", icon: "🧪", description: "Test senaryoları ve kalite güvence", system_prompt: "Sen deneyimli bir QA tester'sın. Otomatik ve manuel test senaryoları yazarsın. Edge case'leri bulur, bug raporları oluşturursun. Test driven development (TDD) konusunda uzmansın. Kullanıcının uygulaması için kapsamlı test planları hazırla. Türkçe yanıt ver." },
-          { role_name: "Product Manager", icon: "📋", description: "Ürün stratejisi ve yol haritası", system_prompt: "Sen deneyimli bir product manager'sın. Kullanıcı hikayelerini yazar, sprint planlaması yapar, MVP tanımlarsın. Pazar analizi, rakip analizi ve ürün yol haritası oluşturursun. Kullanıcının uygulaması için ürün stratejisi belirle. Türkçe yanıt ver." }
+          { client_key: "mob-dev", role_name: "Senior Developer", icon: "👨‍💻", description: "Uygulama mimarisi ve kod yazımı", system_prompt: "Sen deneyimli bir senior mobile developer'sın. Swift, Kotlin, React Native ve Flutter konularında uzmansın. Temiz, ölçeklenebilir ve bakımı kolay kod yazarsın. SOLID prensiplerini uygularsın. Kullanıcının istediği uygulamayı en iyi şekilde tasarla ve kodla. Türkçe yanıt ver.", depends_on: ["mob-ui", "mob-pm"] },
+          { client_key: "mob-ui", role_name: "UI/UX Designer", icon: "🎨", description: "Arayüz tasarımı ve kullanıcı deneyimi", system_prompt: "Sen profesyonel bir UI/UX designer'sın. Modern, minimal ve kullanıcı dostu arayüzler tasarlarsın. Figma, renk teorisi, tipografi ve responsive tasarım konularında uzmansın. Kullanıcının istediği uygulama için detaylı UI/UX önerileri sun. Türkçe yanıt ver.", depends_on: ["mob-pm"] },
+          { client_key: "mob-qa", role_name: "QA Tester", icon: "🧪", description: "Test senaryoları ve kalite güvence", system_prompt: "Sen deneyimli bir QA tester'sın. Otomatik ve manuel test senaryoları yazarsın. Edge case'leri bulur, bug raporları oluşturursun. Test driven development (TDD) konusunda uzmansın. Kullanıcının uygulaması için kapsamlı test planları hazırla. Türkçe yanıt ver.", depends_on: ["mob-dev"] },
+          { client_key: "mob-pm", role_name: "Product Manager", icon: "📋", description: "Ürün stratejisi ve yol haritası", system_prompt: "Sen deneyimli bir product manager'sın. Kullanıcı hikayelerini yazar, sprint planlaması yapar, MVP tanımlarsın. Pazar analizi, rakip analizi ve ürün yol haritası oluşturursun. Kullanıcının uygulaması için ürün stratejisi belirle. Türkçe yanıt ver." }
         ]
       },
       web: {
         name: "Web Dev Team",
         description: "Full-stack web geliştirme takımı",
         members: [
-          { role_name: "Frontend Developer", icon: "⚛️", description: "React/Next.js ve modern frontend", system_prompt: "Sen uzman bir frontend developer'sın. React, Next.js, TypeScript, TailwindCSS konularında derin bilgin var. Performanslı, erişilebilir ve modern web uygulamaları geliştirirsin. Türkçe yanıt ver." },
-          { role_name: "Backend Developer", icon: "⚙️", description: "API tasarımı ve sunucu tarafı", system_prompt: "Sen deneyimli bir backend developer'sın. Node.js, Python, Go, veritabanları (SQL/NoSQL), REST/GraphQL API tasarımı konularında uzmansın. Güvenli, ölçeklenebilir ve performanslı backend sistemleri tasarlarsın. Türkçe yanıt ver." },
-          { role_name: "DevOps Engineer", icon: "🔧", description: "Deployment ve altyapı", system_prompt: "Sen deneyimli bir DevOps engineer'sın. Docker, Kubernetes, CI/CD, AWS/GCP/Azure, Nginx, monitoring konularında uzmansın. Güvenli ve otomatize edilmiş deployment pipeline'ları kurarsın. Türkçe yanıt ver." },
-          { role_name: "Designer", icon: "🎨", description: "Web tasarımı ve branding", system_prompt: "Sen profesyonel bir web designer'sın. Modern web tasarım trendleri, renk paletleri, tipografi, responsive tasarım ve branding konularında uzmansın. Etkileyici ve kullanıcı dostu web arayüzleri tasarlarsın. Türkçe yanıt ver." }
+          { client_key: "web-fe", role_name: "Frontend Developer", icon: "⚛️", description: "React/Next.js ve modern frontend", system_prompt: "Sen uzman bir frontend developer'sın. React, Next.js, TypeScript, TailwindCSS konularında derin bilgin var. Performanslı, erişilebilir ve modern web uygulamaları geliştirirsin. Türkçe yanıt ver." },
+          { client_key: "web-be", role_name: "Backend Developer", icon: "⚙️", description: "API tasarımı ve sunucu tarafı", system_prompt: "Sen deneyimli bir backend developer'sın. Node.js, Python, Go, veritabanları (SQL/NoSQL), REST/GraphQL API tasarımı konularında uzmansın. Güvenli, ölçeklenebilir ve performanslı backend sistemleri tasarlarsın. Türkçe yanıt ver." },
+          { client_key: "web-do", role_name: "DevOps Engineer", icon: "🔧", description: "Deployment ve altyapı", system_prompt: "Sen deneyimli bir DevOps engineer'sın. Docker, Kubernetes, CI/CD, AWS/GCP/Azure, Nginx, monitoring konularında uzmansın. Güvenli ve otomatize edilmiş deployment pipeline'ları kurarsın. Türkçe yanıt ver.", depends_on: ["web-be", "web-fe"] },
+          { client_key: "web-ds", role_name: "Designer", icon: "🎨", description: "Web tasarımı ve branding", system_prompt: "Sen profesyonel bir web designer'sın. Modern web tasarım trendleri, renk paletleri, tipografi, responsive tasarım ve branding konularında uzmansın. Etkileyici ve kullanıcı dostu web arayüzleri tasarlarsın. Türkçe yanıt ver." }
         ]
       },
       startup: {
         name: "Startup Builder",
         description: "Startup kurucu ekibi",
         members: [
-          { role_name: "CEO / Stratejist", icon: "🎯", description: "Vizyon ve iş stratejisi", system_prompt: "Sen deneyimli bir startup CEO'su ve stratejistsin. İş modeli oluşturma, pazar analizi, büyüme stratejisi, yatırımcı ilişkileri konularında uzmansın. Lean Startup metodolojisini uygularsın. Kullanıcının startup fikrini değerlendir ve stratejik öneriler sun. Türkçe yanıt ver." },
-          { role_name: "CTO", icon: "💻", description: "Teknik mimari ve teknoloji seçimi", system_prompt: "Sen deneyimli bir CTO'sun. Teknoloji stack seçimi, sistem mimarisi, ölçeklenebilirlik, güvenlik konularında uzmansın. MVP'den enterprise'a kadar teknik yol haritası çizersin. Kullanıcının projesi için en uygun teknik çözümleri öner. Türkçe yanıt ver." },
-          { role_name: "Marketing Lead", icon: "📢", description: "Pazarlama ve büyüme", system_prompt: "Sen deneyimli bir marketing lead'sin. Dijital pazarlama, SEO, sosyal medya, içerik stratejisi, growth hacking konularında uzmansın. Kullanıcının ürünü için etkili pazarlama stratejileri ve kampanya planları oluştur. Türkçe yanıt ver." },
-          { role_name: "Finance Lead", icon: "💰", description: "Finansal planlama ve bütçe", system_prompt: "Sen deneyimli bir startup finans uzmanısın. Finansal modelleme, bütçe planlama, yatırım turu hazırlığı, birim ekonomisi konularında uzmansın. Kullanıcının startup'ı için finansal analiz ve öneriler sun. Türkçe yanıt ver." }
+          { client_key: "st-ceo", role_name: "CEO / Stratejist", icon: "🎯", description: "Vizyon ve iş stratejisi", system_prompt: "Sen deneyimli bir startup CEO'su ve stratejistsin. İş modeli oluşturma, pazar analizi, büyüme stratejisi, yatırımcı ilişkileri konularında uzmansın. Lean Startup metodolojisini uygularsın. Kullanıcının startup fikrini değerlendir ve stratejik öneriler sun. Türkçe yanıt ver." },
+          { client_key: "st-cto", role_name: "CTO", icon: "💻", description: "Teknik mimari ve teknoloji seçimi", system_prompt: "Sen deneyimli bir CTO'sun. Teknoloji stack seçimi, sistem mimarisi, ölçeklenebilirlik, güvenlik konularında uzmansın. MVP'den enterprise'a kadar teknik yol haritası çizersin. Kullanıcının projesi için en uygun teknik çözümleri öner. Türkçe yanıt ver.", depends_on: ["st-ceo"] },
+          { client_key: "st-mkt", role_name: "Marketing Lead", icon: "📢", description: "Pazarlama ve büyüme", system_prompt: "Sen deneyimli bir marketing lead'sin. Dijital pazarlama, SEO, sosyal medya, içerik stratejisi, growth hacking konularında uzmansın. Kullanıcının ürünü için etkili pazarlama stratejileri ve kampanya planları oluştur. Türkçe yanıt ver.", depends_on: ["st-ceo"] },
+          { client_key: "st-fin", role_name: "Finance Lead", icon: "💰", description: "Finansal planlama ve bütçe", system_prompt: "Sen deneyimli bir startup finans uzmanısın. Finansal modelleme, bütçe planlama, yatırım turu hazırlığı, birim ekonomisi konularında uzmansın. Kullanıcının startup'ı için finansal analiz ve öneriler sun. Türkçe yanıt ver.", depends_on: ["st-ceo", "st-cto"] }
         ]
       },
       content: {
         name: "Content Team",
         description: "İçerik üretim takımı",
         members: [
-          { role_name: "Content Writer", icon: "✍️", description: "Blog, makale ve metin yazımı", system_prompt: "Sen profesyonel bir content writer'sın. SEO uyumlu blog yazıları, makaleler, ürün açıklamaları ve landing page metinleri yazarsın. Akıcı, etkileyici ve hedef kitleye uygun içerikler üretirsin. Türkçe yanıt ver." },
-          { role_name: "Social Media Manager", icon: "📱", description: "Sosyal medya stratejisi", system_prompt: "Sen deneyimli bir social media manager'sın. Instagram, Twitter, LinkedIn, TikTok stratejileri, içerik takvimi, hashtag stratejisi ve topluluk yönetimi konularında uzmansın. Viral içerik fikirleri üretirsin. Türkçe yanıt ver." },
-          { role_name: "SEO Specialist", icon: "🔍", description: "Arama motoru optimizasyonu", system_prompt: "Sen deneyimli bir SEO uzmanısın. On-page SEO, off-page SEO, teknik SEO, anahtar kelime araştırması, link building konularında uzmansın. İçerikleri arama motorları için optimize edersin. Türkçe yanıt ver." },
-          { role_name: "Copywriter", icon: "💬", description: "Reklam ve satış metinleri", system_prompt: "Sen deneyimli bir copywriter'sın. İkna edici satış metinleri, reklam sloganları, e-posta kampanyaları ve CTA'lar yazarsın. AIDA ve PAS gibi copywriting formüllerini uygularsın. Türkçe yanıt ver." }
+          { client_key: "ct-writer", role_name: "Content Writer", icon: "✍️", description: "Blog, makale ve metin yazımı", system_prompt: "Sen profesyonel bir content writer'sın. SEO uyumlu blog yazıları, makaleler, ürün açıklamaları ve landing page metinleri yazarsın. Akıcı, etkileyici ve hedef kitleye uygun içerikler üretirsin. Türkçe yanıt ver.", depends_on: ["ct-seo"] },
+          { client_key: "ct-social", role_name: "Social Media Manager", icon: "📱", description: "Sosyal medya stratejisi", system_prompt: "Sen deneyimli bir social media manager'sın. Instagram, Twitter, LinkedIn, TikTok stratejileri, içerik takvimi, hashtag stratejisi ve topluluk yönetimi konularında uzmansın. Viral içerik fikirleri üretirsin. Türkçe yanıt ver.", depends_on: ["ct-writer", "ct-copy"] },
+          { client_key: "ct-seo", role_name: "SEO Specialist", icon: "🔍", description: "Arama motoru optimizasyonu", system_prompt: "Sen deneyimli bir SEO uzmanısın. On-page SEO, off-page SEO, teknik SEO, anahtar kelime araştırması, link building konularında uzmansın. İçerikleri arama motorları için optimize edersin. Türkçe yanıt ver." },
+          { client_key: "ct-copy", role_name: "Copywriter", icon: "💬", description: "Reklam ve satış metinleri", system_prompt: "Sen deneyimli bir copywriter'sın. İkna edici satış metinleri, reklam sloganları, e-posta kampanyaları ve CTA'lar yazarsın. AIDA ve PAS gibi copywriting formüllerini uygularsın. Türkçe yanıt ver." }
         ]
       }
     };
@@ -557,6 +441,7 @@
           <div class="team-card-members">
             ${(t.members||[]).map(m => `<span class="member-badge">${m.icon || '🤖'} ${m.role_name}</span>`).join('')}
           </div>
+          <div style="margin-top:12px;font-size:12px;color:var(--accent);">Takım ayarlarını aç</div>
         </div>
       `).join('');
     }
@@ -588,15 +473,17 @@
       event.currentTarget.classList.add('selected');
       
       p.members.forEach(m => {
-        addMemberRow(m.role_name, m.description, m.system_prompt, m.icon, m.model || 'gpt-4o-mini');
+        addMemberRow(m.role_name, m.description, m.system_prompt, m.icon, m.model || 'gpt-4o-mini', m.depends_on || [], m.client_key);
       });
     }
 
-    function addMemberRow(name = '', desc = '', prompt = '', icon = '🤖', model = 'gpt-4o-mini') {
+    function addMemberRow(name = '', desc = '', prompt = '', icon = '🤖', model = 'gpt-4o-mini', dependsOn = [], clientKey = null) {
       const id = memberCounter++;
       const row = document.createElement('div');
       row.className = 'member-row';
       row.id = `member-row-${id}`;
+      row.dataset.memberKey = clientKey || `member-${id}`;
+      row.dataset.dependsOn = JSON.stringify(dependsOn || []);
       row.innerHTML = `
         <div class="member-row-header">
           <span>${icon} Üye #${id + 1}</span>
@@ -632,13 +519,50 @@
           <label>System Prompt</label>
           <textarea class="mr-prompt" placeholder="Bu rolün AI'ya nasıl davranacağını söyleyen talimat...">${prompt}</textarea>
         </div>
+        <div class="form-group">
+          <label>Bağımlılıklar</label>
+          <div class="mr-deps"></div>
+        </div>
       `;
       document.getElementById('memberRows').appendChild(row);
+      const nameInput = row.querySelector('.mr-name');
+      if (nameInput) {
+        nameInput.addEventListener('input', () => refreshMemberDependencyOptions());
+      }
+      refreshMemberDependencyOptions();
     }
 
     function removeMemberRow(id) {
       const row = document.getElementById(`member-row-${id}`);
       if (row) row.remove();
+      refreshMemberDependencyOptions();
+    }
+
+    function refreshMemberDependencyOptions() {
+      const rows = [...document.querySelectorAll('.member-row')];
+      rows.forEach((row) => {
+        const container = row.querySelector('.mr-deps');
+        if (!container) return;
+        const selected = new Set(JSON.parse(row.dataset.dependsOn || '[]'));
+        const options = rows.filter(other => other !== row);
+        if (options.length === 0) {
+          container.innerHTML = '<div class="dependency-empty">Bu üye için seçilebilir bağımlılık yok.</div>';
+          row.dataset.dependsOn = '[]';
+          return;
+        }
+        container.innerHTML = options.map((other) => {
+          const otherName = other.querySelector('.mr-name')?.value?.trim() || other.querySelector('.member-row-header span')?.textContent || 'Üye';
+          const otherKey = other.dataset.memberKey;
+          return `<label class="dependency-pill"><input type="checkbox" value="${otherKey}" ${selected.has(otherKey) ? 'checked' : ''}>${otherName}</label>`;
+        }).join('');
+
+        container.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+          checkbox.addEventListener('change', () => {
+            const values = [...container.querySelectorAll('input:checked')].map(input => input.value);
+            row.dataset.dependsOn = JSON.stringify(values);
+          });
+        });
+      });
     }
 
     async function createTeam() {
@@ -655,8 +579,9 @@
         const ri = row.querySelector('.mr-icon').value.trim() || '🤖';
         const rp = row.querySelector('.mr-prompt').value.trim();
         const rm = row.querySelector('.mr-model').value;
+        const dependsOn = JSON.parse(row.dataset.dependsOn || '[]');
         if (!rn || !rp) { alert('Her üye için rol adı ve system prompt gerekli'); return; }
-        members.push({ role_name: rn, description: rd, icon: ri, system_prompt: rp, model: rm });
+        members.push({ client_key: row.dataset.memberKey, role_name: rn, description: rd, icon: ri, system_prompt: rp, model: rm, depends_on: dependsOn });
       }
 
       if (members.length === 0) { alert('En az bir üye ekleyin'); return; }
@@ -687,136 +612,107 @@
     async function openTeam(teamId) {
       currentTeam = await api.getTeam(teamId);
       if (!currentTeam) return;
+      document.getElementById('settingsTeamName').value = currentTeam.name || '';
+      document.getElementById('settingsTeamDesc').value = currentTeam.description || '';
+      renderSettingsMembers();
+      document.getElementById('teamSettingsModal').classList.add('show');
+    }
 
-      document.getElementById('teamListView').style.display = 'none';
-      document.getElementById('newTeamBtn').style.display = 'none';
-      document.getElementById('teamView').classList.add('active');
+    function closeTeamSettingsModal() {
+      document.getElementById('teamSettingsModal').classList.remove('show');
+      currentTeam = null;
+    }
 
-      document.getElementById('tvTeamName').textContent = currentTeam.name;
-      document.getElementById('tvTeamDesc').textContent = currentTeam.description || '';
-
-      const list = document.getElementById('tvMemberList');
-      list.innerHTML = (currentTeam.members || []).map(m => `
-        <div class="member-item" id="mi-${m.id}" onclick="selectMember('${m.id}')">
-          <div class="member-icon">${m.icon || '🤖'}</div>
-          <div class="member-info">
-            <div class="name">${m.role_name}</div>
-            <div class="desc">${m.description || ''}</div>
+    function renderSettingsMembers() {
+      const wrap = document.getElementById('settingsMembers');
+      if (!wrap || !currentTeam) return;
+      wrap.innerHTML = (currentTeam.members || []).map((member) => `
+        <div class="settings-member-card" id="settings-member-${member.id}">
+          <div class="settings-member-head">
+            <div class="settings-member-title">${member.icon || '🤖'} ${member.role_name}</div>
+            <div class="settings-inline-actions">
+              <button class="btn btn-danger" onclick="removeMemberFromSettings('${member.id}')">Üyeyi Sil</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <div class="form-group" style="flex:1;">
+              <label>Rol Adı</label>
+              <input type="text" data-field="role_name" value="${member.role_name || ''}">
+            </div>
+            <div class="form-group" style="width:84px;">
+              <label>İkon</label>
+              <input type="text" data-field="icon" value="${member.icon || '🤖'}">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Açıklama</label>
+            <input type="text" data-field="description" value="${member.description || ''}">
+          </div>
+          <div class="form-group">
+            <label>AI Model</label>
+            <select data-field="model">
+              <option value="gpt-4o-mini" ${member.model==='gpt-4o-mini'?'selected':''}>GPT-4o Mini</option>
+              <option value="gpt-4o" ${member.model==='gpt-4o'?'selected':''}>GPT-4o</option>
+              <option value="groq:llama-3.1-8b-instant" ${member.model==='groq:llama-3.1-8b-instant'?'selected':''}>Groq Llama 3.1 8B</option>
+              <option value="groq:llama-3.3-70b-versatile" ${member.model==='groq:llama-3.3-70b-versatile'?'selected':''}>Groq Llama 3.3 70B</option>
+              <option value="groq:mixtral-8x7b-32768" ${member.model==='groq:mixtral-8x7b-32768'?'selected':''}>Groq Mixtral 8x7B</option>
+              <option value="openrouter:anthropic/claude-3.5-sonnet" ${member.model==='openrouter:anthropic/claude-3.5-sonnet'?'selected':''}>Claude 3.5 Sonnet</option>
+              <option value="openrouter:google/gemini-pro-1.5" ${member.model==='openrouter:google/gemini-pro-1.5'?'selected':''}>Gemini Pro 1.5</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>System Prompt</label>
+            <textarea data-field="system_prompt">${member.system_prompt || ''}</textarea>
+          </div>
+          <div class="form-group">
+            <label>Bağımlılıklar</label>
+            <div class="dependency-pills">
+              ${(currentTeam.members || []).filter((m) => m.id !== member.id).map((opt) => `
+                <label class="dependency-pill"><input type="checkbox" data-dependency value="${opt.id}" ${(member.depends_on || []).includes(opt.id) ? 'checked' : ''}>${opt.icon || '🤖'} ${opt.role_name}</label>
+              `).join('') || '<div class="dependency-empty">Bu üye için seçilebilir bağımlılık yok.</div>'}
+            </div>
+          </div>
+          <div class="settings-inline-actions">
+            <button class="btn btn-secondary" onclick="saveMemberFromSettings('${member.id}')">Üyeyi Kaydet</button>
           </div>
         </div>
       `).join('');
-
-      currentMember = null;
-      document.getElementById('tvMessages').innerHTML = '<div class="team-msg-empty">Bir takım üyesi seçerek sohbete başlayın</div>';
     }
 
-    function backToList() {
-      document.getElementById('teamView').classList.remove('active');
-      document.getElementById('teamListView').style.display = 'block';
-      document.getElementById('newTeamBtn').style.display = '';
-      currentTeam = null;
-      currentMember = null;
+    async function saveTeamSettings() {
+      if (!currentTeam) return;
+      const name = document.getElementById('settingsTeamName').value.trim();
+      const description = document.getElementById('settingsTeamDesc').value.trim();
+      currentTeam = await api.updateTeam(currentTeam.id, { name, description });
+      await loadTeams();
+      renderSettingsMembers();
     }
 
-    async function selectMember(memberId) {
-      const member = (currentTeam.members || []).find(m => m.id === memberId);
-      if (!member) return;
-      currentMember = member;
-
-      // Active state
-      document.querySelectorAll('.member-item').forEach(el => el.classList.remove('active'));
-      document.getElementById(`mi-${memberId}`).classList.add('active');
-
-      // Header güncelle
-      document.getElementById('tvRoleIcon').textContent = member.icon || '🤖';
-      document.getElementById('tvRoleName').textContent = member.role_name;
-      document.getElementById('tvRoleDesc').textContent = member.description || '';
-      document.getElementById('tvModelSelect').value = member.model || 'gpt-4o-mini';
-
-      // Mesajları yükle
-      const messages = await api.getMemberMessages(currentTeam.id, memberId);
-      const container = document.getElementById('tvMessages');
-
-      if (!messages || messages.length === 0) {
-        container.innerHTML = `<div class="team-msg-empty">${member.icon || '🤖'} ${member.role_name} ile sohbete başlayın</div>`;
-      } else {
-        container.innerHTML = messages.map(m => `
-          <div class="team-msg ${m.role}">${m.content}</div>
-        `).join('');
-        container.scrollTop = container.scrollHeight;
-      }
-
-      document.getElementById('tvInput').focus();
+    async function saveMemberFromSettings(memberId) {
+      if (!currentTeam) return;
+      const card = document.getElementById(`settings-member-${memberId}`);
+      const depends_on = [...card.querySelectorAll('[data-dependency]:checked')].map((el) => el.value);
+      const payload = {
+        role_name: card.querySelector('[data-field="role_name"]').value.trim(),
+        icon: card.querySelector('[data-field="icon"]').value.trim() || '🤖',
+        description: card.querySelector('[data-field="description"]').value.trim(),
+        model: card.querySelector('[data-field="model"]').value,
+        system_prompt: card.querySelector('[data-field="system_prompt"]').value.trim(),
+      };
+      const updated = await api.updateMemberModel(currentTeam.id, memberId, payload.model, depends_on, payload);
+      currentTeam.members = (currentTeam.members || []).map((m) => m.id === memberId ? updated : m);
+      await loadTeams();
+      renderSettingsMembers();
     }
 
-    async function changeMemberModel(newModel) {
-      if (!currentTeam || !currentMember) return;
-      try {
-        await api.updateMemberModel(currentTeam.id, currentMember.id, newModel);
-        currentMember.model = newModel;
-        // Lokal team data'yı da güncelle
-        const m = (currentTeam.members || []).find(x => x.id === currentMember.id);
-        if (m) m.model = newModel;
-      } catch (e) {
-        console.error('Model güncelleme hatası:', e);
-      }
+    async function removeMemberFromSettings(memberId) {
+      if (!currentTeam) return;
+      await api.removeTeamMember(currentTeam.id, memberId);
+      currentTeam = await api.getTeam(currentTeam.id);
+      await loadTeams();
+      renderSettingsMembers();
     }
 
-    async function sendTeamMessage() {
-      if (isSending || !currentTeam || !currentMember) return;
-      const input = document.getElementById('tvInput');
-      const message = input.value.trim();
-      if (!message) return;
-
-      isSending = true;
-      input.value = '';
-      document.getElementById('tvSendBtn').disabled = true;
-
-      const container = document.getElementById('tvMessages');
-      // Boş durumu temizle
-      const emptyEl = container.querySelector('.team-msg-empty');
-      if (emptyEl) emptyEl.remove();
-
-      // Kullanıcı mesajını ekle
-      const userDiv = document.createElement('div');
-      userDiv.className = 'team-msg user';
-      userDiv.textContent = message;
-      container.appendChild(userDiv);
-
-      // Bot mesaj alanı
-      const botDiv = document.createElement('div');
-      botDiv.className = 'team-msg assistant';
-      botDiv.textContent = '';
-      container.appendChild(botDiv);
-      container.scrollTop = container.scrollHeight;
-
-      try {
-        const memberModel = currentMember.model || 'gpt-4o-mini';
-        const response = await api.sendTeamChat(currentTeam.id, currentMember.id, message, memberModel);
-        
-        if (!response.ok) {
-          botDiv.textContent = 'Hata: ' + (await response.text());
-          return;
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const text = decoder.decode(value, { stream: true });
-          botDiv.textContent += text;
-          container.scrollTop = container.scrollHeight;
-        }
-      } catch (error) {
-        botDiv.textContent = 'Bağlantı hatası: ' + error.message;
-      } finally {
-        isSending = false;
-        document.getElementById('tvSendBtn').disabled = false;
-        input.focus();
-      }
-    }
   </script>
 </body>
 </html>
