@@ -78,14 +78,9 @@ function switchToChat(chatId) {
   if (!chats[chatId]) return;
   currentChatId = chatId;
 
-  // Team member modundan çık
+  // Team member panelini kapat
   if (activeTeamMember) {
-    activeTeamMember = null;
-    document.querySelectorAll('.team-member-btn').forEach(b => b.style.background = 'transparent');
-    messageInput.placeholder = 'Type your message...';
-    // Model selector'ı geri yükle
-    const model = getModelById(selectedModelId);
-    if (model) document.getElementById('selectedModelName').textContent = model.name;
+    closeMemberChat();
   }
 
   chatMessages.innerHTML = "";
@@ -251,11 +246,6 @@ async function sendMessage() {
   const text = messageInput.value.trim();
   if ((!text && attachedFiles.length === 0) || isSending) return;
 
-  // Team member chat modu
-  if (activeTeamMember) {
-    return sendTeamMemberMessage(text);
-  }
-
   isSending = true;
   sendBtn.disabled = true;
 
@@ -335,60 +325,6 @@ async function sendMessage() {
   }
 }
 
-async function sendTeamMemberMessage(text) {
-  if (!activeTeamMember || isSending) return;
-
-  isSending = true;
-  sendBtn.disabled = true;
-  messageInput.value = "";
-  autoResizeTextarea();
-
-  // Kullanıcı mesaj balonu
-  createMessageElement(text, "user");
-
-  // Bot mesaj balonu (typing)
-  const modelTag = activeTeamMember.model || 'gpt-4o-mini';
-  const botMessage = createMessageElement("Thinking...", "bot", true, [], `${activeTeamMember.icon} ${activeTeamMember.roleName}`);
-
-  try {
-    const response = await api.sendTeamChat(
-      activeTeamMember.teamId,
-      activeTeamMember.memberId,
-      text,
-      activeTeamMember.model
-    );
-
-    if (!response.ok) {
-      botMessage.querySelector(".message-text").textContent = "Hata: " + (await response.text());
-      botMessage.classList.remove("typing");
-      return;
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-    const textEl = botMessage.querySelector(".message-text");
-    textEl.textContent = "";
-    botMessage.classList.remove("typing");
-
-    let fullResponse = "";
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      textEl.textContent += chunk;
-      fullResponse += chunk;
-      scrollToBottom();
-    }
-  } catch (error) {
-    botMessage.querySelector(".message-text").textContent = "Bağlantı hatası: " + error.message;
-    botMessage.classList.remove("typing");
-    console.error(error);
-  } finally {
-    isSending = false;
-    sendBtn.disabled = false;
-    messageInput.focus();
-  }
-}
 
 async function resetChat() {
   try {
@@ -882,13 +818,11 @@ function toggleTeamMembers(teamId) {
 }
 
 async function switchToMemberChat(teamId, memberId) {
-  // Takım verisini al
   let team;
   try { team = await api.getTeam(teamId); } catch(e) { console.error(e); return; }
   const member = (team.members||[]).find(m => m.id === memberId);
   if (!member) return;
 
-  // State ayarla
   activeTeamMember = {
     teamId: team.id,
     teamName: team.name,
@@ -905,63 +839,158 @@ async function switchToMemberChat(teamId, memberId) {
   const btn = document.getElementById(`tmb-${memberId}`);
   if (btn) btn.style.background = 'rgba(100,108,255,0.15)';
 
-  // Chat list active state temizle
-  document.querySelectorAll('#chatList .chat-item').forEach(b => b.classList.remove('active'));
+  // Sağ paneli aç
+  const panel = document.getElementById('memberChatPanel');
+  panel.style.display = 'flex';
+  document.getElementById('memberChatIcon').textContent = member.icon || '🤖';
+  document.getElementById('memberChatName').textContent = member.role_name;
+  document.getElementById('memberChatDesc').textContent = member.description || member.model || '';
 
-  // Topbar'ı güncelle — model adı yerine üye bilgisi
-  document.getElementById('selectedModelName').textContent = `${member.icon||'🤖'} ${member.role_name}`;
+  // Mesajları temizle ve yükle
+  const msgContainer = document.getElementById('memberChatMessages');
+  msgContainer.innerHTML = '';
 
-  // Hero'yu gizle, mesajları temizle
-  chatMessages.innerHTML = '';
-  const heroSection = document.getElementById('heroSection');
-  if (heroSection) heroSection.classList.add('hidden');
-  chatArea.classList.add('has-messages');
-
-  // Mesajları API'den yükle
   try {
     const messages = await api.getMemberMessages(teamId, memberId);
     if (messages && messages.length > 0) {
       messages.forEach(msg => {
-        const sender = msg.role === 'user' ? 'user' : 'bot';
-        const modelTag = msg.role === 'assistant' ? (member.model || 'gpt-4o-mini') : null;
-        createMessageElement(msg.content, sender, false, [], modelTag);
+        createMemberBubble(msg.content, msg.role === 'user' ? 'user' : 'bot');
       });
+    } else {
+      msgContainer.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px;font-size:13px;">Henüz mesaj yok. Aşağıdan yazın.</div>';
     }
   } catch(e) { console.error('Load member messages error:', e); }
 
-  // Composer'ı aç
-  composerWrap.style.display = 'block';
-  messageInput.disabled = false;
-  sendBtn.disabled = false;
-  messageInput.placeholder = `${member.role_name} ile sohbet et...`;
-  messageInput.focus();
+  document.getElementById('memberChatInput').focus();
 }
 
-function exitMemberChat() {
-  if (!activeTeamMember) return;
+function closeMemberChat() {
   activeTeamMember = null;
+  document.getElementById('memberChatPanel').style.display = 'none';
   document.querySelectorAll('.team-member-btn').forEach(b => b.style.background = 'transparent');
-  // Normal chat'e geri dön
-  if (currentChatId && chats[currentChatId]) {
-    switchToChat(currentChatId);
-  }
-  messageInput.placeholder = 'Type your message...';
 }
+
+function createMemberBubble(text, sender) {
+  const msgContainer = document.getElementById('memberChatMessages');
+  // Placeholder mesajı varsa kaldır
+  const placeholder = msgContainer.querySelector('[data-placeholder]');
+  if (placeholder) placeholder.remove();
+
+  const row = document.createElement('div');
+  row.style.cssText = `display:flex;${sender === 'user' ? 'justify-content:flex-end;' : 'justify-content:flex-start;'}`;
+
+  const bubble = document.createElement('div');
+  bubble.style.cssText = `max-width:85%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word;${
+    sender === 'user'
+      ? 'background:var(--accent);color:#fff;border-bottom-right-radius:4px;'
+      : 'background:var(--sidebar-bg);color:var(--text);border-bottom-left-radius:4px;border:1px solid var(--border);'
+  }`;
+  bubble.textContent = text;
+
+  row.appendChild(bubble);
+  msgContainer.appendChild(row);
+  msgContainer.scrollTop = msgContainer.scrollHeight;
+  return bubble;
+}
+
+let memberSending = false;
+async function sendMemberChatMsg() {
+  if (!activeTeamMember || memberSending) return;
+  const input = document.getElementById('memberChatInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  memberSending = true;
+  input.value = '';
+
+  // Kullanıcı balonu
+  createMemberBubble(text, 'user');
+
+  // Bot balonu (typing)
+  const botBubble = createMemberBubble('⏳ Düşünüyor...', 'bot');
+
+  try {
+    const response = await api.sendTeamChat(
+      activeTeamMember.teamId,
+      activeTeamMember.memberId,
+      text,
+      activeTeamMember.model
+    );
+
+    if (!response.ok) {
+      botBubble.textContent = 'Hata: ' + (await response.text());
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    botBubble.textContent = '';
+
+    let fullResponse = '';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      botBubble.textContent += chunk;
+      fullResponse += chunk;
+      document.getElementById('memberChatMessages').scrollTop = document.getElementById('memberChatMessages').scrollHeight;
+    }
+  } catch (error) {
+    botBubble.textContent = 'Bağlantı hatası: ' + error.message;
+    console.error(error);
+  } finally {
+    memberSending = false;
+    input.focus();
+  }
+}
+
+// Resize handle for member chat panel
+(function initMemberResize() {
+  const handle = document.getElementById('memberResizeHandle');
+  const panel = document.getElementById('memberChatPanel');
+  if (!handle || !panel) return;
+  let isResizing = false;
+
+  handle.addEventListener('mousedown', (e) => {
+    isResizing = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isResizing) return;
+    const mainWrap = document.getElementById('mainChatWrap');
+    const wrapRect = mainWrap.getBoundingClientRect();
+    let newWidth = wrapRect.right - e.clientX;
+    newWidth = Math.max(280, Math.min(newWidth, wrapRect.width * 0.7));
+    panel.style.width = newWidth + 'px';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isResizing) {
+      isResizing = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+  });
+})();
 
 async function openTeamWorkspace(teamId) {
   try {
-  console.log('[TW] openTeamWorkspace called, teamId:', teamId);
   const team = await api.getTeam(teamId);
-  console.log('[TW] team data:', team);
-  if (!team) { console.error('[TW] team is null'); return; }
+  if (!team) return;
   twCurrentTeam = team;
 
   document.getElementById('twTeamName').textContent = team.name;
   document.getElementById('twTeamDesc').textContent = team.description || '';
   document.getElementById('twMasterInput').value = '';
-  document.getElementById('twCombined').style.display = 'none';
 
-  // Üye panellerini oluştur
+  // Genel akış alanını sıfırla
+  document.getElementById('twFlowMessages').innerHTML =
+    '<div style="color:var(--muted);text-align:center;padding:40px 20px;font-size:13px;">Master prompt gönderin, sonuçlar burada görünecek.</div>';
+
+  // Üye panellerini accordion olarak oluştur
   const modelOptions = `
     <option value="gpt-4o-mini">GPT-4o Mini</option>
     <option value="gpt-4o">GPT-4o</option>
@@ -971,24 +1000,27 @@ async function openTeamWorkspace(teamId) {
     <option value="openrouter:anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
     <option value="openrouter:google/gemini-pro-1.5">Gemini Pro 1.5</option>`;
   const panels = document.getElementById('twPanels');
-  panels.innerHTML = (team.members || []).map(m => `
-    <div id="tw-panel-${m.id}" style="background:var(--bg);display:flex;flex-direction:column;min-height:200px;">
-      <div style="padding:10px 14px;border-bottom:1px solid var(--border);background:var(--sidebar-bg);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span style="font-size:18px;">${m.icon || '🤖'}</span>
+  panels.innerHTML = (team.members || []).map((m, i) => `
+    <div id="tw-panel-${m.id}" style="border-bottom:1px solid var(--border);display:flex;flex-direction:column;">
+      <div onclick="twToggleMemberPanel('${m.id}')" style="padding:8px 12px;background:var(--sidebar-bg);display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;">
+        <span style="font-size:10px;color:var(--muted);transition:transform 0.2s;" id="tw-arrow-${m.id}">${i === 0 ? '▼' : '▶'}</span>
+        <span style="font-size:16px;">${m.icon || '🤖'}</span>
         <div style="flex:1;min-width:0;">
-          <div style="font-weight:600;font-size:13px;">${m.role_name}</div>
-          <div style="font-size:11px;color:var(--muted);">${m.description || ''}</div>
+          <div style="font-weight:600;font-size:12px;">${m.role_name}</div>
         </div>
-        <select id="tw-model-${m.id}" onchange="twChangeMemberModel('${m.id}',this.value)" style="padding:4px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;outline:none;cursor:pointer;">
+        <span id="tw-status-${m.id}" style="font-size:10px;color:var(--muted);">●</span>
+        <select id="tw-model-${m.id}" onclick="event.stopPropagation()" onchange="twChangeMemberModel('${m.id}',this.value)" style="padding:2px 6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:10px;outline:none;cursor:pointer;">
           ${modelOptions.replace(`value="${m.model || 'gpt-4o-mini'}"`, `value="${m.model || 'gpt-4o-mini'}" selected`)}
         </select>
       </div>
-      <div id="tw-content-${m.id}" style="flex:1;padding:14px;font-size:13px;line-height:1.6;color:var(--muted);overflow-y:auto;white-space:pre-wrap;">
-        Bekleniyor...
-      </div>
-      <div style="padding:8px 10px;border-top:1px solid var(--border);background:var(--sidebar-bg);display:flex;gap:6px;">
-        <input id="tw-input-${m.id}" type="text" placeholder="Mesaj yaz..." onkeydown="if(event.key==='Enter'){event.preventDefault();twSendMemberChat('${m.id}');}" style="flex:1;padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;outline:none;font-family:inherit;">
-        <button onclick="twSendMemberChat('${m.id}')" style="padding:6px 12px;background:var(--accent);border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-family:inherit;">↑</button>
+      <div id="tw-body-${m.id}" style="display:${i === 0 ? 'flex' : 'none'};flex-direction:column;max-height:300px;">
+        <div id="tw-content-${m.id}" style="flex:1;padding:8px 12px;font-size:12px;line-height:1.5;color:var(--muted);overflow-y:auto;white-space:pre-wrap;min-height:60px;">
+          Bekleniyor...
+        </div>
+        <div style="padding:6px 8px;border-top:1px solid var(--border);background:var(--sidebar-bg);display:flex;gap:4px;">
+          <input id="tw-input-${m.id}" type="text" placeholder="Mesaj yaz..." onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.preventDefault();twSendMemberChat('${m.id}');}" style="flex:1;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;outline:none;font-family:inherit;">
+          <button onclick="event.stopPropagation();twSendMemberChat('${m.id}')" style="padding:5px 10px;background:var(--accent);border:none;border-radius:5px;color:#fff;font-size:11px;cursor:pointer;font-family:inherit;">↑</button>
+        </div>
       </div>
     </div>
   `).join('');
@@ -1008,13 +1040,73 @@ async function openTeamWorkspace(teamId) {
         ).join('\n\n');
         content.scrollTop = content.scrollHeight;
       } else if (content) {
-        content.textContent = 'Henüz mesaj yok. Master prompt gönderin veya aşağıdan yazın.';
+        content.textContent = 'Henüz mesaj yok.';
       }
     } catch(e) { console.error('Load member messages error:', e); }
   }
 
-  console.log('[TW] workspace opened, members:', (team.members||[]).length);
+  // Resize handle for members column
+  twInitMembersResize();
+
   } catch(e) { console.error('[TW] openTeamWorkspace error:', e); }
+}
+
+function twToggleMemberPanel(memberId) {
+  const body = document.getElementById(`tw-body-${memberId}`);
+  const arrow = document.getElementById(`tw-arrow-${memberId}`);
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'flex';
+  if (arrow) arrow.textContent = isOpen ? '▶' : '▼';
+}
+
+function twInitMembersResize() {
+  const handle = document.getElementById('twMembersResizeHandle');
+  const col = document.getElementById('twMembersCol');
+  if (!handle || !col) return;
+  let isResizing = false;
+
+  handle.onmousedown = (e) => {
+    isResizing = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  };
+  document.addEventListener('mousemove', (e) => {
+    if (!isResizing) return;
+    const bodyRect = document.getElementById('twBody').getBoundingClientRect();
+    let newWidth = e.clientX - bodyRect.left;
+    newWidth = Math.max(220, Math.min(newWidth, bodyRect.width * 0.5));
+    col.style.width = newWidth + 'px';
+  });
+  document.addEventListener('mouseup', () => {
+    if (isResizing) {
+      isResizing = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+  });
+}
+
+function twAddFlowMessage(icon, title, content, type) {
+  const flow = document.getElementById('twFlowMessages');
+  // İlk placeholder'ı kaldır
+  const placeholder = flow.querySelector('div[style*="text-align:center"]');
+  if (placeholder) placeholder.remove();
+
+  const colors = { info: 'var(--accent)', success: '#22c55e', error: 'var(--danger)', result: 'var(--text)' };
+  const borderColor = colors[type] || 'var(--border)';
+
+  const msg = document.createElement('div');
+  msg.style.cssText = `padding:12px 16px;border-left:3px solid ${borderColor};background:var(--sidebar-bg);border-radius:0 8px 8px 0;font-size:13px;line-height:1.6;`;
+  msg.innerHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+    <span style="font-size:14px;">${icon}</span>
+    <span style="font-weight:600;font-size:12px;">${title}</span>
+    <span style="font-size:10px;color:var(--muted);margin-left:auto;">${new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})}</span>
+  </div>
+  <div style="white-space:pre-wrap;word-break:break-word;color:var(--text);font-size:12px;">${content}</div>`;
+  flow.appendChild(msg);
+  flow.scrollTop = flow.scrollHeight;
 }
 
 function closeTeamWorkspace() {
@@ -1070,12 +1162,10 @@ async function twSendMemberChat(memberId) {
 }
 
 async function sendMasterPrompt() {
-  console.log('[TW] sendMasterPrompt called, twSending:', twSending, 'twCurrentTeam:', twCurrentTeam?.id);
-  if (twSending || !twCurrentTeam) { console.warn('[TW] blocked: twSending=',twSending,'team=',!!twCurrentTeam); return; }
+  if (twSending || !twCurrentTeam) return;
   const input = document.getElementById('twMasterInput');
   const message = input.value.trim();
-  console.log('[TW] message:', message);
-  if (!message) { console.warn('[TW] empty message'); return; }
+  if (!message) return;
 
   twSending = true;
   stopConnectivityPolling();
@@ -1085,47 +1175,60 @@ async function sendMasterPrompt() {
 
   const teamRef = twCurrentTeam;
 
-  // Tüm panelleri "çalışıyor" yap
+  // Akışa prompt mesajı ekle
+  twAddFlowMessage('📨', 'Master Prompt', message, 'info');
+
+  // Tüm panelleri "çalışıyor" yap + status
   (teamRef.members || []).forEach(m => {
     const content = document.getElementById(`tw-content-${m.id}`);
+    const status = document.getElementById(`tw-status-${m.id}`);
     if (content) {
       content.textContent = '⏳ Çalışıyor...';
       content.style.color = 'var(--muted)';
     }
+    if (status) { status.style.color = '#f59e0b'; status.textContent = '⏳'; }
   });
 
   try {
-    console.log('[TW] sending master prompt to API...');
     const data = await api.sendMasterPrompt(teamRef.id, message);
-    console.log('[TW] master prompt response:', data);
 
-    // Her üyenin sonucunu paneline yaz
+    // Her üyenin sonucunu paneline yaz + akışa ekle
     (data.results || []).forEach(r => {
       const content = document.getElementById(`tw-content-${r.member_id}`);
+      const status = document.getElementById(`tw-status-${r.member_id}`);
       if (content) {
         content.textContent = r.content;
         content.style.color = r.error ? 'var(--danger)' : 'var(--text)';
       }
+      if (status) {
+        status.style.color = r.error ? 'var(--danger)' : '#22c55e';
+        status.textContent = r.error ? '✕' : '✓';
+      }
+      // Sonucu genel akışa ekle
+      const shortContent = r.content.length > 500 ? r.content.substring(0, 500) + '...' : r.content;
+      twAddFlowMessage(
+        r.icon || '🤖',
+        r.role_name || 'Üye',
+        shortContent,
+        r.error ? 'error' : 'result'
+      );
     });
 
-    // Birleştirilmiş sonucu göster
-    if (data.combined) {
-      document.getElementById('twCombinedContent').textContent = data.combined;
-      document.getElementById('twCombined').style.display = 'block';
-    }
-
-    // Dosya çıkarıldıysa proje panelini aç
+    // Dosya çıkarıldıysa akışa bilgi ekle + preview aç
     if (data.extracted_files && data.extracted_files.length > 0) {
+      twAddFlowMessage('📁', 'Dosyalar Çıkarıldı', data.extracted_files.join(', '), 'success');
       twShowProjectPanel();
     }
   } catch (error) {
-    console.error('[TW] master prompt error:', error);
+    twAddFlowMessage('❌', 'Hata', error.message, 'error');
     (teamRef.members || []).forEach(m => {
       const content = document.getElementById(`tw-content-${m.id}`);
+      const status = document.getElementById(`tw-status-${m.id}`);
       if (content) {
         content.textContent = 'Hata: ' + error.message;
         content.style.color = 'var(--danger)';
       }
+      if (status) { status.style.color = 'var(--danger)'; status.textContent = '✕'; }
     });
   } finally {
     twSending = false;
@@ -1134,9 +1237,7 @@ async function sendMasterPrompt() {
   }
 }
 
-// ===== PROJECT FILES & PREVIEW =====
-let twPreviewMode = false;
-let twSelectedFile = null;
+// ===== PROJECT PREVIEW & DOWNLOAD =====
 
 function twToggleProjectPanel() {
   const panel = document.getElementById('twProjectPanel');
@@ -1146,11 +1247,12 @@ function twToggleProjectPanel() {
     panel.style.display = 'none';
     btn.style.background = 'var(--bg)';
     btn.style.color = 'var(--text)';
+    document.getElementById('twPreviewFrame').src = 'about:blank';
   } else {
     panel.style.display = 'flex';
     btn.style.background = 'var(--accent)';
     btn.style.color = '#fff';
-    twRefreshFiles();
+    twRefreshPreview();
   }
 }
 
@@ -1160,122 +1262,43 @@ async function twShowProjectPanel() {
   panel.style.display = 'flex';
   btn.style.background = 'var(--accent)';
   btn.style.color = '#fff';
-  await twRefreshFiles();
+  twRefreshPreview();
 }
 
-async function twRefreshFiles() {
+function twRefreshPreview() {
   if (!twCurrentTeam) return;
-  const files = await api.listProjectFiles(twCurrentTeam.id);
-  const tree = document.getElementById('twFileTree');
-  
-  if (!files || files.length === 0) {
-    tree.innerHTML = '<div style="color:var(--muted);padding:12px;">Henüz dosya yok.</div>';
-    return;
-  }
-
-  // Dosyaları klasör yapısına dönüştür
-  const folders = {};
-  const rootFiles = [];
-  files.forEach(f => {
-    const parts = f.path.split('/');
-    if (parts.length > 1) {
-      const folder = parts.slice(0, -1).join('/');
-      if (!folders[folder]) folders[folder] = [];
-      folders[folder].push(f);
-    } else {
-      rootFiles.push(f);
-    }
-  });
-
-  let html = '';
-  // Root dosyalar
-  rootFiles.forEach(f => {
-    const icon = getFileIcon(f.ext);
-    const active = twSelectedFile === f.path ? 'background:rgba(100,108,255,0.15);' : '';
-    html += `<div onclick="twSelectFile('${f.path}')" style="padding:5px 8px;cursor:pointer;border-radius:4px;display:flex;align-items:center;gap:6px;${active}" onmouseover="this.style.background='rgba(100,108,255,0.1)'" onmouseout="this.style.background='${active ? 'rgba(100,108,255,0.15)' : 'transparent'}'">${icon} ${f.path}</div>`;
-  });
-  // Klasörler
-  Object.keys(folders).sort().forEach(folder => {
-    html += `<div style="padding:5px 8px;color:var(--muted);font-weight:600;margin-top:6px;">📂 ${folder}/</div>`;
-    folders[folder].forEach(f => {
-      const name = f.path.split('/').pop();
-      const icon = getFileIcon(f.ext);
-      const active = twSelectedFile === f.path ? 'background:rgba(100,108,255,0.15);' : '';
-      html += `<div onclick="twSelectFile('${f.path}')" style="padding:4px 8px 4px 20px;cursor:pointer;border-radius:4px;display:flex;align-items:center;gap:6px;${active}" onmouseover="this.style.background='rgba(100,108,255,0.1)'" onmouseout="this.style.background='${active ? 'rgba(100,108,255,0.15)' : 'transparent'}'">${icon} ${name}</div>`;
-    });
-  });
-
-  tree.innerHTML = html;
-
-  // index.html varsa otomatik preview aç
-  const hasIndex = files.some(f => f.path === 'index.html');
-  if (hasIndex && !twSelectedFile) {
-    twSelectFile('index.html');
-    if (!twPreviewMode) twTogglePreview();
-  }
-}
-
-function getFileIcon(ext) {
-  const icons = {
-    '.html': '🌐', '.css': '🎨', '.js': '⚡',
-    '.json': '📋', '.py': '🐍', '.md': '📝',
-    '.ts': '💠', '.jsx': '⚛️', '.tsx': '⚛️',
-    '.svg': '🖼️', '.png': '🖼️', '.jpg': '🖼️',
-    '.txt': '📄'
-  };
-  return icons[ext] || '📄';
-}
-
-async function twSelectFile(filePath) {
-  if (!twCurrentTeam) return;
-  twSelectedFile = filePath;
-  
-  try {
-    const data = await api.readProjectFile(twCurrentTeam.id, filePath);
-    const contentEl = document.getElementById('twFileContent');
-    contentEl.textContent = data.content;
-    
-    // Dosya ağacını güncelle (active state)
-    twRefreshFiles();
-  } catch(e) {
-    document.getElementById('twFileContent').textContent = 'Dosya okunamadı: ' + e.message;
-  }
-}
-
-function twTogglePreview() {
-  twPreviewMode = !twPreviewMode;
   const frame = document.getElementById('twPreviewFrame');
-  const content = document.getElementById('twFileContent');
-  const toggleBtn = document.getElementById('twPreviewToggle');
-  
-  if (twPreviewMode) {
-    frame.style.display = 'block';
-    content.style.display = 'none';
-    toggleBtn.textContent = '📝 Kod';
-    // iframe'e preview URL yükle
-    if (twCurrentTeam) {
-      frame.src = api.getPreviewUrl(twCurrentTeam.id, 'index.html');
-    }
-  } else {
-    frame.style.display = 'none';
-    content.style.display = 'block';
-    toggleBtn.textContent = '👁 Preview';
-    frame.src = 'about:blank';
-  }
+  frame.src = api.getPreviewUrl(twCurrentTeam.id, 'index.html');
 }
 
-async function twExtractFiles() {
+async function twDownloadProject() {
   if (!twCurrentTeam) return;
+  const btn = document.getElementById('twDownloadBtn');
+  btn.textContent = '⏳ Hazırlanıyor...';
+  btn.disabled = true;
   try {
-    const data = await api.extractProjectFiles(twCurrentTeam.id);
-    alert(`${data.extracted} dosya çıkarıldı!`);
-    await twRefreshFiles();
-    // Preview varsa yenile
-    if (twPreviewMode) {
-      const frame = document.getElementById('twPreviewFrame');
-      frame.src = api.getPreviewUrl(twCurrentTeam.id, 'index.html');
+    const token = localStorage.getItem('bambam_token');
+    const response = await fetch(`${api.baseUrl}/api/projects/${twCurrentTeam.id}/download`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      alert(err.detail || 'İndirme hatası');
+      return;
     }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (twCurrentTeam.name || 'project').replace(/\s+/g, '_') + '.zip';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   } catch(e) {
-    alert('Dosya çıkarma hatası: ' + e.message);
+    alert('İndirme hatası: ' + e.message);
+  } finally {
+    btn.textContent = '📥 Projeyi İndir';
+    btn.disabled = false;
   }
 }

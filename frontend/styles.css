@@ -1259,3 +1259,20 @@ body {
   border-color: var(--danger);
   background: rgba(239, 68, 68, 0.1);
 }
+
+#memberResizeHandle:hover,
+#memberResizeHandle:active,
+#twMembersResizeHandle:hover,
+#twMembersResizeHandle:active {
+  background: var(--accent);
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+
+#memberChatMessages::-webkit-scrollbar {
+  width: 4px;
+}
+#memberChatMessages::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 4px;
+}

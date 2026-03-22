@@ -256,3 +256,41 @@ async def extract_files_endpoint(
     
     saved = save_extracted_files(team_id, all_files)
     return {"extracted": len(saved), "files": saved}
+
+
+@router.get("/{team_id}/download")
+async def download_project_zip(
+    team_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Proje dosyalarını ZIP olarak indir"""
+    import zipfile
+    import io
+
+    team = db.get_team(team_id)
+    if not team:
+        raise HTTPException(status_code=404, detail="Takım bulunamadı")
+    if team["user_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Erişim yok")
+
+    project_dir = get_project_dir(team_id)
+    files = list(project_dir.rglob("*"))
+    files = [f for f in files if f.is_file()]
+
+    if not files:
+        raise HTTPException(status_code=404, detail="Projede dosya yok")
+
+    buf = io.BytesIO()
+    team_name = team.get("name", "project").replace(" ", "_")
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for f in files:
+            arcname = f"{team_name}/{f.relative_to(project_dir).as_posix()}"
+            zf.write(f, arcname)
+    buf.seek(0)
+
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{team_name}.zip"'}
+    )
