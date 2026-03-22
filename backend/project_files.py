@@ -85,15 +85,134 @@ def extract_files_from_text(text: str) -> list:
 
 
 def save_extracted_files(team_id: str, files: list) -> list:
-    """Çıkarılan dosyaları proje klasörüne kaydet"""
+    """Çıkarılan dosyaları proje klasörüne kaydet.
+    Returns: list of dicts {"path": str, "status": "added"|"updated"}
+    """
     project_dir = get_project_dir(team_id)
     saved = []
     for f in files:
         fpath = project_dir / f["path"]
         fpath.parent.mkdir(parents=True, exist_ok=True)
+        status = "updated" if fpath.exists() else "added"
         fpath.write_text(f["content"], encoding="utf-8")
-        saved.append(f["path"])
+        saved.append({"path": f["path"], "status": status})
+    # Dosyalar kaydedildikten sonra index.html'i otomatik düzelt
+    auto_fix_index_html(project_dir)
     return saved
+
+
+def auto_fix_index_html(project_dir: Path):
+    """index.html'deki eksik JS/CSS referanslarını ve DOM elementlerini otomatik ekle.
+    
+    Takım üyeleri bağımsız çalıştığı için dosyalar birbirini referans etmeyebilir.
+    Bu fonksiyon:
+    1. Proje klasöründeki .js ve .css dosyalarını bulur
+    2. index.html'de referans yoksa <link>/<script> ekler
+    3. JS'de kullanılan getElementById elementleri HTML'de yoksa ekler
+    """
+    index_path = project_dir / "index.html"
+    if not index_path.exists():
+        return
+    
+    html = index_path.read_text(encoding="utf-8")
+    html_lower = html.lower()
+    modified = False
+    
+    # 1. Eksik CSS referanslarını ekle
+    css_files = [p.relative_to(project_dir).as_posix() 
+                 for p in project_dir.rglob("*.css") if p.is_file()]
+    css_inject = []
+    for css in css_files:
+        # Dosya zaten referans edilmiş mi kontrol et
+        if css not in html and css.split('/')[-1] not in html:
+            css_inject.append(f'    <link rel="stylesheet" href="{css}">')
+    
+    # 2. Eksik JS referanslarını ekle (backend/server dosyalarını hariç tut)
+    server_keywords = ['express', 'require(', 'module.exports', 'const app = ', 
+                       'router.post', 'router.get', 'app.listen', 'flask', 'fastapi']
+    js_files = [p for p in project_dir.rglob("*.js") if p.is_file()]
+    
+    frontend_js = []
+    for js_path in js_files:
+        js_name = js_path.relative_to(project_dir).as_posix()
+        # Zaten HTML'de var mı?
+        if js_name in html or js_name.split('/')[-1] in html:
+            continue
+        # Server-side JS mi kontrol et
+        try:
+            js_content = js_path.read_text(encoding="utf-8").lower()
+            is_server = any(kw in js_content for kw in server_keywords)
+            if is_server:
+                continue
+        except:
+            continue
+        frontend_js.append(js_name)
+    
+    js_inject = [f'    <script src="{js}"></script>' for js in frontend_js]
+    
+    # 3. JS dosyalarında getElementById ile kullanılan elementleri bul
+    import re as _re
+    missing_elements = {}
+    all_frontend_js = []
+    for js_path in project_dir.rglob("*.js"):
+        try:
+            js_content = js_path.read_text(encoding="utf-8")
+            js_lower = js_content.lower()
+            if any(kw in js_lower for kw in server_keywords):
+                continue
+            all_frontend_js.append(js_content)
+        except:
+            continue
+    
+    for js_content in all_frontend_js:
+        # getElementById('xxx') veya getElementById("xxx") bul
+        for match in _re.finditer(r'getElementById\([\'"]([^\'"]+)[\'"]\)', js_content):
+            elem_id = match.group(1)
+            # HTML'de bu id var mı?
+            if f'id="{elem_id}"' not in html and f"id='{elem_id}'" not in html:
+                # Element tipini tahmin et
+                elem_id_lower = elem_id.lower()
+                if 'canvas' in elem_id_lower:
+                    missing_elements[elem_id] = f'<canvas id="{elem_id}" style="display:none;"></canvas>'
+                elif 'download' in elem_id_lower or 'link' in elem_id_lower:
+                    missing_elements[elem_id] = f'<a id="{elem_id}" style="display:none;" href="#">İndir</a>'
+                elif 'preview' in elem_id_lower or 'image' in elem_id_lower or 'img' in elem_id_lower:
+                    missing_elements[elem_id] = f'<img id="{elem_id}" style="display:none;max-width:100%;" />'
+                elif 'result' in elem_id_lower or 'output' in elem_id_lower or 'status' in elem_id_lower or 'message' in elem_id_lower:
+                    missing_elements[elem_id] = f'<div id="{elem_id}"></div>'
+                elif 'input' in elem_id_lower and 'file' not in elem_id_lower:
+                    missing_elements[elem_id] = f'<input id="{elem_id}" type="text" />'
+                # fileInput, convertButton gibi zaten olan elementleri ekleme
+    
+    # HTML'e enjekte et
+    if css_inject or js_inject or missing_elements:
+        # CSS'leri </head> öncesine ekle
+        if css_inject and '</head>' in html:
+            html = html.replace('</head>', '\n'.join(css_inject) + '\n</head>')
+            modified = True
+        
+        # Eksik elementleri </body> öncesine (ama script'lerden önce) ekle
+        if missing_elements:
+            elements_html = '\n    '.join(missing_elements.values())
+            if '</body>' in html:
+                html = html.replace('</body>', f'\n    <!-- Auto-generated missing elements -->\n    {elements_html}\n</body>')
+                modified = True
+        
+        # JS'leri </body> öncesine ekle
+        if js_inject:
+            if '</body>' in html:
+                html = html.replace('</body>', '\n'.join(js_inject) + '\n</body>')
+                modified = True
+            elif '</html>' in html:
+                html = html.replace('</html>', '\n'.join(js_inject) + '\n</html>')
+                modified = True
+            else:
+                html += '\n' + '\n'.join(js_inject)
+                modified = True
+        
+        if modified:
+            index_path.write_text(html, encoding="utf-8")
+            print(f"[auto_fix] index.html updated: +{len(css_inject)} CSS, +{len(js_inject)} JS, +{len(missing_elements)} elements")
 
 
 # ---- API Endpoint'leri ----

@@ -1,0 +1,61 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    line-height: 1.6;
+}
+
+header {
+    background: #007BFF; /* Mavi */
+    color: #fff;
+    padding: 10px 20px;
+    text-align: center;
+}
+
+h1, h2, h3 {
+    margin: 0;
+}
+
+main {
+    padding: 20px;
+}
+
+section {
+    margin-bottom: 20px;
+}
+
+.btn, .bg-blue-500 {
+    background: #007BFF; /* Mavi tonu */
+    color: #fff;
+    padding: 10px 15px;
+    text-decoration: none;
+    border-radius: 5px;
+}
+
+footer {
+    text-align: center;
+    padding: 20px;
+    background: #007BFF; /* Mavi */
+    color: #fff;
+}
+
+/* Başka mavi tonları için eklemeler */
+.bg-blue {
+    background-color: #007BFF; /* Mavi */
+}
+
+.text-blue {
+    color: #007BFF; /* Mavi */
+}
+
+.hover\:bg-blue-700:hover {
+    background-color: #0056b3; /* Daha koyu mavi */
+}
+
+.success-message {
+    color: #007BFF; /* Mavi mesaj */
+}
+
+.error-message {
+    color: #FF0000; /* Hata mesajı kırmızı */
+}

@@ -751,8 +751,12 @@ import pathlib
 @app.get("/preview/{team_id}/{file_path:path}")
 async def serve_preview(team_id: str, file_path: str):
     """Proje dosyasını doğrudan serve et (iframe preview için)"""
-    from project_files import get_project_dir
+    import mimetypes
+    from project_files import get_project_dir, auto_fix_index_html
     project_dir = get_project_dir(team_id)
+    # index.html serve edilirken otomatik düzelt
+    if file_path == "index.html":
+        auto_fix_index_html(project_dir)
     fpath = project_dir / file_path
     try:
         fpath.resolve().relative_to(project_dir.resolve())
@@ -761,8 +765,31 @@ async def serve_preview(team_id: str, file_path: str):
     if not fpath.exists() or not fpath.is_file():
         return JSONResponse({"error": "Not found"}, status_code=404)
     
+    # Doğru MIME type belirle
+    mime_map = {
+        '.html': 'text/html',
+        '.css': 'text/css',
+        '.js': 'application/javascript',
+        '.mjs': 'application/javascript',
+        '.json': 'application/json',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.svg': 'image/svg+xml',
+        '.webp': 'image/webp',
+        '.ico': 'image/x-icon',
+        '.woff': 'font/woff',
+        '.woff2': 'font/woff2',
+        '.ttf': 'font/ttf',
+        '.mp4': 'video/mp4',
+        '.webm': 'video/webm',
+    }
+    ext = fpath.suffix.lower()
+    media_type = mime_map.get(ext) or mimetypes.guess_type(str(fpath))[0] or 'application/octet-stream'
+    
     from fastapi.responses import FileResponse as FR
-    return FR(fpath)
+    return FR(fpath, media_type=media_type)
 
 # Frontend statik dosyalarını serve et
 from fastapi.staticfiles import StaticFiles

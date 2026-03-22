@@ -792,9 +792,11 @@ async function loadTeamList() {
         </button>
         <div class="team-members-list" id="tm-${t.id}" style="display:none;padding-left:12px;">
           ${(t.members||[]).map(m => `
-            <button class="chat-item team-member-btn" id="tmb-${m.id}" onclick="switchToMemberChat('${t.id}','${m.id}')" style="font-size:12px;padding:7px 10px;background:transparent;border:none;gap:6px;">
+            <button class="chat-item team-member-btn" id="tmb-${m.id}" onclick="switchToMemberChat('${t.id}','${m.id}')" style="font-size:12px;padding:7px 10px;background:transparent;border:none;gap:6px;align-items:center;">
               <span style="font-size:14px;">${m.icon||'🤖'}</span>
-              <span class="chat-item-title" style="font-size:12px;">${m.role_name}</span>
+              <span class="chat-item-title" style="font-size:12px;flex:1;">${m.role_name}</span>
+              <span id="sb-spinner-${m.id}" class="tw-spinner" style="display:none;width:12px;height:12px;border-width:1.5px;"></span>
+              <span id="sb-tasks-${m.id}" class="tw-task-badge" style="display:none;"></span>
             </button>
           `).join('')}
           <button class="chat-item" onclick="openTeamWorkspace('${t.id}')" style="font-size:11px;padding:6px 10px;color:var(--muted);background:transparent;border:none;">
@@ -1008,13 +1010,15 @@ async function openTeamWorkspace(teamId) {
         <div style="flex:1;min-width:0;">
           <div style="font-weight:600;font-size:12px;">${m.role_name}</div>
         </div>
+        <span id="tw-spinner-${m.id}" style="display:none;" class="tw-spinner"></span>
+        <span id="tw-tasks-${m.id}" class="tw-task-badge" style="display:none;"></span>
         <span id="tw-status-${m.id}" style="font-size:10px;color:var(--muted);">●</span>
         <select id="tw-model-${m.id}" onclick="event.stopPropagation()" onchange="twChangeMemberModel('${m.id}',this.value)" style="padding:2px 6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:10px;outline:none;cursor:pointer;">
           ${modelOptions.replace(`value="${m.model || 'gpt-4o-mini'}"`, `value="${m.model || 'gpt-4o-mini'}" selected`)}
         </select>
       </div>
-      <div id="tw-body-${m.id}" style="display:${i === 0 ? 'flex' : 'none'};flex-direction:column;max-height:300px;">
-        <div id="tw-content-${m.id}" style="flex:1;padding:8px 12px;font-size:12px;line-height:1.5;color:var(--muted);overflow-y:auto;white-space:pre-wrap;min-height:60px;">
+      <div id="tw-body-${m.id}" style="display:${i === 0 ? 'flex' : 'none'};flex-direction:column;max-height:400px;">
+        <div id="tw-content-${m.id}" style="flex:1;padding:8px 12px;font-size:12px;line-height:1.5;color:var(--muted);overflow-y:auto;min-height:60px;">
           Bekleniyor...
         </div>
         <div style="padding:6px 8px;border-top:1px solid var(--border);background:var(--sidebar-bg);display:flex;gap:4px;">
@@ -1076,7 +1080,7 @@ function twInitMembersResize() {
     if (!isResizing) return;
     const bodyRect = document.getElementById('twBody').getBoundingClientRect();
     let newWidth = e.clientX - bodyRect.left;
-    newWidth = Math.max(220, Math.min(newWidth, bodyRect.width * 0.5));
+    newWidth = Math.max(280, Math.min(newWidth, bodyRect.width * 0.5));
     col.style.width = newWidth + 'px';
   });
   document.addEventListener('mouseup', () => {
@@ -1109,9 +1113,71 @@ function twAddFlowMessage(icon, title, content, type) {
   flow.scrollTop = flow.scrollHeight;
 }
 
+function twAddFlowFileCard(icon, roleName, files, step) {
+  const flow = document.getElementById('twFlowMessages');
+  const placeholder = flow.querySelector('div[style*="text-align:center"]');
+  if (placeholder) placeholder.remove();
+
+  // Normalize files: support both string[] and {path,status}[]
+  const normalized = files.map(f => typeof f === 'string' ? { path: f, status: 'added' } : f);
+  const added = normalized.filter(f => f.status === 'added');
+  const updated = normalized.filter(f => f.status === 'updated');
+
+  const cardId = 'tw-fcard-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+
+  const card = document.createElement('div');
+  card.className = 'tw-flow-card';
+  card.style.borderLeftColor = '#22c55e';
+
+  const summary = [];
+  if (added.length) summary.push(`+${added.length} yeni`);
+  if (updated.length) summary.push(`~${updated.length} güncelleme`);
+  const stepLabel = step ? ` · Adım ${step}` : '';
+
+  card.innerHTML = `
+    <div class="tw-flow-card-header" onclick="document.getElementById('${cardId}').classList.toggle('open')">
+      <span style="font-size:14px;">${icon}</span>
+      <span style="font-weight:600;font-size:12px;flex:1;">${roleName} — Dosyalar</span>
+      <span style="font-size:10px;color:var(--muted);">${summary.join(' · ')}${stepLabel}</span>
+      <span style="font-size:10px;color:var(--muted);margin-left:4px;">${new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})}</span>
+      <span style="font-size:10px;color:var(--muted);margin-left:4px;">▶</span>
+    </div>
+    <div class="tw-flow-card-body" id="${cardId}">
+      ${added.map(f => `<div class="tw-flow-file-row"><span class="file-badge added">+ yeni</span><span style="font-family:monospace;">${f.path}</span></div>`).join('')}
+      ${updated.map(f => `<div class="tw-flow-file-row"><span class="file-badge updated">~ güncellendi</span><span style="font-family:monospace;">${f.path}</span></div>`).join('')}
+    </div>`;
+
+  // Toggle arrow on click
+  const header = card.querySelector('.tw-flow-card-header');
+  const arrow = header.querySelector('span:last-child');
+  header.addEventListener('click', () => { arrow.textContent = arrow.textContent === '▶' ? '▼' : '▶'; });
+
+  flow.appendChild(card);
+  flow.scrollTop = flow.scrollHeight;
+}
+
 function closeTeamWorkspace() {
   document.getElementById('teamWorkspace').style.display = 'none';
   twCurrentTeam = null;
+}
+
+let twPromptExpanded = false;
+function twToggleExpandPrompt() {
+  const input = document.getElementById('twMasterInput');
+  const btn = document.getElementById('twExpandBtn');
+  twPromptExpanded = !twPromptExpanded;
+  if (twPromptExpanded) {
+    input.style.minHeight = '200px';
+    input.rows = 10;
+    btn.textContent = '⤡';
+    btn.title = 'Daralt';
+  } else {
+    input.style.minHeight = '52px';
+    input.rows = 2;
+    btn.textContent = '⤢';
+    btn.title = 'Genişlet';
+  }
+  input.focus();
 }
 
 async function twChangeMemberModel(memberId, newModel) {
@@ -1161,6 +1227,66 @@ async function twSendMemberChat(memberId) {
   }
 }
 
+// Helper: smart auto-scroll — sadece kullanıcı en alttaysa scroll yap
+function twAutoScroll(el) {
+  if (!el) return;
+  const threshold = 60;
+  const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  if (isNearBottom) el.scrollTop = el.scrollHeight;
+}
+
+// Helper: üye panelinde step block oluştur/güncelle
+function twGetOrCreateStep(memberId, stepNum, totalSteps, desc) {
+  const content = document.getElementById(`tw-content-${memberId}`);
+  if (!content) return null;
+  let stepEl = document.getElementById(`tw-step-${memberId}-${stepNum}`);
+  if (!stepEl) {
+    stepEl = document.createElement('div');
+    stepEl.id = `tw-step-${memberId}-${stepNum}`;
+    stepEl.className = 'tw-step running';
+    stepEl.innerHTML = `
+      <div class="tw-step-header">
+        <span class="tw-spinner" style="width:10px;height:10px;border-width:1.5px;"></span>
+        <span>Adım ${stepNum}/${totalSteps}: ${desc || ''}</span>
+      </div>
+      <div class="tw-step-content" id="tw-step-text-${memberId}-${stepNum}"></div>`;
+    content.appendChild(stepEl);
+    twAutoScroll(content);
+  }
+  return stepEl;
+}
+
+function twSetMemberWorking(memberId, working) {
+  // Workspace panel spinner
+  const spinner = document.getElementById(`tw-spinner-${memberId}`);
+  const status = document.getElementById(`tw-status-${memberId}`);
+  if (spinner) spinner.style.display = working ? 'inline-block' : 'none';
+  if (status) {
+    status.style.display = working ? 'none' : '';
+    if (!working) { status.style.color = '#22c55e'; status.textContent = '✓'; }
+  }
+  // Sidebar spinner
+  const sbSpinner = document.getElementById(`sb-spinner-${memberId}`);
+  if (sbSpinner) sbSpinner.style.display = working ? 'inline-block' : 'none';
+}
+
+function twUpdateTaskBadge(memberId, current, total, state) {
+  // Workspace badge
+  const badge = document.getElementById(`tw-tasks-${memberId}`);
+  if (badge) {
+    badge.style.display = 'inline';
+    badge.textContent = `${current}/${total}`;
+    badge.className = 'tw-task-badge ' + (state || 'active');
+  }
+  // Sidebar badge
+  const sbBadge = document.getElementById(`sb-tasks-${memberId}`);
+  if (sbBadge) {
+    sbBadge.style.display = 'inline';
+    sbBadge.textContent = `${current}/${total}`;
+    sbBadge.className = 'tw-task-badge ' + (state || 'active');
+  }
+}
+
 async function sendMasterPrompt() {
   if (twSending || !twCurrentTeam) return;
   const input = document.getElementById('twMasterInput');
@@ -1172,62 +1298,185 @@ async function sendMasterPrompt() {
   const btn = document.getElementById('twSendBtn');
   btn.disabled = true;
   btn.textContent = 'Çalışıyor...';
+  input.value = '';
 
   const teamRef = twCurrentTeam;
 
   // Akışa prompt mesajı ekle
   twAddFlowMessage('📨', 'Master Prompt', message, 'info');
 
-  // Tüm panelleri "çalışıyor" yap + status
+  // Tüm panelleri hazırla
   (teamRef.members || []).forEach(m => {
     const content = document.getElementById(`tw-content-${m.id}`);
-    const status = document.getElementById(`tw-status-${m.id}`);
     if (content) {
-      content.textContent = '⏳ Çalışıyor...';
-      content.style.color = 'var(--muted)';
+      content.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:4px 0;">🧠 Plan oluşturuluyor...</div>';
     }
-    if (status) { status.style.color = '#f59e0b'; status.textContent = '⏳'; }
+    twSetMemberWorking(m.id, true);
+    twUpdateTaskBadge(m.id, 0, '?', 'active');
   });
 
+  // Üye bilgilerini cache'le (flow mesajları için)
+  const memberInfo = {};
+  (teamRef.members || []).forEach(m => {
+    memberInfo[m.id] = { role_name: m.role_name, icon: m.icon || '🤖' };
+  });
+
+  let hasExtracted = false;
+
   try {
-    const data = await api.sendMasterPrompt(teamRef.id, message);
+    const response = await api.sendMasterPromptStream(teamRef.id, message);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
 
-    // Her üyenin sonucunu paneline yaz + akışa ekle
-    (data.results || []).forEach(r => {
-      const content = document.getElementById(`tw-content-${r.member_id}`);
-      const status = document.getElementById(`tw-status-${r.member_id}`);
-      if (content) {
-        content.textContent = r.content;
-        content.style.color = r.error ? 'var(--danger)' : 'var(--text)';
-      }
-      if (status) {
-        status.style.color = r.error ? 'var(--danger)' : '#22c55e';
-        status.textContent = r.error ? '✕' : '✓';
-      }
-      // Sonucu genel akışa ekle
-      const shortContent = r.content.length > 500 ? r.content.substring(0, 500) + '...' : r.content;
-      twAddFlowMessage(
-        r.icon || '🤖',
-        r.role_name || 'Üye',
-        shortContent,
-        r.error ? 'error' : 'result'
-      );
-    });
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-    // Dosya çıkarıldıysa akışa bilgi ekle + preview aç
-    if (data.extracted_files && data.extracted_files.length > 0) {
-      twAddFlowMessage('📁', 'Dosyalar Çıkarıldı', data.extracted_files.join(', '), 'success');
-      twShowProjectPanel();
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // son satır tamamlanmamış olabilir
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        let event;
+        try { event = JSON.parse(line.slice(6)); } catch { continue; }
+
+        const mid = event.member_id;
+        const info = mid ? memberInfo[mid] : null;
+
+        switch (event.type) {
+          case 'start':
+            // Üye bilgilerini güncelle
+            (event.members || []).forEach(m => {
+              memberInfo[m.id] = { role_name: m.role_name, icon: m.icon || '🤖' };
+            });
+            break;
+
+          case 'planning':
+            // Zaten "Plan oluşturuluyor" yazıyor
+            break;
+
+          case 'skipped': {
+            const content = document.getElementById(`tw-content-${mid}`);
+            if (content) {
+              content.innerHTML = `<div style="padding:8px;color:var(--muted);font-size:11px;">⏭ Atlandı: ${event.reason || 'Bu görev benim rolümle ilgili değil.'}</div>`;
+            }
+            twSetMemberWorking(mid, false);
+            const skipStatus = document.getElementById(`tw-status-${mid}`);
+            if (skipStatus) { skipStatus.style.color = 'var(--muted)'; skipStatus.textContent = '—'; }
+            twUpdateTaskBadge(mid, 0, 0, '');
+            const skipBadge = document.getElementById(`tw-tasks-${mid}`);
+            if (skipBadge) { skipBadge.textContent = 'atlandı'; skipBadge.style.display = 'inline'; skipBadge.className = 'tw-task-badge'; }
+            const sbBadge = document.getElementById(`sb-tasks-${mid}`);
+            if (sbBadge) { sbBadge.textContent = 'atlandı'; sbBadge.style.display = 'inline'; sbBadge.className = 'tw-task-badge'; }
+            if (info) twAddFlowMessage('⏭', info.role_name, event.reason || 'Atlandı — rol ile ilgili değil', 'info');
+            break;
+          }
+
+          case 'plan': {
+            const content = document.getElementById(`tw-content-${mid}`);
+            if (content) {
+              content.innerHTML = '';
+              // Plan özeti göster
+              const planDiv = document.createElement('div');
+              planDiv.style.cssText = 'padding:4px 0;margin-bottom:6px;';
+              planDiv.innerHTML = `<div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:4px;">📋 Plan (${event.total} adım):</div>` +
+                (event.steps || []).map((s, i) => `<div style="font-size:11px;color:var(--muted);padding:1px 0;">  ${i+1}. ${s}</div>`).join('');
+              content.appendChild(planDiv);
+            }
+            twUpdateTaskBadge(mid, 0, event.total, 'active');
+            if (info) twAddFlowMessage(info.icon, info.role_name + ' — Plan', (event.steps || []).map((s,i)=>`${i+1}. ${s}`).join('\n'), 'info');
+            break;
+          }
+
+          case 'step_start': {
+            twGetOrCreateStep(mid, event.step, event.total, event.description);
+            twUpdateTaskBadge(mid, event.step, event.total, 'active');
+            const content = document.getElementById(`tw-content-${mid}`);
+            twAutoScroll(content);
+            // Paneli aç (accordion)
+            const body = document.getElementById(`tw-body-${mid}`);
+            const arrow = document.getElementById(`tw-arrow-${mid}`);
+            if (body && body.style.display === 'none') {
+              body.style.display = 'flex';
+              if (arrow) arrow.textContent = '▼';
+            }
+            break;
+          }
+
+          case 'delta': {
+            const textEl = document.getElementById(`tw-step-text-${mid}-${event.step}`);
+            if (textEl) {
+              textEl.textContent += event.content;
+              twAutoScroll(document.getElementById(`tw-content-${mid}`));
+            }
+            break;
+          }
+
+          case 'step_done': {
+            const stepEl = document.getElementById(`tw-step-${mid}-${event.step}`);
+            if (stepEl) {
+              stepEl.className = 'tw-step done';
+              const header = stepEl.querySelector('.tw-step-header');
+              if (header) {
+                const spinnerEl = header.querySelector('.tw-spinner');
+                if (spinnerEl) spinnerEl.outerHTML = '<span style="color:#22c55e;font-size:10px;">✓</span>';
+              }
+            }
+            twUpdateTaskBadge(mid, event.step, event.total, event.step === event.total ? 'done' : 'active');
+            break;
+          }
+
+          case 'step_error': {
+            const stepEl = document.getElementById(`tw-step-${mid}-${event.step}`);
+            if (stepEl) {
+              stepEl.className = 'tw-step error';
+              const textEl = stepEl.querySelector('.tw-step-content');
+              if (textEl) textEl.textContent += '\n❌ ' + (event.error || 'Hata');
+            }
+            break;
+          }
+
+          case 'files':
+            if (event.files && event.files.length > 0) {
+              hasExtracted = true;
+              if (info) twAddFlowFileCard(info.icon, info.role_name, event.files, event.step);
+            }
+            break;
+
+          case 'member_done':
+            twSetMemberWorking(mid, false);
+            if (info) twAddFlowMessage(info.icon, info.role_name, 'Tamamlandı ✓', 'result');
+            break;
+
+          case 'error': {
+            twSetMemberWorking(mid, false);
+            const statusEl = document.getElementById(`tw-status-${mid}`);
+            if (statusEl) { statusEl.style.color = 'var(--danger)'; statusEl.textContent = '✕'; }
+            const taskBadge = document.getElementById(`tw-tasks-${mid}`);
+            if (taskBadge) { taskBadge.className = 'tw-task-badge error'; }
+            const errContent = document.getElementById(`tw-content-${mid}`);
+            if (errContent) errContent.innerHTML = `<div style="color:var(--danger);padding:8px;">❌ ${event.error || 'Hata'}</div>`;
+            if (info) twAddFlowMessage('❌', info.role_name, event.error || 'Hata', 'error');
+            break;
+          }
+
+          case 'all_done':
+            twAddFlowMessage('🎉', 'Tamamlandı', 'Tüm takım üyeleri görevlerini bitirdi.', 'success');
+            if (hasExtracted) twShowProjectPanel();
+            break;
+
+          case 'heartbeat':
+            break;
+        }
+      }
     }
   } catch (error) {
-    twAddFlowMessage('❌', 'Hata', error.message, 'error');
+    twAddFlowMessage('❌', 'Bağlantı Hatası', error.message, 'error');
     (teamRef.members || []).forEach(m => {
-      const content = document.getElementById(`tw-content-${m.id}`);
+      twSetMemberWorking(m.id, false);
       const status = document.getElementById(`tw-status-${m.id}`);
-      if (content) {
-        content.textContent = 'Hata: ' + error.message;
-        content.style.color = 'var(--danger)';
-      }
       if (status) { status.style.color = 'var(--danger)'; status.textContent = '✕'; }
     });
   } finally {
@@ -1269,6 +1518,12 @@ function twRefreshPreview() {
   if (!twCurrentTeam) return;
   const frame = document.getElementById('twPreviewFrame');
   frame.src = api.getPreviewUrl(twCurrentTeam.id, 'index.html');
+}
+
+function twOpenFullPreview() {
+  if (!twCurrentTeam) return;
+  const url = api.getPreviewUrl(twCurrentTeam.id, 'index.html');
+  window.open(url, '_blank');
 }
 
 async function twDownloadProject() {

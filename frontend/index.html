@@ -197,16 +197,21 @@
           <button id="twProjectBtn" onclick="twToggleProjectPanel()" style="padding:6px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;">📁 Proje</button>
         </div>
         <!-- Master Prompt Bar -->
-        <div style="padding:12px 20px;border-bottom:1px solid var(--border);background:var(--sidebar-bg);display:flex;gap:10px;align-items:end;">
-          <textarea id="twMasterInput" placeholder="Master prompt girin... (ör: Bir araba blog sitesi kur)" rows="2" style="flex:1;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;font-size:14px;resize:none;outline:none;"></textarea>
-          <button type="button" id="twSendBtn" onclick="sendMasterPrompt();return false;" style="padding:10px 20px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-family:inherit;font-weight:600;cursor:pointer;white-space:nowrap;">Hepsine Gönder ↑</button>
+        <div id="twMasterBar" style="padding:12px 20px;border-bottom:1px solid var(--border);background:var(--sidebar-bg);display:flex;gap:10px;align-items:end;">
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+            <textarea id="twMasterInput" placeholder="Master prompt girin... (ör: Bir araba blog sitesi kur)" rows="2" style="flex:1;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;font-size:14px;resize:vertical;outline:none;min-height:52px;max-height:50vh;"></textarea>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <button type="button" id="twExpandBtn" onclick="twToggleExpandPrompt()" title="Genişlet / Daralt" style="padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);cursor:pointer;font-size:14px;line-height:1;">⤢</button>
+            <button type="button" id="twSendBtn" onclick="sendMasterPrompt();return false;" style="padding:10px 20px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-family:inherit;font-weight:600;cursor:pointer;white-space:nowrap;">Hepsine Gönder ↑</button>
+          </div>
         </div>
 
         <!-- Main Body: Left (members) + Right (genel akış) -->
         <div id="twBody" style="flex:1;display:flex;overflow:hidden;min-height:0;">
 
           <!-- Sol: Üye Panelleri (accordion, dikey) -->
-          <div id="twMembersCol" style="width:320px;min-width:220px;max-width:50%;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;background:var(--bg);flex-shrink:0;position:relative;">
+          <div id="twMembersCol" style="width:320px;min-width:280px;max-width:50%;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;background:var(--bg);flex-shrink:0;position:relative;">
             <div id="twMembersResizeHandle" style="position:absolute;right:-3px;top:0;bottom:0;width:6px;cursor:col-resize;z-index:10;"></div>
             <div id="twPanels" style="display:flex;flex-direction:column;"></div>
           </div>
@@ -231,11 +236,12 @@
               <button onclick="twRefreshPreview()" style="padding:4px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;cursor:pointer;">↻ Yenile</button>
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
+              <button onclick="twOpenFullPreview()" style="padding:5px 14px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;">↗ Tam Ekran</button>
               <button onclick="twDownloadProject()" id="twDownloadBtn" style="padding:5px 14px;background:var(--accent);border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;">📥 Projeyi İndir</button>
               <button onclick="twToggleProjectPanel()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;">✕</button>
             </div>
           </div>
-          <iframe id="twPreviewFrame" style="flex:1;border:none;background:#fff;" sandbox="allow-scripts allow-same-origin"></iframe>
+          <iframe id="twPreviewFrame" style="flex:1;border:none;background:#fff;" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-popups-to-escape-sandbox" allow="camera;microphone;fullscreen;clipboard-read;clipboard-write"></iframe>
         </div>
       </div>
     </main>
