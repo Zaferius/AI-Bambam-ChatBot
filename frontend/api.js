@@ -415,11 +415,11 @@ class BambamAPI {
     }
   }
 
-  async sendMasterPromptStream(teamId, message, model = "gpt-4o-mini") {
+  async sendMasterPromptStream(teamId, message, model = "gpt-4o-mini", attachments = []) {
     const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/master-stream`, {
       method: "POST",
       headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ message, model })
+      body: JSON.stringify({ message, model, attachments })
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));

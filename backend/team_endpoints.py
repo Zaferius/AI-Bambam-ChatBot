@@ -11,6 +11,7 @@ import queue
 import threading
 import time
 import shutil
+import base64
 from concurrent.futures import ThreadPoolExecutor
 from project_files import (
     extract_files_from_text,
@@ -108,6 +109,12 @@ class UpdateMemberRequest(BaseModel):
 
 class TeamProjectRequest(BaseModel):
     name: str
+
+
+class AttachmentInput(BaseModel):
+    name: str
+    type: Optional[str] = None
+    content: Optional[str] = None
 
 
 # ===== ENDPOINTS =====
@@ -477,6 +484,77 @@ async def team_member_chat(
 class MasterPromptRequest(BaseModel):
     message: str
     model: Optional[str] = None
+    attachments: Optional[List[AttachmentInput]] = None
+
+
+def _format_master_message(
+    message: str, attachments: Optional[List[AttachmentInput]] = None
+) -> str:
+    if not attachments:
+        return message
+
+    blocks = []
+    for item in attachments:
+        if not item.name:
+            continue
+        file_type = item.type or "file"
+        if file_type.startswith("image/"):
+            blocks.append(
+                f"[Gorsel] {item.name}: Bu gorseli dikkate al ve tasarim kararlarini buna gore ver."
+            )
+        else:
+            content = (item.content or "").strip()
+            if content:
+                blocks.append(f"[Dosya] {item.name}\n{content[:12000]}")
+            else:
+                blocks.append(
+                    f"[Dosya] {item.name}: Icerik okunamadi ama dosya baglama eklendi."
+                )
+
+    if not blocks:
+        return message
+
+    return f"{message}\n\n=== EKLER ===\n" + "\n\n".join(blocks)
+
+
+def _build_user_content(
+    message: str, attachments: Optional[List[AttachmentInput]] = None
+):
+    parts = []
+    if message:
+        parts.append({"type": "text", "text": message})
+
+    for item in attachments or []:
+        if not item.name:
+            continue
+        file_type = item.type or "file"
+        raw_content = item.content or ""
+        if file_type.startswith("image/") and raw_content:
+            image_url = raw_content
+            if not raw_content.startswith("data:"):
+                image_url = f"data:{file_type};base64,{raw_content}"
+            parts.append({"type": "image_url", "image_url": {"url": image_url}})
+            parts.append(
+                {
+                    "type": "text",
+                    "text": f"\n[Gorsel: {item.name}] Bu gorseli analiz et ve dikkate al.",
+                }
+            )
+        elif raw_content:
+            parts.append(
+                {
+                    "type": "text",
+                    "text": f"\n[Dosya: {item.name}]\n{raw_content[:12000]}",
+                }
+            )
+        else:
+            parts.append(
+                {"type": "text", "text": f"\n[Dosya: {item.name}] Icerik okunamadi."}
+            )
+
+    if len(parts) == 1 and parts[0]["type"] == "text":
+        return parts[0]["text"]
+    return parts
 
 
 def _resolve_model(model_id: str):
@@ -495,7 +573,7 @@ def _resolve_model(model_id: str):
         ) else "gpt-4o-mini"
 
 
-def _run_member_chat(member, message, model_id, clients):
+def _run_member_chat(member, message, model_id, clients, attachments=None):
     """Bir üye için senkron LLM çağrısı (thread'de çalışır)"""
     provider, model_name = _resolve_model(model_id)
     client = clients.get(provider)
@@ -533,6 +611,9 @@ def _run_member_chat(member, message, model_id, clients):
     recent = history[-20:] if len(history) > 20 else history
     for msg in recent:
         llm_messages.append({"role": msg["role"], "content": msg["content"]})
+    llm_messages.append(
+        {"role": "user", "content": _build_user_content(message, attachments)}
+    )
 
     try:
         response = client.chat.completions.create(
@@ -581,6 +662,7 @@ async def master_prompt(
         raise HTTPException(status_code=400, detail="Takımda üye yok")
 
     clients = _get_llm_clients()
+    formatted_message = _format_master_message(req.message, req.attachments)
 
     # Tüm üyelere paralel istek gönder
     loop = asyncio.get_event_loop()
@@ -591,9 +673,10 @@ async def master_prompt(
             executor,
             _run_member_chat,
             member,
-            req.message,
+            formatted_message,
             req.model or member.get("model") or "gpt-4o-mini",
             clients,
+            req.attachments,
         )
         for member in members
     ]
@@ -1054,6 +1137,7 @@ def _run_step_streaming(
     event_queue,
     run_id=None,
     task_id=None,
+    attachments=None,
 ):
     """Bir adım için streaming LLM çağrısı yap, token'ları event_queue'ya gönder"""
     provider, model_name = _resolve_model(model_id)
@@ -1087,11 +1171,14 @@ def _run_step_streaming(
         llm_messages.append({"role": msg["role"], "content": msg["content"]})
 
     # Son kullanıcı mesajı history'de yoksa ekle
-    if not recent or recent[-1]["content"] != message:
+    if attachments or not recent or recent[-1]["content"] != message:
         llm_messages.append(
             {
                 "role": "user",
-                "content": f"{message}\n\n[Adım {step_num}/{total_steps}: {step_desc}]",
+                "content": _build_user_content(
+                    f"{message}\n\n[Adım {step_num}/{total_steps}: {step_desc}]",
+                    attachments,
+                ),
             }
         )
 
@@ -1142,6 +1229,7 @@ def _run_member_agentic(
     event_queue,
     run_id=None,
     task_id=None,
+    attachments=None,
 ):
     """Bir üye için agentic multi-step çalışma (thread'de çalışır)"""
     member_id = member["id"]
@@ -1243,6 +1331,7 @@ def _run_member_agentic(
             event_queue,
             run_id,
             task_id,
+            attachments,
         )
 
         all_content += f"\n\n## Adım {i}: {step_desc}\n{step_content}"
@@ -1362,11 +1451,12 @@ async def master_prompt_stream(
         raise HTTPException(status_code=400, detail="Takımda üye yok")
 
     clients = _get_llm_clients()
+    formatted_message = _format_master_message(req.message, req.attachments)
     event_queue = queue.Queue()
     run, tasks, dependencies = _create_hard_block_run(
         team_id,
         current_user["id"],
-        req.message,
+        formatted_message,
         req.model,
         members,
     )
@@ -1375,7 +1465,7 @@ async def master_prompt_stream(
         team_id,
         memory_type="master_prompt",
         title="Master Prompt",
-        content=req.message,
+        content=formatted_message,
     )
     task_by_member = _get_member_task_map(tasks)
     task_by_id = _get_task_id_map(tasks)
@@ -1417,13 +1507,14 @@ async def master_prompt_stream(
 
                     _run_member_agentic(
                         member,
-                        req.message,
+                        formatted_message,
                         req.model or member.get("model") or "gpt-4o-mini",
                         clients,
                         team_id,
                         event_queue,
                         run["id"],
                         task["id"],
+                        req.attachments,
                     )
 
                     member_messages = db.get_messages(member["chat_id"])

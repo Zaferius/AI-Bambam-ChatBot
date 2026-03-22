@@ -20,6 +20,10 @@ const searchOverlayInput = document.getElementById("searchOverlayInput");
 const searchResultsList = document.getElementById("searchResultsList");
 const searchNewChatBtn = document.getElementById("searchNewChatBtn");
 const refreshModelsBtn = { disabled: true };
+const twAttachBtn = document.getElementById("twAttachBtn");
+const twFileInput = document.getElementById("twFileInput");
+const twAttachmentPreview = document.getElementById("twAttachmentPreview");
+const twMasterInputEl = document.getElementById("twMasterInput");
 
 // State Variables
 let thinkingLevel = "medium";
@@ -90,6 +94,14 @@ function switchToChat(chatId) {
   });
   updateChatAreaState();
   updateChatList();
+}
+
+function twAutoResizeTextarea() {
+  if (!twMasterInputEl) return;
+  twMasterInputEl.style.height = "auto";
+  const nextHeight = Math.min(Math.max(twMasterInputEl.scrollHeight, 52), 240);
+  twMasterInputEl.style.height = nextHeight + "px";
+  twMasterInputEl.style.overflowY = twMasterInputEl.scrollHeight > 240 ? "auto" : "hidden";
 }
 
 async function deleteChat(chatId, event) {
@@ -994,6 +1006,7 @@ let twCurrentRunId = null;
 let twCollabPanelOpen = false;
 let twCurrentProject = null;
 let twProjectsManagerOpen = false;
+let twAttachedFiles = [];
 
 async function loadTeamList() {
   const list = document.getElementById('teamList');
@@ -1006,10 +1019,14 @@ async function loadTeamList() {
     }
     list.innerHTML = teams.map(t => `
       <div class="team-group" id="tg-${t.id}">
-        <button class="chat-item" onclick="toggleTeamMembers('${t.id}')" title="${t.description || t.name}" style="justify-content:space-between;">
-          <span class="chat-item-title">${t.name}</span>
-          <span class="team-arrow" id="ta-${t.id}" style="font-size:10px;transition:transform 0.2s;">▶</span>
-        </button>
+        <div class="chat-item" title="${t.description || t.name}" style="justify-content:space-between;gap:8px;">
+          <button onclick="openTeamWorkspace('${t.id}')" style="flex:1;background:none;border:none;color:inherit;text-align:left;font:inherit;cursor:pointer;padding:0;overflow:hidden;">
+            <span class="chat-item-title">${t.name}</span>
+          </button>
+          <button onclick="toggleTeamMembers('${t.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0 2px;display:flex;align-items:center;">
+            <span class="team-arrow" id="ta-${t.id}" style="font-size:10px;transition:transform 0.2s;">▶</span>
+          </button>
+        </div>
         <div class="team-members-list" id="tm-${t.id}" style="display:none;padding-left:12px;">
           ${(t.members||[]).map(m => `
             <button class="chat-item team-member-btn" id="tmb-${m.id}" onclick="switchToMemberChat('${t.id}','${m.id}')" style="font-size:12px;padding:7px 10px;background:transparent;border:none;gap:6px;align-items:center;">
@@ -1019,9 +1036,6 @@ async function loadTeamList() {
               <span id="sb-tasks-${m.id}" class="tw-task-badge" style="display:none;"></span>
             </button>
           `).join('')}
-          <button class="chat-item" onclick="openTeamWorkspace('${t.id}')" style="font-size:11px;padding:6px 10px;color:var(--muted);background:transparent;border:none;">
-            <span class="chat-item-title" style="font-size:11px;">⚡ Master Prompt</span>
-          </button>
         </div>
       </div>
     `).join('');
@@ -1136,6 +1150,90 @@ async function twDeleteProject(projectId) {
   twRenderProjectGate(twCurrentTeam.projects, twCurrentProject);
 }
 
+if (twAttachBtn && twFileInput) {
+  twAttachBtn.addEventListener("click", () => twFileInput.click());
+  twFileInput.addEventListener("change", (e) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach((file) => {
+      if (!twAttachedFiles.find((f) => f.name === file.name && f.size === file.size)) {
+        twAttachedFiles.push(file);
+      }
+    });
+    twUpdateAttachmentPreview();
+    twFileInput.value = "";
+  });
+}
+
+if (twMasterInputEl) {
+  twMasterInputEl.addEventListener("input", twAutoResizeTextarea);
+  twMasterInputEl.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      sendMasterPrompt();
+    }
+  });
+  twAutoResizeTextarea();
+}
+
+function twUpdateAttachmentPreview() {
+  if (!twAttachmentPreview) return;
+  if (twAttachedFiles.length === 0) {
+    twAttachmentPreview.classList.remove("has-files");
+    twAttachmentPreview.innerHTML = "";
+    return;
+  }
+
+  twAttachmentPreview.classList.add("has-files");
+  twAttachmentPreview.innerHTML = "";
+  twAttachedFiles.forEach((file, index) => {
+    const item = document.createElement("div");
+    if (file.type.startsWith("image/")) {
+      item.className = "attachment-item image-item";
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        item.innerHTML = `
+          <img src="${e.target.result}" class="attachment-image-preview" alt="${file.name}">
+          <div class="attachment-item-actions">
+            <button class="attachment-item-btn attachment-item-remove" onclick="twRemoveAttachment(${index})" title="Remove">×</button>
+          </div>
+        `;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      item.className = "attachment-item file-item";
+      item.innerHTML = `
+        <span>📄</span>
+        <span class="attachment-item-name" title="${file.name}">${file.name}</span>
+        <button class="attachment-item-btn attachment-item-remove" onclick="twRemoveAttachment(${index})">×</button>
+      `;
+    }
+    twAttachmentPreview.appendChild(item);
+  });
+}
+
+function twRemoveAttachment(index) {
+  twAttachedFiles.splice(index, 1);
+  twUpdateAttachmentPreview();
+}
+
+async function twBuildAttachmentsPayload() {
+  const payload = [];
+  for (const file of twAttachedFiles) {
+    if (file.type.startsWith("image/")) {
+      const dataUrl = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result || "");
+        reader.readAsDataURL(file);
+      });
+      payload.push({ name: file.name, type: file.type, content: String(dataUrl || "") });
+    } else {
+      const text = await file.text().catch(() => "");
+      payload.push({ name: file.name, type: file.type || "application/octet-stream", content: text });
+    }
+  }
+  return payload;
+}
+
 async function switchToMemberChat(teamId, memberId) {
   let team;
   try { team = await api.getTeam(teamId); } catch(e) { console.error(e); return; }
@@ -1156,7 +1254,7 @@ async function switchToMemberChat(teamId, memberId) {
   // Sidebar active state
   document.querySelectorAll('.team-member-btn').forEach(b => b.style.background = 'transparent');
   const btn = document.getElementById(`tmb-${memberId}`);
-  if (btn) btn.style.background = 'rgba(100,108,255,0.15)';
+  if (btn) btn.style.background = 'rgba(139,92,246,0.15)';
 
   const overlay = document.getElementById('memberSettingsOverlay');
   if (overlay) overlay.classList.add('active');
@@ -1255,6 +1353,9 @@ async function openTeamWorkspace(teamId) {
   document.getElementById('twProjectName').textContent = team.active_project ? `/ ${team.active_project.name}` : '/ Proje seç';
   document.getElementById('twTeamDesc').textContent = team.description || '';
   document.getElementById('twMasterInput').value = '';
+  if (twMasterInputEl) twAutoResizeTextarea();
+  twAttachedFiles = [];
+  twUpdateAttachmentPreview();
 
   // Genel akış alanını sıfırla
   document.getElementById('twFlowMessages').innerHTML =
@@ -1508,26 +1609,9 @@ function closeTeamWorkspace() {
   twCurrentProject = null;
   twCurrentRunId = null;
   twProjectsManagerOpen = false;
+  twAttachedFiles = [];
+  twUpdateAttachmentPreview();
   twToggleCollabPanel(false);
-}
-
-let twPromptExpanded = false;
-function twToggleExpandPrompt() {
-  const input = document.getElementById('twMasterInput');
-  const btn = document.getElementById('twExpandBtn');
-  twPromptExpanded = !twPromptExpanded;
-  if (twPromptExpanded) {
-    input.style.minHeight = '200px';
-    input.rows = 10;
-    btn.textContent = '⤡';
-    btn.title = 'Daralt';
-  } else {
-    input.style.minHeight = '52px';
-    input.rows = 2;
-    btn.textContent = '⤢';
-    btn.title = 'Genişlet';
-  }
-  input.focus();
 }
 
 async function twChangeMemberModel(memberId, newModel) {
@@ -1795,8 +1879,10 @@ async function sendMasterPrompt() {
   stopConnectivityPolling();
   const btn = document.getElementById('twSendBtn');
   btn.disabled = true;
-  btn.textContent = 'Çalışıyor...';
+  btn.innerHTML = '<span class="arrow">…</span>';
+  const attachmentPayload = await twBuildAttachmentsPayload();
   input.value = '';
+  twAutoResizeTextarea();
 
   const teamRef = twCurrentTeam;
 
@@ -1823,7 +1909,7 @@ async function sendMasterPrompt() {
   let hasExtracted = false;
 
   try {
-    const response = await api.sendMasterPromptStream(teamRef.id, message);
+    const response = await api.sendMasterPromptStream(teamRef.id, message, 'gpt-4o-mini', attachmentPayload);
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
@@ -2086,7 +2172,9 @@ async function sendMasterPrompt() {
   } finally {
     twSending = false;
     btn.disabled = false;
-    btn.textContent = 'Hepsine Gönder ↑';
+    btn.innerHTML = '<span class="arrow">↑</span>';
+    twAttachedFiles = [];
+    twUpdateAttachmentPreview();
   }
 }
 

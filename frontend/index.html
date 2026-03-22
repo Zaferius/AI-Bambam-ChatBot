@@ -178,12 +178,18 @@
         </div>
         <!-- Master Prompt Bar -->
         <div id="twMasterBar" style="padding:12px 20px;border-bottom:1px solid var(--border);background:var(--sidebar-bg);display:flex;gap:10px;align-items:end;">
-          <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
-            <textarea id="twMasterInput" placeholder="Master prompt girin... (ör: Bir araba blog sitesi kur)" rows="2" style="flex:1;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;font-size:14px;resize:vertical;outline:none;min-height:52px;max-height:50vh;"></textarea>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:6px;">
-            <button type="button" id="twExpandBtn" onclick="twToggleExpandPrompt()" title="Genişlet / Daralt" style="padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);cursor:pointer;font-size:14px;line-height:1;">⤢</button>
-            <button type="button" id="twSendBtn" onclick="sendMasterPrompt();return false;" style="padding:10px 20px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-family:inherit;font-weight:600;cursor:pointer;white-space:nowrap;">Hepsine Gönder ↑</button>
+          <div style="flex:1;display:flex;flex-direction:column;gap:8px;min-width:0;">
+            <div class="attachment-preview" id="twAttachmentPreview"></div>
+            <div class="input-row" style="display:flex;gap:10px;align-items:flex-end;">
+              <button class="attach-btn" id="twAttachBtn" title="Dosya ekle" type="button">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                </svg>
+              </button>
+              <input type="file" id="twFileInput" style="display:none;" multiple accept="image/*,.pdf,.txt,.md,.json,.js,.ts,.tsx,.html,.css,.py,.doc,.docx">
+              <textarea id="twMasterInput" placeholder="Master prompt girin... (ör: Bir araba blog sitesi kur)" rows="2" style="flex:1;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;font-size:14px;resize:vertical;outline:none;min-height:52px;max-height:50vh;"></textarea>
+              <button class="send-btn" type="button" id="twSendBtn" onclick="sendMasterPrompt();return false;"><span class="arrow">↑</span></button>
+            </div>
           </div>
         </div>
 
@@ -191,7 +197,7 @@
         <div id="twBody" style="flex:1;display:flex;overflow:hidden;min-height:0;">
 
           <!-- Sol: Üye Panelleri (accordion, dikey) -->
-          <div id="twMembersCol" style="width:320px;min-width:280px;max-width:50%;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;background:var(--bg);flex-shrink:0;position:relative;">
+          <div id="twMembersCol" style="width:320px;min-width:280px;max-width:50%;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;background:var(--bg);flex-shrink:0;position:relative;">
             <div id="twMembersResizeHandle" style="position:absolute;right:-3px;top:0;bottom:0;width:6px;cursor:col-resize;z-index:10;"></div>
             <div id="twPanels" style="display:flex;flex-direction:column;"></div>
           </div>

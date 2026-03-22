@@ -4,7 +4,7 @@
   --text: #e5e5e5;
   --muted: #a0a0a0;
   --border: rgba(255,255,255,0.1);
-  --accent: #3b82f6;
+  --accent: #8b5cf6;
   --danger: #ef4444;
 }
 
@@ -910,7 +910,7 @@ body {
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
-  background: #3b82f6;
+  background: #8b5cf6;
   color: white;
 }
 
@@ -1372,8 +1372,8 @@ body {
 .member-settings-field input:focus,
 .member-settings-field select:focus,
 .member-settings-field textarea:focus {
-  border-color: rgba(59,130,246,0.6);
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+  border-color: rgba(139,92,246,0.6);
+  box-shadow: 0 0 0 3px rgba(139,92,246,0.12);
 }
 
 .member-settings-deps {
@@ -1446,7 +1446,7 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .tw-task-badge.active {
-  background: rgba(99,102,241,0.15);
+  background: rgba(139,92,246,0.15);
   color: var(--accent);
 }
 .tw-task-badge.done {
@@ -1468,7 +1468,7 @@ body {
 }
 .tw-step.planning {
   border-left-color: var(--accent);
-  background: rgba(99,102,241,0.05);
+  background: rgba(139,92,246,0.05);
 }
 .tw-step.running {
   border-left-color: #f59e0b;
@@ -1522,6 +1522,10 @@ body {
   background: rgba(255,255,255,0.1);
   border-radius: 4px;
 }
+#twMembersCol,
+#twPanels {
+  overflow-x: hidden;
+}
 
 /* Team Workspace: Flow file card */
 .tw-flow-card {
@@ -1572,7 +1576,7 @@ body {
   color: #22c55e;
 }
 .tw-flow-file-row .file-badge.updated {
-  background: rgba(99,102,241,0.15);
+  background: rgba(139,92,246,0.15);
   color: var(--accent);
 }
 .tw-flow-file-row .file-badge.deleted {
@@ -1707,8 +1711,8 @@ body {
 
 .tw-inline-msg.user {
   align-self: flex-end;
-  background: rgba(59,130,246,0.15);
-  border-color: rgba(59,130,246,0.35);
+  background: rgba(139,92,246,0.15);
+  border-color: rgba(139,92,246,0.35);
   color: var(--text);
 }
 
