@@ -7,7 +7,7 @@
   <link rel="icon" type="image/png" href="b-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -170,11 +170,46 @@
         <!-- Header -->
         <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid var(--border);background:var(--sidebar-bg);">
           <button onclick="closeTeamWorkspace()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;">←</button>
+          <div class="model-selector-wrapper tw-model-selector-wrapper">
+            <button class="model-selector-btn tw-model-selector-btn" id="twModelSelectorBtn" onclick="toggleTwModelDropdown()">
+              <span class="model-selector-name" id="twSelectedModelName">Bambam 1.2 Lite</span>
+              <svg class="model-selector-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="model-dropdown tw-model-dropdown" id="twModelDropdown">
+              <div class="model-dropdown-content" id="twModelDropdownContent"></div>
+            </div>
+          </div>
           <span id="twTeamName" style="font-weight:600;font-size:16px;"></span>
           <span id="twProjectName" style="font-size:13px;color:var(--muted);"></span>
           <span id="twTeamDesc" style="font-size:12px;color:var(--muted);margin-left:8px;flex:1;"></span>
           <button id="twCollabBtn" onclick="twToggleCollabPanel()" style="padding:6px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;">🧠 Collaboration</button>
+          <button id="twEditorBtn" onclick="twToggleProjectPanel()" style="padding:6px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;">◇ Kod</button>
           <button id="twProjectBtn" onclick="twToggleProjectsManager()" style="padding:6px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;">📁 Projeler</button>
+        </div>
+
+        <div class="search-overlay" id="twMemberChatOverlay">
+          <div class="member-settings-modal tw-member-chat-modal" role="dialog" aria-modal="true">
+            <div class="member-settings-header">
+              <div class="member-settings-title-wrap">
+                <span id="twMemberModalIcon" class="member-settings-icon">🤖</span>
+                <div>
+                  <div id="twMemberModalTitle" class="member-settings-title">Takım Üyesi</div>
+                  <div id="twMemberModalDesc" class="member-settings-subtitle"></div>
+                </div>
+              </div>
+              <button class="search-close-btn" onclick="twCloseMemberChatModal()" aria-label="Kapat">×</button>
+            </div>
+            <div id="twMemberModalContent" class="tw-member-chat-modal-content"></div>
+            <div class="member-settings-footer">
+              <button class="search-new-chat" onclick="twCloseMemberChatModal()">Kapat</button>
+              <div style="display:flex;gap:8px;flex:1;justify-content:flex-end;">
+                <input id="twMemberModalInput" type="text" placeholder="Mesaj yaz..." style="flex:1;max-width:420px;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:var(--text);font-family:inherit;outline:none;">
+                <button class="member-settings-save" onclick="twSendMemberChat(twOpenMemberModalId, true)">Gönder</button>
+              </div>
+            </div>
+          </div>
         </div>
         <!-- Master Prompt Bar -->
         <div id="twMasterBar" style="padding:12px 20px;border-bottom:1px solid var(--border);background:var(--sidebar-bg);display:flex;gap:10px;align-items:end;">
@@ -206,7 +241,14 @@
           <div id="twFlowCol" style="flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;">
             <div style="padding:8px 16px;border-bottom:1px solid var(--border);background:var(--sidebar-bg);display:flex;align-items:center;gap:8px;">
               <span style="font-weight:600;font-size:13px;">📋 Proje Akışı</span>
-              <span style="font-size:11px;color:var(--muted);">— Sonuçlar ve gelişmeler</span>
+              <span style="font-size:11px;color:var(--muted);flex:1;">— Sonuçlar ve gelişmeler</span>
+              <div class="tw-flow-filter-wrap">
+                <button class="tw-flow-filter-btn active" data-flow-filter="all" onclick="twSetFlowFilter('all')">Tümü</button>
+                <button class="tw-flow-filter-btn" data-flow-filter="important" onclick="twSetFlowFilter('important')">Önemli</button>
+              </div>
+              <select id="twFlowMemberFilter" class="tw-flow-member-select" onchange="twSetFlowMemberFilter(this.value)">
+                <option value="all">Tüm ekip</option>
+              </select>
             </div>
             <div id="twFlowMessages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;">
               <div style="color:var(--muted);text-align:center;padding:40px 20px;font-size:13px;">Master prompt gönderin, sonuçlar burada görünecek.</div>
@@ -214,20 +256,63 @@
           </div>
         </div>
 
-        <!-- Project Preview Panel -->
-        <div id="twProjectPanel" style="display:none;border-top:2px solid var(--accent);background:var(--bg);height:45vh;flex-direction:column;">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 20px;border-bottom:1px solid var(--border);background:var(--sidebar-bg);">
-            <div style="display:flex;align-items:center;gap:10px;">
-              <span style="font-weight:600;font-size:13px;">👁 Preview</span>
-              <button onclick="twRefreshPreview()" style="padding:4px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;cursor:pointer;">↻ Yenile</button>
+        <!-- Project Code Editor Panel (Manus-style) -->
+        <div id="twProjectPanel" class="tw-editor-panel" style="display:none;">
+          <!-- Editor Toolbar -->
+          <div class="tw-editor-toolbar">
+            <div class="tw-editor-toolbar-left">
+              <button class="tw-editor-tab-btn active" data-view="split" onclick="twEditorSwitchView('split')">◫ Split</button>
+              <button class="tw-editor-tab-btn" data-view="code" onclick="twEditorSwitchView('code')">◇ Kod</button>
+              <button class="tw-editor-tab-btn" data-view="preview" onclick="twEditorSwitchView('preview')">👁 Preview</button>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <button onclick="twOpenFullPreview()" style="padding:5px 14px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;">↗ Tam Ekran</button>
-              <button onclick="twDownloadProject()" id="twDownloadBtn" style="padding:5px 14px;background:var(--accent);border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;">📥 Projeyi İndir</button>
-              <button onclick="twToggleProjectPanel()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;">✕</button>
+            <div class="tw-editor-toolbar-right">
+              <button onclick="twRefreshPreview()" class="tw-editor-action-btn" title="Yenile">↻</button>
+              <button onclick="twOpenFullPreview()" class="tw-editor-action-btn" title="Tam Ekran">↗</button>
+              <button onclick="twDownloadProject()" id="twDownloadBtn" class="tw-editor-action-btn accent" title="İndir">📥 İndir</button>
+              <button onclick="twEditorNewFile()" class="tw-editor-action-btn" title="Yeni Dosya">+ Dosya</button>
+              <button onclick="twToggleProjectPanel()" class="tw-editor-action-btn close" title="Kapat">✕</button>
             </div>
           </div>
-          <iframe id="twPreviewFrame" style="flex:1;border:none;background:#fff;" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-popups-to-escape-sandbox" allow="camera;microphone;fullscreen;clipboard-read;clipboard-write"></iframe>
+          <!-- Editor Body -->
+          <div class="tw-editor-body">
+            <!-- File Tree -->
+            <div class="tw-editor-sidebar" id="twEditorSidebar">
+              <div class="tw-editor-sidebar-header">
+                <span>Dosyalar</span>
+                <button onclick="twEditorRefreshTree()" title="Yenile" class="tw-editor-sidebar-btn">↻</button>
+              </div>
+              <div class="tw-editor-file-tree" id="twEditorFileTree"></div>
+            </div>
+            <div class="tw-editor-sidebar-resize" id="twEditorSidebarResize"></div>
+            <!-- Code Area -->
+            <div class="tw-editor-main">
+              <!-- Tabs -->
+              <div class="tw-editor-tabs" id="twEditorTabs"></div>
+              <!-- Monaco Container -->
+              <div class="tw-editor-monaco" id="twEditorMonaco">
+                <div class="tw-editor-welcome">
+                  <div style="font-size:28px;margin-bottom:8px;">◇</div>
+                  <div style="font-size:14px;font-weight:600;">Bambam Code Editor</div>
+                  <div style="font-size:12px;color:var(--muted);margin-top:4px;">Sol panelden bir dosya seçin veya yeni dosya oluşturun</div>
+                </div>
+              </div>
+            </div>
+            <div class="tw-editor-split-resize" id="twEditorSplitResize"></div>
+            <!-- Preview -->
+            <div class="tw-editor-preview" id="twEditorPreview">
+              <iframe id="twPreviewFrame" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-popups-to-escape-sandbox" allow="camera;microphone;fullscreen;clipboard-read;clipboard-write"></iframe>
+            </div>
+          </div>
+          <!-- Status Bar -->
+          <div class="tw-editor-statusbar" id="twEditorStatusbar">
+            <span id="twEditorStatusFile">Dosya seçilmedi</span>
+            <span class="tw-editor-statusbar-sep">•</span>
+            <span id="twEditorStatusSave">—</span>
+            <span class="tw-editor-statusbar-sep">•</span>
+            <span id="twEditorStatusLang">—</span>
+            <span style="flex:1;"></span>
+            <span id="twEditorStatusCursor">Ln 1, Col 1</span>
+          </div>
         </div>
 
         <div id="twCollabPanel" class="tw-collab-panel" style="display:none;">
@@ -330,18 +415,6 @@
             <span>İkon</span>
             <input id="memberSettingsIcon" type="text" />
           </label>
-          <label class="member-settings-field">
-            <span>Model</span>
-            <select id="memberSettingsModel">
-              <option value="gpt-4o-mini">GPT-4o Mini</option>
-              <option value="gpt-4o">GPT-4o</option>
-              <option value="groq:llama-3.1-8b-instant">Groq Llama 3.1 8B</option>
-              <option value="groq:llama-3.3-70b-versatile">Groq Llama 3.3 70B</option>
-              <option value="groq:mixtral-8x7b-32768">Groq Mixtral 8x7B</option>
-              <option value="openrouter:anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
-              <option value="openrouter:google/gemini-pro-1.5">Gemini Pro 1.5</option>
-            </select>
-          </label>
           <label class="member-settings-field member-settings-field-wide">
             <span>Açıklama</span>
             <input id="memberSettingsDesc" type="text" />
@@ -363,6 +436,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
   <script src="api.js"></script>
   <script src="app.js"></script>
 </body>

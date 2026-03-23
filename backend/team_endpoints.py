@@ -54,6 +54,9 @@ def _employee_output_guide():
         "- Kısa bir ilerleme özeti ver, gereksiz uzun anlatım yapma.\n"
         "- MUTLAKA 'Brainstorming:' başlığı yaz. Bu başlık her yanıtta zorunlu.\n"
         "- Kodları düz metin olarak yazma; sadece belirtilen kod bloğu formatında yaz.\n"
+        "- Kullanıcının açıkça istemediği hiçbir şeyi değiştirme. Tasarım, metin, renk, dosya yapısı veya davranış değişikliği ekleme.\n"
+        "- Görev kapsamı dışına çıkma. Sadece istenen bileşen, ekran, stil veya dosya üzerinde minimal değişiklik yap.\n"
+        "- Mevcut çalışan yapıyı koru; istenmeyen refactor, yeniden adlandırma veya ek özellik ekleme.\n"
         "- Yanıtı şu iskelette yaz:\n"
         "  Durum: <1-2 cümle durum güncellemesi>\n"
         "  Brainstorming: <kısa düşünce/plan notları>\n"
@@ -425,21 +428,8 @@ async def team_member_chat(
     # Model provider belirle (request'ten gelen varsa onu, yoksa üyenin kayıtlı modelini kullan)
     model_id = req.model or member.get("model") or "gpt-4o-mini"
 
-    if model_id.startswith("groq:"):
-        provider = "groq"
-        model_name = model_id.replace("groq:", "")
-    elif model_id.startswith("openrouter:"):
-        provider = "openrouter"
-        model_name = model_id.replace("openrouter:", "")
-    elif model_id.startswith("bambam:lite"):
-        provider = "groq"
-        model_name = "llama-3.1-8b-instant"
-    elif model_id.startswith("bambam:max"):
-        provider = "openrouter"
-        model_name = "anthropic/claude-3.5-sonnet"
-    else:
-        provider = "openai"
-        model_name = model_id if not model_id.startswith("bambam:") else "gpt-4o-mini"
+    provider = "openai"
+    model_name = "gpt-4o"
 
     clients = _get_llm_clients()
     client = clients.get(provider)
@@ -559,18 +549,7 @@ def _build_user_content(
 
 def _resolve_model(model_id: str):
     """Model ID'den provider ve model adı çıkar"""
-    if model_id.startswith("groq:"):
-        return "groq", model_id.replace("groq:", "")
-    elif model_id.startswith("openrouter:"):
-        return "openrouter", model_id.replace("openrouter:", "")
-    elif model_id.startswith("bambam:lite"):
-        return "groq", "llama-3.1-8b-instant"
-    elif model_id.startswith("bambam:max"):
-        return "openrouter", "anthropic/claude-3.5-sonnet"
-    else:
-        return "openai", model_id if not model_id.startswith(
-            "bambam:"
-        ) else "gpt-4o-mini"
+    return "openai", "gpt-4o"
 
 
 def _run_member_chat(member, message, model_id, clients, attachments=None):

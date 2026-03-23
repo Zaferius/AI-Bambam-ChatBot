@@ -514,6 +514,21 @@ class BambamAPI {
     }
   }
 
+  async deleteProjectFile(teamId, filePath) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/projects/${teamId}/files`, {
+        method: "DELETE",
+        headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ path: filePath })
+      });
+      if (!response.ok) { const err = await response.json(); throw new Error(err.detail || "Failed"); }
+      return await response.json();
+    } catch (error) {
+      console.error("Delete project file error:", error);
+      throw error;
+    }
+  }
+
   async extractProjectFiles(teamId) {
     try {
       const response = await fetch(`${this.baseUrl}/api/projects/${teamId}/extract`, {
