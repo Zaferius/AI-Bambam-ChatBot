@@ -13,9 +13,18 @@
 <body>
   <div class="app">
     <aside class="sidebar" id="sidebar">
-      <div class="sidebar-header" onclick="toggleSidebar()">
-        <img src="b-icon.png" alt="Bambam Logo" class="logo-icon">
-        <span class="logo-text">Bambam</span>
+      <div class="sidebar-header">
+        <div class="sidebar-brand">
+          <div class="sidebar-brand-icon-wrap">
+            <img src="b-icon.png" alt="Bambam Logo" class="logo-icon sidebar-main-logo">
+          </div>
+          <span class="logo-text">Bambam</span>
+        </div>
+        <button class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Kenar cubugunu daralt / genislet" aria-label="Kenar cubugunu daralt / genislet">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 6l-6 6 6 6"></path>
+          </svg>
+        </button>
       </div>
 
       <div class="sidebar-nav">

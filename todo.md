@@ -9,3 +9,6 @@
 14)az önce oluşturulan sitede bir title düzeltmesi yaptı üyelerden biri ama hiç bu sekilde acıklayıcı bir yazı yazmadı. işlerini tamamladı dedi sadece. Her işinde bunu yazması lazım. Görsel: >Ekran Kayıtları>plan-yazmali.png
 15)Takım üyeleri sidebarı fazla kapanıyor biraz iç içe giriyor noktalar.Ayrıca kapanırken de sekiyor biraz ikonlar.
 16)Takım üyelerinin bireysel sohbet pencereleri aşırı dandik. Normal sitedeki 1v1 konusma tasarımı birebir bu bireysel sohbet pencerelerine de gelsin.
+17)Model seçme kısmı tekli sohbet kısmında çalışmıyor. Liste açılıyor ama hiçbir şey seçemiyorum. Düzeltelim.
+18)Sol üstteki logo ve Bambam yazısının sağda karşısında kenar cubugunu daraltma butonu ekleyelim. uygun ikonu sen bulursun. Kenar cubugunu daraltırken çubuk biraz sekiyor garip duruyor. Onu kontrol eder misin tamamen smooth sekilde açılıp kapanmalı. Yazılar fadein falan gelmeli.
+19)Giriş ekranı polish.

@@ -139,8 +139,9 @@ function updateChatList() {
 
 // Sidebar Functions
 function toggleSidebar() {
-  sidebar.classList.toggle("open");
-  mainContent.classList.toggle("sidebar-open");
+  const willOpen = !sidebar.classList.contains("open");
+  sidebar.classList.toggle("open", willOpen);
+  mainContent.classList.toggle("sidebar-open", willOpen);
 }
 
 function handleNavClick(action) {
