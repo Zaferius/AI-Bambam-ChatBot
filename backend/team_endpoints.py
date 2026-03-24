@@ -734,13 +734,37 @@ def _build_system_prompt(member, team_id, run_id=None):
     return base
 
 
-def _check_relevance(member, message, model_id, clients):
+def _get_project_file_list(team_id):
+    """Projede var olan dosya listesini döndür (sadece isimler, küçük boyutlu bağlam)"""
+    try:
+        project_dir = get_project_dir(team_id)
+        files = []
+        for p in sorted(project_dir.rglob("*")):
+            if p.is_file() and p.suffix in (".html", ".css", ".js", ".json", ".py", ".txt", ".tsx", ".ts"):
+                rel = p.relative_to(project_dir).as_posix()
+                files.append(rel)
+        return files
+    except:
+        return []
+
+
+def _check_relevance(member, message, model_id, clients, team_id=None, force_accept=False):
     """Görevin bu üyenin rolüyle ilgili olup olmadığını kontrol et.
     Returns: (is_relevant: bool, reason: str)"""
+    if force_accept:
+        return True, ""
+
     provider, model_name = _resolve_model(model_id)
     client = clients.get(provider)
     if not client:
-        return True, ""  # Client yoksa yine de dene
+        return True, ""
+
+    # Proje dosyaları bağlamı
+    file_context = ""
+    if team_id:
+        existing_files = _get_project_file_list(team_id)
+        if existing_files:
+            file_context = f"\nProjede mevcut dosyalar: {', '.join(existing_files[:30])}\n"
 
     try:
         response = client.chat.completions.create(
@@ -750,11 +774,20 @@ def _check_relevance(member, message, model_id, clients):
                     "role": "system",
                     "content": (
                         f"Sen '{member['role_name']}' rolünde bir takım üyesisin.\n"
-                        f"Rol açıklaman: {member.get('system_prompt', '')[:200]}\n\n"
-                        f"Aşağıdaki görevi değerlendir. Bu görev SENİN ROLÜNLE doğrudan ilgili mi?\n"
-                        f"Sadece JSON döndür, başka bir şey yazma.\n"
-                        f'İlgiliyse: {{"relevant": true}}\n'
-                        f'İlgili değilse: {{"relevant": false, "reason": "kısa açıklama"}}'
+                        f"Rol açıklaman: {member.get('system_prompt', '')[:300]}\n"
+                        f"{file_context}\n"
+                        f"Aşağıdaki görevi değerlendir.\n\n"
+                        f"KURALLAR:\n"
+                        f"1. Eğer görev mevcut dosyaları GÜNCELLEME/DEĞİŞTİRME/DÜZENLEME içeriyorsa "
+                        f"(title değiştir, renk güncelle, metin ekle, düzelt vb.) ve projedeki dosyalar "
+                        f"senin uzmanlık alanındaki dosya türlerini içeriyorsa → relevant: true\n"
+                        f"2. Eğer görev yeni bir şey OLUŞTURMA içeriyorsa ve senin rolünle ilişkili bir "
+                        f"kısmı varsa → relevant: true\n"
+                        f"3. Şüphede kalırsan → relevant: true (atlamaktansa katkı sağla)\n"
+                        f"4. SADECE görev tamamen farklı bir uzmanlık alanıysa ve senin yapabileceğin "
+                        f"HİÇBİR şey yoksa → relevant: false\n\n"
+                        f"Sadece JSON döndür:\n"
+                        f'{{"relevant": true}} veya {{"relevant": false, "reason": "kısa açıklama"}}'
                     ),
                 },
                 {"role": "user", "content": message},
@@ -768,7 +801,7 @@ def _check_relevance(member, message, model_id, clients):
         result = json.loads(raw)
         return result.get("relevant", True), result.get("reason", "")
     except:
-        return True, ""  # Parse hatası olursa yine de çalış
+        return True, ""
 
 
 def _plan_steps(member, message, model_id, clients):
@@ -1209,6 +1242,7 @@ def _run_member_agentic(
     run_id=None,
     task_id=None,
     attachments=None,
+    force_relevant=False,
 ):
     """Bir üye için agentic multi-step çalışma (thread'de çalışır)"""
     member_id = member["id"]
@@ -1223,7 +1257,9 @@ def _run_member_agentic(
     event_queue.put(
         _event_payload({"member_id": member_id, "type": "planning"}, run_id, task_id)
     )
-    is_relevant, skip_reason = _check_relevance(member, message, model_id, clients)
+    is_relevant, skip_reason = _check_relevance(
+        member, message, model_id, clients, team_id=team_id, force_accept=force_relevant
+    )
 
     if not is_relevant:
         reason_text = skip_reason or "Bu görev benim rolümle ilgili değil."
@@ -1608,6 +1644,66 @@ async def master_prompt_stream(
 
                     completed_task_ids.add(task["id"])
                     pending_tasks.discard(task["id"])
+
+            # Fallback: Tüm üyeler skip ettiyse en uygun üyeyi zorla çalıştır
+            all_tasks_final = [db.get_team_task(t["id"]) for t in tasks]
+            all_skipped = all(
+                t and t.get("status") == "skipped" for t in all_tasks_final
+            )
+            if all_skipped and members:
+                # En uygun üyeyi bul: frontend > general > ilk üye
+                fallback_member = None
+                for m in members:
+                    stage = _infer_member_stage(m)
+                    if stage == "frontend":
+                        fallback_member = m
+                        break
+                if not fallback_member:
+                    for m in members:
+                        stage = _infer_member_stage(m)
+                        if stage in ("general", "backend"):
+                            fallback_member = m
+                            break
+                if not fallback_member:
+                    fallback_member = members[0]
+
+                fb_task = task_by_member.get(fallback_member["id"])
+                if fb_task:
+                    db.update_team_task_status(fb_task["id"], "running", blocked_reason="")
+                    event_queue.put(
+                        _event_payload(
+                            {"type": "task_started", "member_id": fallback_member["id"]},
+                            run["id"],
+                            fb_task["id"],
+                        )
+                    )
+                    _run_member_agentic(
+                        fallback_member,
+                        formatted_message,
+                        req.model or fallback_member.get("model") or "gpt-4o-mini",
+                        clients,
+                        team_id,
+                        event_queue,
+                        run["id"],
+                        fb_task["id"],
+                        req.attachments,
+                        force_relevant=True,
+                    )
+                    fb_messages = db.get_messages(fallback_member["chat_id"])
+                    fb_assistant = [m for m in fb_messages if m.get("role") == "assistant"]
+                    fb_reply = fb_assistant[-1]["content"] if fb_assistant else ""
+                    fb_extracted = extract_files_from_text(fb_reply) if fb_reply else []
+                    _record_task_completion_artifacts(
+                        run["id"], team_id, fallback_member, fb_task["id"], fb_reply, fb_extracted
+                    )
+                    if fb_extracted:
+                        saved = save_extracted_files_with_proposals(
+                            team_id, fb_extracted, run_id=run["id"],
+                            task_id=fb_task["id"], member_id=fallback_member["id"],
+                        )
+                    latest_fb = db.get_team_task(fb_task["id"])
+                    if latest_fb and latest_fb.get("status") not in ("failed", "skipped", "completed"):
+                        db.update_team_task_status(fb_task["id"], "completed")
 
             db.update_team_run_status(run["id"], "completed")
         except Exception as e:

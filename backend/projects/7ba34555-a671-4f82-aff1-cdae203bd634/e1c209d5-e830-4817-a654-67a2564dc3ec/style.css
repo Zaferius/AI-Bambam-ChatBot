@@ -1,0 +1,66 @@
+body {
+    font-family: 'Permanent Marker', cursive;
+    background-color: #f7f3e9;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.title {
+    font-size: 3rem;
+    color: #ff6363;
+    text-shadow: 2px 2px #ffa600;
+}
+
+.add-task {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+#task-input {
+    width: 70%;
+    padding: 10px;
+    border: 2px dashed #ffa600;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    margin-right: 10px;
+    background-color: #fffde1;
+    outline: none;
+}
+
+#add-task-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    background-color: #ff6363;
+    color: #fff;
+    font-size: 1.2rem;
+    cursor: pointer;
+    box-shadow: 2px 2px #660000;
+    transition: background-color 0.2s ease-in-out;
+}
+
+#add-task-btn:hover {
+    background-color: #ff4040;
+}
+
+.task-list {
+    list-style: none;
+    padding: 0;
+}
+
+.task-list li {
+    background-color: #ffedcc;
+    margin: 5px 0;
+    padding: 10px;
+    border-left: 5px solid #ff6363;
+    font-size: 1.1rem;
+    border-radius: 5px;
+    box-shadow: 2px 2px #dddddd;
+}

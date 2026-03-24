@@ -179,6 +179,16 @@ function getModelShortName() {
   return parts.length > 0 ? parts.join(" ") : "Lite";
 }
 
+function getCurrentModelDisplayMeta(modelName = null) {
+  const raw = String(modelName || (document.getElementById("selectedModelName")?.textContent || "Bambam 1.2 Lite")).replace(/\s+/g, ' ').trim();
+  const clean = raw.replace(/\bPro\b/g, '').trim();
+  const isPro = /Bambam 1\.2(?: Max)?$/i.test(clean);
+  return {
+    fullName: clean,
+    badge: isPro ? 'Pro' : 'Lite'
+  };
+}
+
 function escapeHtml(value) {
   return String(value || '')
     .replace(/&/g, '&amp;')
@@ -453,11 +463,11 @@ function createMessageElement(text, sender, isTyping = false, images = [], model
   if (sender === "bot") {
     const header = document.createElement("div");
     header.className = "bot-header";
-    const badge = modelName || getModelShortName();
+    const meta = getCurrentModelDisplayMeta(modelName);
     header.innerHTML = `
       <img src="b-icon.png" alt="Bambam Logo" class="bot-header-logo">
       <span class="bot-header-name">Bambam</span>
-      <span class="bot-header-badge">${badge}</span>
+      <span class="bot-header-badge">${meta.badge}</span>
     `;
     msg.appendChild(header);
   }
@@ -1159,10 +1169,26 @@ let twProjectsManagerOpen = false;
 let twAttachedFiles = [];
 let twWorkspaceHideTimer = null;
 let twProjectHideTimer = null;
-let twFlowState = [];
-let twFlowFilter = 'all';
-let twFlowMemberFilter = 'all';
 let twOpenMemberModalId = null;
+let twSidebarCollapsed = false;
+let twChatState = []; // Array of chat message objects for persistence
+let twTodoItems = []; // [{id, memberId, text, done}]
+let twTodoExpanded = true;
+
+// Member color palette
+const TW_MEMBER_COLORS = [
+  '#8b5cf6', // purple
+  '#3b82f6', // blue
+  '#22c55e', // green
+  '#f59e0b', // amber
+  '#ec4899', // pink
+  '#06b6d4', // cyan
+  '#f97316', // orange
+  '#ef4444', // red
+  '#14b8a6', // teal
+  '#a855f7', // violet
+];
+let twMemberColorMap = {}; // memberId -> color
 
 function twWorkspaceStateStorageKey(teamId) {
   return `tw-workspace-state:${teamId}`;
@@ -1185,116 +1211,494 @@ function twSaveWorkspaceState(teamId, state) {
   } catch {}
 }
 
-function twCloneFlowItems(items) {
-  try {
-    return JSON.parse(JSON.stringify(items || []));
-  } catch {
-    return [];
-  }
+// ===== TEAM CHAT MESSAGE RENDERING SYSTEM =====
+
+function twGetMemberColor(memberId) {
+  if (twMemberColorMap[memberId]) return twMemberColorMap[memberId];
+  const idx = Object.keys(twMemberColorMap).length % TW_MEMBER_COLORS.length;
+  twMemberColorMap[memberId] = TW_MEMBER_COLORS[idx];
+  return twMemberColorMap[memberId];
 }
 
-function twRerenderFlow() {
-  const flow = document.getElementById('twFlowMessages');
-  if (!flow) return;
-  flow.innerHTML = '';
-  const items = twGetVisibleFlowItems();
-  if (!items.length) {
-    flow.innerHTML = '<div style="color:var(--muted);text-align:center;padding:40px 20px;font-size:13px;">Master prompt gönderin, sonuçlar burada görünecek.</div>';
-    return;
-  }
-  items.forEach((item) => {
-    if (item.kind === 'section') {
-      twRenderFlowSectionItem(item);
-    } else if (item.kind === 'files') {
-      twRenderFlowFileItem(item, false);
-    } else {
-      twRenderFlowMessageItem(item, false);
-    }
+function twAssignMemberColors(members) {
+  twMemberColorMap = {};
+  (members || []).forEach((m, i) => {
+    twMemberColorMap[m.id] = TW_MEMBER_COLORS[i % TW_MEMBER_COLORS.length];
   });
 }
 
-function twGetVisibleFlowItems() {
-  return twFlowState.filter((item) => {
-    const groupLabel = item.groupLabel || twResolveFlowGroupLabel(item);
-    const memberPass = twFlowMemberFilter === 'all' || groupLabel === twFlowMemberFilter;
-    if (!memberPass) return false;
-    if (twFlowFilter === 'all') return true;
-    if (item.kind === 'section') return true;
-    return ['plan', 'success', 'error', 'files', 'wait'].includes(item.type || item.kind);
-  });
-}
-
-function twSetFlowFilter(filter) {
-  twFlowFilter = filter;
-  document.querySelectorAll('[data-flow-filter]').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.flowFilter === filter);
-  });
-  twRerenderFlow();
-}
-
-function twSetFlowMemberFilter(value) {
-  twFlowMemberFilter = value;
-  twRerenderFlow();
-}
-
-function twPushFlowItem(item) {
-  twFlowState.push(item);
-
-  if (item.kind === 'section') {
-    twRenderFlowSectionItem(item);
-  } else if (item.kind === 'files') {
-    twRenderFlowFileItem(item, true);
-  } else {
-    twRenderFlowMessageItem(item, true);
+function twGetChatInner() {
+  const scroll = document.getElementById('twChatMessages');
+  if (!scroll) return null;
+  let inner = scroll.querySelector('.tw-chat-inner');
+  if (!inner) {
+    inner = document.createElement('div');
+    inner.className = 'tw-chat-inner';
+    scroll.appendChild(inner);
   }
+  return inner;
 }
 
-function twRenderFlowSectionItem(item, persist = true) {
-  const flow = document.getElementById('twFlowMessages');
-  if (!flow) return;
-  const placeholder = flow.querySelector('div[style*="text-align:center"]');
-  if (placeholder) placeholder.remove();
+function twHideWelcome() {
+  const welcome = document.getElementById('twChatWelcome');
+  if (welcome) welcome.style.display = 'none';
+}
+
+function twChatAutoScroll() {
+  const scroll = document.getElementById('twChatMessages');
+  if (!scroll) return;
+  const threshold = 80;
+  const isNearBottom = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < threshold;
+  if (isNearBottom) scroll.scrollTop = scroll.scrollHeight;
+}
+
+function twAddUserMessage(text) {
+  twHideWelcome();
+  const inner = twGetChatInner();
+  if (!inner) return;
+  const row = document.createElement('div');
+  row.className = 'tw-msg-user';
+  const bubble = document.createElement('div');
+  bubble.className = 'tw-msg-user-bubble';
+  bubble.textContent = text;
+  row.appendChild(bubble);
+  inner.appendChild(row);
+  twChatAutoScroll();
+}
+
+function twAddSystemMessage(text, type) {
+  const inner = twGetChatInner();
+  if (!inner) return;
+  const row = document.createElement('div');
+  row.className = 'tw-msg-system';
+  const bubble = document.createElement('div');
+  bubble.className = 'tw-msg-system-bubble';
+  if (type === 'error') bubble.style.borderColor = 'rgba(239,68,68,0.3)';
+  if (type === 'success') bubble.style.borderColor = 'rgba(34,197,94,0.3)';
+  bubble.textContent = text;
+  row.appendChild(bubble);
+  inner.appendChild(row);
+  twChatAutoScroll();
+}
+
+function twGetOrCreateMemberMsg(memberId, memberInfo) {
+  const inner = twGetChatInner();
+  if (!inner) return null;
+  let existing = inner.querySelector(`.tw-msg-member[data-member-id="${memberId}"]`);
+  if (existing) return existing;
+
+  twHideWelcome();
+  const color = twGetMemberColor(memberId);
+  const info = memberInfo || {};
+
+  const msg = document.createElement('div');
+  msg.className = 'tw-msg-member';
+  msg.dataset.memberId = memberId;
+
+  const header = document.createElement('div');
+  header.className = 'tw-msg-member-header';
+
+  const iconEl = document.createElement('div');
+  iconEl.className = 'tw-msg-member-icon';
+  iconEl.textContent = info.icon || '🤖';
+
+  const nameEl = document.createElement('span');
+  nameEl.className = 'tw-msg-member-name';
+  nameEl.style.color = color;
+  nameEl.textContent = info.role_name || 'Agent';
+
+  const badge = document.createElement('span');
+  badge.className = 'tw-msg-member-badge';
+  badge.textContent = 'çalışıyor...';
+
+  header.appendChild(iconEl);
+  header.appendChild(nameEl);
+  header.appendChild(badge);
+
+  const body = document.createElement('div');
+  body.className = 'tw-msg-member-body';
+
+  msg.appendChild(header);
+  msg.appendChild(body);
+  inner.appendChild(msg);
+  twChatAutoScroll();
+  return msg;
+}
+
+function twSetMemberMsgBadge(memberId, text) {
+  const inner = twGetChatInner();
+  if (!inner) return;
+  const msg = inner.querySelector(`.tw-msg-member[data-member-id="${memberId}"]`);
+  if (!msg) return;
+  const badge = msg.querySelector('.tw-msg-member-badge');
+  if (badge) badge.textContent = text;
+}
+
+function twAddMemberText(memberId, text, memberInfo) {
+  const msg = twGetOrCreateMemberMsg(memberId, memberInfo);
+  if (!msg) return;
+  const body = msg.querySelector('.tw-msg-member-body');
+  if (!body) return;
+  const textEl = document.createElement('div');
+  textEl.className = 'tw-msg-member-text';
+  textEl.textContent = text;
+  body.appendChild(textEl);
+  twChatAutoScroll();
+}
+
+function twAddMemberStatusLine(memberId, icon, shortText, memberInfo) {
+  const msg = twGetOrCreateMemberMsg(memberId, memberInfo);
+  if (!msg) return;
+  const body = msg.querySelector('.tw-msg-member-body');
+  if (!body) return;
+  const line = document.createElement('div');
+  line.className = 'tw-msg-member-status-line';
+  line.innerHTML = `<span class="status-icon">${icon}</span> <span>${shortText}</span>`;
+  body.appendChild(line);
+  twChatAutoScroll();
+}
+
+function twAddMemberPlanSection(memberId, steps, memberInfo) {
+  const msg = twGetOrCreateMemberMsg(memberId, memberInfo);
+  if (!msg) return;
+  const body = msg.querySelector('.tw-msg-member-body');
+  if (!body) return;
 
   const section = document.createElement('div');
-  section.className = 'tw-flow-section';
-  section.innerHTML = `
-    <div class="tw-flow-section-line"></div>
-    <div class="tw-flow-section-label">${escapeHtml(item.label || 'Akış')}</div>
-    <div class="tw-flow-section-line"></div>
-  `;
-  flow.appendChild(section);
-  requestAnimationFrame(() => section.classList.add('is-visible'));
-  twAutoScroll(flow);
-  if (persist) twPersistCurrentWorkspaceState();
+  section.className = 'tw-msg-section open';
+  section.dataset.sectionType = 'plan';
+
+  const header = document.createElement('div');
+  header.className = 'tw-msg-section-header';
+  header.onclick = () => section.classList.toggle('open');
+
+  const check = document.createElement('div');
+  check.className = 'tw-msg-section-check';
+  check.innerHTML = '✓';
+  const title = document.createElement('div');
+  title.className = 'tw-msg-section-title';
+  title.textContent = `Plan (${steps.length} adım)`;
+  const arrow = document.createElement('div');
+  arrow.className = 'tw-msg-section-arrow';
+  arrow.textContent = '▸';
+
+  header.appendChild(check);
+  header.appendChild(title);
+  header.appendChild(arrow);
+
+  const sBody = document.createElement('div');
+  sBody.className = 'tw-msg-section-body';
+  const sInner = document.createElement('div');
+  sInner.className = 'tw-msg-section-body-inner';
+
+  steps.forEach((stepText, i) => {
+    const task = document.createElement('div');
+    task.className = 'tw-msg-task';
+    const tIcon = document.createElement('div');
+    tIcon.className = 'tw-msg-task-icon';
+    tIcon.textContent = `${i + 1}`;
+    const tLabel = document.createElement('div');
+    tLabel.className = 'tw-msg-task-label';
+    tLabel.textContent = stepText;
+    task.appendChild(tIcon);
+    task.appendChild(tLabel);
+    sInner.appendChild(task);
+  });
+
+  sBody.appendChild(sInner);
+  section.appendChild(header);
+  section.appendChild(sBody);
+  body.appendChild(section);
+  twChatAutoScroll();
 }
 
-function twAddFlowSection(label) {
-  const item = {
-    kind: 'section',
-    sectionType: 'run',
-    label,
-    groupLabel: label,
-    time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
-  };
-  twPushFlowItem(item);
+function twGetOrCreateStepSection(memberId, stepNum, total, desc, memberInfo) {
+  const msg = twGetOrCreateMemberMsg(memberId, memberInfo);
+  if (!msg) return null;
+  const body = msg.querySelector('.tw-msg-member-body');
+  if (!body) return null;
+
+  let section = body.querySelector(`.tw-msg-section[data-step="${stepNum}"]`);
+  if (section) return section;
+
+  section = document.createElement('div');
+  section.className = 'tw-msg-section running';
+  section.dataset.step = stepNum;
+
+  const header = document.createElement('div');
+  header.className = 'tw-msg-section-header';
+  header.onclick = () => section.classList.toggle('open');
+
+  const check = document.createElement('div');
+  check.className = 'tw-msg-section-check';
+  check.innerHTML = '✓';
+  const title = document.createElement('div');
+  title.className = 'tw-msg-section-title';
+  title.textContent = desc || `Adım ${stepNum}/${total}`;
+  const arrow = document.createElement('div');
+  arrow.className = 'tw-msg-section-arrow';
+  arrow.textContent = '▸';
+
+  header.appendChild(check);
+  header.appendChild(title);
+  header.appendChild(arrow);
+
+  const sBody = document.createElement('div');
+  sBody.className = 'tw-msg-section-body';
+  const sInner = document.createElement('div');
+  sInner.className = 'tw-msg-section-body-inner';
+  const content = document.createElement('div');
+  content.className = 'tw-msg-section-content';
+  content.dataset.raw = '';
+  content.textContent = 'Çıktı hazırlanıyor...';
+  sInner.appendChild(content);
+  sBody.appendChild(sInner);
+
+  section.appendChild(header);
+  section.appendChild(sBody);
+  body.appendChild(section);
+  twChatAutoScroll();
+  return section;
 }
 
-function twResolveFlowGroupLabel(item) {
-  if (item.kind === 'files') return item.roleName || 'Dosyalar';
-  const title = item.title || '';
-  if (title.includes('->')) return 'Handoff';
-  if (title.includes('—')) return title.split('—')[0].trim();
-  return title.trim() || 'Akış';
+function twUpdateStepDelta(memberId, stepNum, deltaText) {
+  const inner = twGetChatInner();
+  if (!inner) return;
+  const msg = inner.querySelector(`.tw-msg-member[data-member-id="${memberId}"]`);
+  if (!msg) return;
+  const section = msg.querySelector(`.tw-msg-section[data-step="${stepNum}"]`);
+  if (!section) return;
+  const content = section.querySelector('.tw-msg-section-content');
+  if (!content) return;
+  const prevRaw = content.dataset.raw || '';
+  const nextRaw = prevRaw + (deltaText || '');
+  content.dataset.raw = nextRaw;
+  const liveText = extractLiveProgressText(nextRaw, 160);
+  content.textContent = liveText ? `Thinking... ${liveText}` : 'Thinking...';
+  twChatAutoScroll();
 }
 
-function twPopulateFlowMemberFilter(team) {
-  const select = document.getElementById('twFlowMemberFilter');
-  if (!select || !team) return;
-  const options = ['Coordinator', 'Master Prompt', ...(team.members || []).map((m) => m.role_name), 'Handoff'];
-  const unique = [...new Set(options.filter(Boolean))];
-  select.innerHTML = ['<option value="all">Tüm ekip</option>', ...unique.map((label) => `<option value="${escapeHtml(label)}">${escapeHtml(label)}</option>`)].join('');
-  select.value = 'all';
-  twFlowMemberFilter = 'all';
+function twSetStepDone(memberId, stepNum) {
+  const inner = twGetChatInner();
+  if (!inner) return;
+  const msg = inner.querySelector(`.tw-msg-member[data-member-id="${memberId}"]`);
+  if (!msg) return;
+  const section = msg.querySelector(`.tw-msg-section[data-step="${stepNum}"]`);
+  if (!section) return;
+  section.classList.remove('running');
+  section.classList.add('done');
+  const content = section.querySelector('.tw-msg-section-content');
+  if (content) {
+    const raw = content.dataset.raw || content.textContent || '';
+    renderAgentStructuredContent(content, raw, true);
+  }
+}
+
+function twSetStepError(memberId, stepNum, errorText) {
+  const inner = twGetChatInner();
+  if (!inner) return;
+  const msg = inner.querySelector(`.tw-msg-member[data-member-id="${memberId}"]`);
+  if (!msg) return;
+  const section = msg.querySelector(`.tw-msg-section[data-step="${stepNum}"]`);
+  if (!section) return;
+  section.classList.remove('running');
+  section.classList.add('error');
+  const content = section.querySelector('.tw-msg-section-content');
+  if (content) content.textContent += '\n❌ ' + (errorText || 'Hata');
+}
+
+function twAddMemberFiles(memberId, files, memberInfo) {
+  const msg = twGetOrCreateMemberMsg(memberId, memberInfo);
+  if (!msg) return;
+  const body = msg.querySelector('.tw-msg-member-body');
+  if (!body) return;
+
+  const filesWrap = document.createElement('div');
+  filesWrap.className = 'tw-msg-files';
+  (files || []).forEach(f => {
+    const fObj = typeof f === 'string' ? { path: f, status: 'added' } : f;
+    const badge = document.createElement('div');
+    badge.className = 'tw-msg-file-badge' + (fObj.status === 'updated' ? ' updated' : '');
+    badge.textContent = `${fObj.status === 'updated' ? '~' : '+'} ${fObj.path}`;
+    filesWrap.appendChild(badge);
+  });
+  body.appendChild(filesWrap);
+  twChatAutoScroll();
+}
+
+function twSetSidebarMemberStatus(memberId, status) {
+  const el = document.querySelector(`#twMembersList .tw-member-item[data-member-id="${memberId}"] .tw-member-item-status`);
+  if (!el) return;
+  el.className = 'tw-member-item-status';
+  if (status === 'working') el.classList.add('working');
+  else if (status === 'done') el.classList.add('done');
+  else if (status === 'error') el.classList.add('error');
+}
+
+function twToggleSidebar(forceState) {
+  const sidebar = document.getElementById('twMembersSidebar');
+  if (!sidebar) return;
+  const shouldCollapse = typeof forceState === 'boolean' ? forceState : !sidebar.classList.contains('collapsed');
+  twSidebarCollapsed = shouldCollapse;
+  if (shouldCollapse) {
+    sidebar.classList.add('collapsed');
+  } else {
+    sidebar.classList.remove('collapsed');
+  }
+}
+
+function twAddCoordinatorMessage(text) {
+  twHideWelcome();
+  const inner = twGetChatInner();
+  if (!inner) return;
+  const row = document.createElement('div');
+  row.className = 'tw-msg-coordinator';
+
+  const header = document.createElement('div');
+  header.className = 'tw-msg-coordinator-header';
+  const meta = getCurrentModelDisplayMeta();
+  header.innerHTML = `<img src="b-icon.png" alt="Bambam"><span class="coord-name">Bambam</span><span class="coord-badge">${meta.badge}</span>`;
+
+  const textEl = document.createElement('div');
+  textEl.className = 'tw-msg-coordinator-text';
+  textEl.textContent = text;
+
+  row.appendChild(header);
+  row.appendChild(textEl);
+  inner.appendChild(row);
+  twChatAutoScroll();
+}
+
+// ===== TODO PANEL =====
+function twToggleTodoPanel() {
+  const panel = document.getElementById('twTodoPanel');
+  if (!panel) return;
+  twTodoExpanded = !twTodoExpanded;
+  if (twTodoExpanded) {
+    panel.classList.remove('collapsed');
+  } else {
+    panel.classList.add('collapsed');
+  }
+}
+
+function twShowTodoPanel() {
+  const panel = document.getElementById('twTodoPanel');
+  if (panel) panel.style.display = '';
+}
+
+function twHideTodoPanel() {
+  const panel = document.getElementById('twTodoPanel');
+  if (panel) panel.style.display = 'none';
+  twTodoItems = [];
+}
+
+function twAddTodoItems(memberId, steps) {
+  const color = twGetMemberColor(memberId);
+  const memberInfo = twCurrentTeam?.members?.find(m => m.id === memberId);
+  const roleName = memberInfo?.role_name || 'Üye';
+  steps.forEach((step, i) => {
+    twTodoItems.push({
+      id: `${memberId}-${i}`,
+      memberId,
+      text: typeof step === 'string' ? step : (step.description || step.title || `Adım ${i + 1}`),
+      done: false,
+      color,
+      roleName
+    });
+  });
+  twRenderTodoList();
+  twShowTodoPanel();
+}
+
+function twMarkTodoDone(memberId, stepIndex) {
+  const id = `${memberId}-${stepIndex - 1}`;
+  const item = twTodoItems.find(t => t.id === id);
+  if (item) item.done = true;
+  twRenderTodoList();
+}
+
+function twMarkMemberTodosDone(memberId) {
+  twTodoItems.forEach(t => {
+    if (t.memberId === memberId) t.done = true;
+  });
+  twRenderTodoList();
+}
+
+function twRenderTodoList() {
+  const list = document.getElementById('twTodoList');
+  const countEl = document.getElementById('twTodoCount');
+  if (!list) return;
+  list.innerHTML = '';
+  const total = twTodoItems.length;
+  const doneCount = twTodoItems.filter(t => t.done).length;
+  if (countEl) countEl.textContent = `${doneCount}/${total}`;
+
+  twTodoItems.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'tw-todo-item' + (item.done ? ' done' : '');
+    row.style.color = item.color;
+
+    const circle = document.createElement('div');
+    circle.className = 'tw-todo-circle';
+    circle.style.borderColor = item.done ? item.color : item.color;
+
+    const text = document.createElement('span');
+    text.className = 'tw-todo-item-text';
+    text.textContent = item.text;
+
+    const member = document.createElement('span');
+    member.className = 'tw-todo-item-member';
+    member.textContent = item.roleName;
+
+    row.appendChild(circle);
+    row.appendChild(text);
+    row.appendChild(member);
+    list.appendChild(row);
+  });
+}
+
+function twGetTodoSummary() {
+  const done = twTodoItems.filter(t => t.done);
+  const members = [...new Set(done.map(t => t.roleName))];
+  return members;
+}
+
+function twRenderMembersSidebar(team) {
+  const list = document.getElementById('twMembersList');
+  if (!list || !team) return;
+  list.innerHTML = '';
+  (team.members || []).forEach(m => {
+    const color = twGetMemberColor(m.id);
+    const item = document.createElement('div');
+    item.className = 'tw-member-item';
+    item.dataset.memberId = m.id;
+    item.onclick = () => twOpenMemberChatModal(m.id);
+
+    const icon = document.createElement('div');
+    icon.className = 'tw-member-item-icon';
+    icon.style.borderLeft = `3px solid ${color}`;
+    icon.textContent = m.icon || '🤖';
+
+    const info = document.createElement('div');
+    info.className = 'tw-member-item-info';
+    const name = document.createElement('div');
+    name.className = 'tw-member-item-name';
+    name.style.color = color;
+    name.textContent = m.role_name;
+    const desc = document.createElement('div');
+    desc.className = 'tw-member-item-desc';
+    desc.textContent = m.description || 'Takım üyesi';
+    info.appendChild(name);
+    info.appendChild(desc);
+
+    const status = document.createElement('div');
+    status.className = 'tw-member-item-status';
+
+    item.appendChild(icon);
+    item.appendChild(info);
+    item.appendChild(status);
+    list.appendChild(item);
+  });
 }
 
 function twOpenMemberChatModal(memberId) {
@@ -1308,8 +1712,28 @@ function twOpenMemberChatModal(memberId) {
   document.getElementById('twMemberModalIcon').textContent = member.icon || '🤖';
   document.getElementById('twMemberModalTitle').textContent = member.role_name;
   document.getElementById('twMemberModalDesc').textContent = member.description || member.model || '';
-  const inlineContent = document.getElementById(`tw-content-${memberId}`);
-  content.innerHTML = inlineContent ? inlineContent.innerHTML : '<div style="color:var(--muted);">Henüz mesaj yok.</div>';
+  content.innerHTML = '<div class="tw-modal-placeholder" style="color:var(--muted);text-align:center;padding:20px;">Mesajlar yükleniyor...</div>';
+  // Load member messages from API
+  api.getMemberMessages(twCurrentTeam.id, memberId).then(messages => {
+    content.innerHTML = '';
+    if (messages && messages.length > 0) {
+      messages.forEach(msg => {
+        const row = document.createElement('div');
+        row.className = `tw-inline-msg ${msg.role === 'user' ? 'user' : 'assistant'}`;
+        if (msg.role === 'user') {
+          row.textContent = msg.content;
+        } else {
+          renderAgentStructuredContent(row, msg.content, true);
+        }
+        content.appendChild(row);
+      });
+      twAutoScroll(content);
+    } else {
+      content.innerHTML = '<div class="tw-modal-placeholder" style="color:var(--muted);text-align:center;padding:20px;">Henüz mesaj yok.</div>';
+    }
+  }).catch(() => {
+    content.innerHTML = '<div class="tw-modal-placeholder" style="color:var(--muted);text-align:center;padding:20px;">Henüz mesaj yok.</div>';
+  });
   overlay.classList.add('active');
   if (input) {
     input.value = '';
@@ -1323,60 +1747,28 @@ function twCloseMemberChatModal() {
   if (overlay) overlay.classList.remove('active');
 }
 
-function twEnsureFlowGroup(item) {
-  const label = twResolveFlowGroupLabel(item);
-  const lastSection = [...twFlowState].reverse().find((entry) => entry.kind === 'section' && entry.sectionType === 'group');
-  if (lastSection && lastSection.label === label) return;
-  twPushFlowItem({
-    kind: 'section',
-    sectionType: 'group',
-    label,
-    time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
-  });
-}
-
 function twResetWorkspaceForProjectChange() {
   if (!twCurrentTeam) return;
   twCurrentRunId = null;
-  twFlowState = [];
+  twChatState = [];
 
-  const flow = document.getElementById('twFlowMessages');
-  if (flow) {
-    flow.innerHTML = '<div style="color:var(--muted);text-align:center;padding:40px 20px;font-size:13px;">Master prompt gönderin, sonuçlar burada görünecek.</div>';
+  // Reset chat area
+  const scroll = document.getElementById('twChatMessages');
+  if (scroll) {
+    scroll.innerHTML = '';
+    const inner = document.createElement('div');
+    inner.className = 'tw-chat-inner';
+    const welcome = document.createElement('div');
+    welcome.className = 'tw-chat-welcome';
+    welcome.id = 'twChatWelcome';
+    welcome.innerHTML = '<div class="tw-chat-welcome-icon">🚀</div><div class="tw-chat-welcome-title">Takıma görev verin</div><div class="tw-chat-welcome-sub">Ne yapmalarını istediğinizi yazın, takım hemen çalışmaya başlasın.</div>';
+    inner.appendChild(welcome);
+    scroll.appendChild(inner);
   }
 
-  (twCurrentTeam.members || []).forEach((m, index) => {
-    const content = document.getElementById(`tw-content-${m.id}`);
-    const status = document.getElementById(`tw-status-${m.id}`);
-    const spinner = document.getElementById(`tw-spinner-${m.id}`);
-    const badge = document.getElementById(`tw-tasks-${m.id}`);
-    const body = document.getElementById(`tw-body-${m.id}`);
-    const arrow = document.getElementById(`tw-arrow-${m.id}`);
-    const input = document.getElementById(`tw-input-${m.id}`);
-
-    if (content) {
-      content.textContent = 'Bekleniyor...';
-      content.style.color = 'var(--muted)';
-    }
-    if (status) {
-      status.textContent = '●';
-      status.style.color = 'var(--muted)';
-      status.style.display = '';
-    }
-    if (spinner) spinner.style.display = 'none';
-    if (badge) {
-      badge.textContent = '';
-      badge.className = 'tw-task-badge';
-      badge.style.display = 'none';
-    }
-    if (body) {
-      const open = index === 0;
-      body.dataset.open = open ? 'true' : 'false';
-      body.style.maxHeight = open ? '400px' : '0';
-      body.style.opacity = open ? '1' : '0';
-    }
-    if (arrow) arrow.textContent = index === 0 ? '▼' : '▶';
-    if (input) input.value = '';
+  // Reset sidebar member statuses
+  (twCurrentTeam.members || []).forEach(m => {
+    twSetSidebarMemberStatus(m.id, 'idle');
   });
 
   const projectPanel = document.getElementById('twProjectPanel');
@@ -1401,37 +1793,14 @@ function twResetWorkspaceForProjectChange() {
 
 function twPersistCurrentWorkspaceState() {
   if (!twCurrentTeam) return;
-  const flow = document.getElementById('twFlowMessages');
+  const scroll = document.getElementById('twChatMessages');
   const panel = document.getElementById('twProjectPanel');
-  const members = {};
-
-  (twCurrentTeam.members || []).forEach((m) => {
-    const content = document.getElementById(`tw-content-${m.id}`);
-    const status = document.getElementById(`tw-status-${m.id}`);
-    const spinner = document.getElementById(`tw-spinner-${m.id}`);
-    const badge = document.getElementById(`tw-tasks-${m.id}`);
-    const body = document.getElementById(`tw-body-${m.id}`);
-    const arrow = document.getElementById(`tw-arrow-${m.id}`);
-    members[m.id] = {
-      contentHtml: content ? content.innerHTML : '',
-      contentColor: content ? content.style.color || '' : '',
-      statusText: status ? status.textContent : '',
-      statusColor: status ? status.style.color || '' : '',
-      statusDisplay: status ? status.style.display || '' : '',
-      spinnerDisplay: spinner ? spinner.style.display || '' : '',
-      badgeText: badge ? badge.textContent : '',
-      badgeClass: badge ? badge.className : '',
-      badgeDisplay: badge ? badge.style.display || '' : '',
-      bodyOpen: body ? body.dataset.open !== 'false' : false,
-      arrowText: arrow ? arrow.textContent : '▶'
-    };
-  });
 
   twSaveWorkspaceState(twCurrentTeam.id, {
-    version: 2,
+    version: 3,
     runId: twCurrentRunId || null,
-    flowItems: twCloneFlowItems(twFlowState),
-    members,
+    chatHtml: scroll ? scroll.innerHTML : '',
+    memberColors: twMemberColorMap,
     projectPanelOpen: panel ? panel.style.display === 'flex' : false,
     currentProjectId: twCurrentProject?.id || null,
     savedAt: Date.now()
@@ -1440,61 +1809,20 @@ function twPersistCurrentWorkspaceState() {
 
 function twRestoreWorkspaceState(team) {
   const state = twLoadWorkspaceState(team?.id);
-  if (!state) return false;
+  if (!state || state.version < 3) return false;
 
-  const flow = document.getElementById('twFlowMessages');
-  twFlowState = [];
-  if (flow && Array.isArray(state.flowItems) && state.flowItems.length > 0) {
-    flow.innerHTML = '';
-    twFlowState = twCloneFlowItems(state.flowItems);
-    twFlowState.forEach((item) => {
-      if (item.kind === 'files') {
-        twRenderFlowFileItem(item, false);
-      } else {
-        twRenderFlowMessageItem(item, false);
-      }
+  const scroll = document.getElementById('twChatMessages');
+  if (scroll && state.chatHtml) {
+    scroll.innerHTML = state.chatHtml;
+    // Re-attach section toggle handlers
+    scroll.querySelectorAll('.tw-msg-section-header').forEach(header => {
+      header.onclick = () => header.parentElement.classList.toggle('open');
     });
-  } else if (state.version === 2) {
-    if (flow) {
-      flow.innerHTML = '<div style="color:var(--muted);text-align:center;padding:40px 20px;font-size:13px;">Önceki akış verisi bu sürümle uyumlu değil. Yeni çalışma burada görünecek.</div>';
-    }
-    twFlowState = [];
   }
 
-  (team.members || []).forEach((m) => {
-    const memberState = state.members?.[m.id];
-    if (!memberState) return;
-
-    const content = document.getElementById(`tw-content-${m.id}`);
-    const status = document.getElementById(`tw-status-${m.id}`);
-    const spinner = document.getElementById(`tw-spinner-${m.id}`);
-    const badge = document.getElementById(`tw-tasks-${m.id}`);
-    const body = document.getElementById(`tw-body-${m.id}`);
-    const arrow = document.getElementById(`tw-arrow-${m.id}`);
-
-    if (content) {
-      content.innerHTML = memberState.contentHtml || '';
-      content.style.color = memberState.contentColor || '';
-    }
-    if (status) {
-      status.textContent = memberState.statusText || '●';
-      status.style.color = memberState.statusColor || '';
-      status.style.display = memberState.statusDisplay || '';
-    }
-    if (spinner) spinner.style.display = memberState.spinnerDisplay || 'none';
-    if (badge) {
-      badge.textContent = memberState.badgeText || '';
-      badge.className = memberState.badgeClass || 'tw-task-badge';
-      badge.style.display = memberState.badgeDisplay || 'none';
-    }
-    if (body) {
-      const open = !!memberState.bodyOpen;
-      body.dataset.open = open ? 'true' : 'false';
-      body.style.maxHeight = open ? '400px' : '0';
-      body.style.opacity = open ? '1' : '0';
-    }
-    if (arrow) arrow.textContent = memberState.arrowText || (memberState.bodyOpen ? '▼' : '▶');
-  });
+  if (state.memberColors) {
+    twMemberColorMap = state.memberColors;
+  }
 
   twCurrentRunId = state.runId || null;
   if (state.projectPanelOpen && twCurrentProject) {
@@ -1504,30 +1832,16 @@ function twRestoreWorkspaceState(team) {
       projectPanel.style.display = 'flex';
       requestAnimationFrame(() => projectPanel.classList.add('tw-open'));
     }
-    const projectBtn = document.getElementById('twProjectBtn');
-    if (projectBtn) {
-      projectBtn.style.background = 'var(--accent)';
-      projectBtn.style.color = '#fff';
+    const editorBtn = document.getElementById('twEditorBtn');
+    if (editorBtn) {
+      editorBtn.style.background = 'var(--accent)';
+      editorBtn.style.color = '#fff';
     }
     twSchedulePreviewRefresh();
   }
 
   return true;
 }
-
-document.addEventListener('click', (event) => {
-  const header = event.target.closest('.tw-flow-card-header[data-toggle-target]');
-  if (!header) return;
-  const targetId = header.dataset.toggleTarget;
-  const body = document.getElementById(targetId);
-  if (!body) return;
-  body.classList.toggle('open');
-  const arrow = header.querySelector('[data-flow-arrow]');
-  if (arrow) arrow.textContent = body.classList.contains('open') ? '▼' : '▶';
-  const item = twFlowState.find((entry) => entry.cardId === targetId);
-  if (item) item.open = body.classList.contains('open');
-  twPersistCurrentWorkspaceState();
-});
 
 async function loadTeamList() {
   const list = document.getElementById('teamList');
@@ -1553,8 +1867,6 @@ async function loadTeamList() {
             <button class="chat-item team-member-btn" id="tmb-${m.id}" onclick="switchToMemberChat('${t.id}','${m.id}')" style="font-size:12px;padding:7px 10px;background:transparent;border:none;gap:6px;align-items:center;">
               <span style="font-size:14px;">${m.icon||'🤖'}</span>
               <span class="chat-item-title" style="font-size:12px;flex:1;">${m.role_name}</span>
-              <span id="sb-spinner-${m.id}" class="tw-spinner" style="display:none;width:12px;height:12px;border-width:1.5px;"></span>
-              <span id="sb-tasks-${m.id}" class="tw-task-badge" style="display:none;"></span>
             </button>
           `).join('')}
         </div>
@@ -1879,364 +2191,58 @@ async function saveMemberSettings() {
 
 async function openTeamWorkspace(teamId) {
   try {
-  closeMemberChat();
-  const team = await api.getTeam(teamId);
-  if (!team) return;
-  twCurrentTeam = team;
-  twCurrentProject = team.active_project || null;
-  twCurrentRunId = null;
-  twToggleCollabPanel(false);
-  twProjectsManagerOpen = !twCurrentProject;
+    closeMemberChat();
+    const team = await api.getTeam(teamId);
+    if (!team) return;
+    twCurrentTeam = team;
+    twCurrentProject = team.active_project || null;
+    twCurrentRunId = null;
+    twToggleCollabPanel(false);
+    twProjectsManagerOpen = !twCurrentProject;
 
-  document.getElementById('twTeamName').textContent = team.name;
-  const twSelected = document.getElementById('twSelectedModelName');
-  const selectedModel = getModelById(selectedModelId);
-  if (twSelected) twSelected.innerHTML = formatModelLabelHtml(selectedModel?.name || 'Bambam 1.2 Lite');
-  renderTwModelDropdown();
-  document.getElementById('twProjectName').textContent = team.active_project ? `/ ${team.active_project.name}` : '/ Proje seç';
-  document.getElementById('twTeamDesc').textContent = team.description || '';
-  document.getElementById('twMasterInput').value = '';
-  twPopulateFlowMemberFilter(team);
-  if (twMasterInputEl) twAutoResizeTextarea();
-  twAttachedFiles = [];
-  twUpdateAttachmentPreview();
+    // Assign member colors
+    twAssignMemberColors(team.members);
 
-  // Genel akış alanını sıfırla
-  document.getElementById('twFlowMessages').innerHTML =
-    '<div style="color:var(--muted);text-align:center;padding:40px 20px;font-size:13px;">Master prompt gönderin, sonuçlar burada görünecek.</div>';
+    // Update header info
+    document.getElementById('twTeamName').textContent = team.name;
+    const twSelected = document.getElementById('twSelectedModelName');
+    const selectedModel = getModelById(selectedModelId);
+    if (twSelected) twSelected.innerHTML = formatModelLabelHtml(selectedModel?.name || 'Bambam 1.2 Lite');
+    renderTwModelDropdown();
+    document.getElementById('twProjectName').textContent = team.active_project ? `/ ${team.active_project.name}` : '/ Proje seç';
+    document.getElementById('twTeamDesc').textContent = team.description || '';
+    document.getElementById('twMasterInput').value = '';
+    if (twMasterInputEl) twAutoResizeTextarea();
+    twAttachedFiles = [];
+    twUpdateAttachmentPreview();
 
-  // Üye panellerini accordion olarak oluştur
-  const panels = document.getElementById('twPanels');
-  panels.innerHTML = (team.members || []).map((m, i) => `
-    <div id="tw-panel-${m.id}" class="tw-member-panel" style="display:flex;flex-direction:column;">
-      <div onclick="twToggleMemberPanel('${m.id}')" class="tw-member-header" style="cursor:pointer;user-select:none;">
-        <span style="font-size:10px;color:var(--muted);transition:transform 0.2s;" id="tw-arrow-${m.id}">${i === 0 ? '▼' : '▶'}</span>
-        <span class="tw-member-icon">${m.icon || '🤖'}</span>
-        <div class="tw-member-copy">
-          <div class="tw-member-title">${m.role_name}</div>
-          <div class="tw-member-subtitle">${m.description || 'Takım uzmanı'}</div>
-        </div>
-        <div class="tw-member-actions">
-        <span id="tw-spinner-${m.id}" style="display:none;" class="tw-spinner"></span>
-        <span id="tw-tasks-${m.id}" class="tw-task-badge" style="display:none;"></span>
-        <span id="tw-status-${m.id}" style="font-size:10px;color:var(--muted);">●</span>
-        <button class="tw-member-model" onclick="event.stopPropagation();twOpenMemberChatModal('${m.id}')">⤢ Büyüt</button>
-        </div>
-      </div>
-      <div id="tw-body-${m.id}" data-open="${i === 0 ? 'true' : 'false'}" style="display:flex;flex-direction:column;max-height:${i === 0 ? '400px' : '0'};opacity:${i === 0 ? '1' : '0'};overflow:hidden;transition:max-height var(--premium-med) var(--premium-ease),opacity var(--premium-fast) var(--premium-ease);">
-        <div id="tw-content-${m.id}" style="flex:1;padding:8px 12px;font-size:12px;line-height:1.5;color:var(--muted);overflow-y:auto;min-height:60px;">
-          Bekleniyor...
-        </div>
-        <div style="padding:6px 8px;border-top:1px solid var(--border);background:var(--sidebar-bg);display:flex;gap:4px;">
-          <input id="tw-input-${m.id}" type="text" placeholder="Mesaj yaz..." onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.preventDefault();twSendMemberChat('${m.id}');}" style="flex:1;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;outline:none;font-family:inherit;">
-          <button onclick="event.stopPropagation();twSendMemberChat('${m.id}')" style="padding:5px 10px;background:var(--accent);border:none;border-radius:5px;color:#fff;font-size:11px;cursor:pointer;font-family:inherit;">↑</button>
-        </div>
-      </div>
-    </div>
-  `).join('');
+    // Render members sidebar
+    twRenderMembersSidebar(team);
 
-  const ws = document.getElementById('teamWorkspace');
- clearTimeout(twWorkspaceHideTimer);
- ws.style.display = 'flex';
- requestAnimationFrame(() => ws.classList.add('tw-visible'));
- await twLoadProjectGate();
+    // Show workspace
+    const ws = document.getElementById('teamWorkspace');
+    clearTimeout(twWorkspaceHideTimer);
+    ws.style.display = 'flex';
+    requestAnimationFrame(() => ws.classList.add('tw-visible'));
 
-  const restored = twRestoreWorkspaceState(team);
+    await twLoadProjectGate();
 
-  // Her üyenin önceki mesajlarını yükle
-  if (!restored) {
-    for (const m of (team.members || [])) {
-      try {
-        const messages = await api.getMemberMessages(team.id, m.id);
-        const content = document.getElementById(`tw-content-${m.id}`);
-        if (content && messages && messages.length > 0) {
-          content.style.color = 'var(--text)';
-          twRenderMemberHistory(content, messages);
-          content.scrollTop = content.scrollHeight;
-        } else if (content) {
-          content.textContent = 'Henüz mesaj yok.';
-        }
-      } catch(e) { console.error('Load member messages error:', e); }
+    // Restore previous state or show welcome
+    const restored = twRestoreWorkspaceState(team);
+    if (!restored) {
+      twResetWorkspaceForProjectChange();
     }
-  }
-
-  // Resize handle for members column
-  twInitMembersResize();
 
   } catch(e) { console.error('[TW] openTeamWorkspace error:', e); }
 }
 
-function twToggleMemberPanel(memberId) {
-  const body = document.getElementById(`tw-body-${memberId}`);
-  const arrow = document.getElementById(`tw-arrow-${memberId}`);
-  if (!body) return;
-  const isOpen = body.dataset.open !== 'false';
-  body.dataset.open = isOpen ? 'false' : 'true';
-  if (isOpen) {
-    body.style.maxHeight = body.scrollHeight + 'px';
-    requestAnimationFrame(() => {
-      body.style.maxHeight = '0';
-      body.style.opacity = '0';
-    });
-  } else {
-    body.style.maxHeight = '0';
-    body.style.opacity = '0';
-    requestAnimationFrame(() => {
-      body.style.maxHeight = Math.max(240, body.scrollHeight) + 'px';
-      body.style.opacity = '1';
-    });
-  }
-  if (arrow) arrow.textContent = isOpen ? '▶' : '▼';
-  twPersistCurrentWorkspaceState();
-}
-
-function twInitMembersResize() {
-  const handle = document.getElementById('twMembersResizeHandle');
-  const col = document.getElementById('twMembersCol');
-  if (!handle || !col) return;
-  let isResizing = false;
-
-  handle.onmousedown = (e) => {
-    isResizing = true;
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-    e.preventDefault();
-  };
-  document.addEventListener('mousemove', (e) => {
-    if (!isResizing) return;
-    const bodyRect = document.getElementById('twBody').getBoundingClientRect();
-    let newWidth = e.clientX - bodyRect.left;
-    newWidth = Math.max(280, Math.min(newWidth, bodyRect.width * 0.5));
-    col.style.width = newWidth + 'px';
-  });
-  document.addEventListener('mouseup', () => {
-    if (isResizing) {
-      isResizing = false;
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    }
-  });
-}
-
-function twRenderMemberHistory(container, messages) {
-  if (!container) return;
-  container.textContent = '';
-
-  messages.forEach((msg) => {
-    const row = document.createElement('div');
-    row.className = `tw-inline-msg ${msg.role === 'user' ? 'user' : 'assistant'}`;
-
-    if (msg.role === 'user') {
-      row.textContent = msg.content;
-    } else {
-      renderAgentStructuredContent(row, msg.content, true);
-    }
-
-    container.appendChild(row);
-  });
-}
-
-function twRenderFlowMessageItem(item, persist = true) {
-  const flow = document.getElementById('twFlowMessages');
-  if (!flow) return;
-  const placeholder = flow.querySelector('div[style*="text-align:center"]');
-  if (placeholder) placeholder.remove();
-
-  const variantMap = {
-    info: { variant: 'info', chip: 'Güncelleme', subtitle: 'Akış mesajı' },
-    plan: { variant: 'plan', chip: 'Plan', subtitle: 'Planlama tamamlandı' },
-    wait: { variant: 'wait', chip: 'Bekliyor', subtitle: 'Durum değişikliği' },
-    success: { variant: 'success', chip: 'Tamamlandı', subtitle: 'Başarıyla bitti' },
-    result: { variant: 'success', chip: 'Sonuç', subtitle: 'Üye çıktısı' },
-    error: { variant: 'error', chip: 'Hata', subtitle: 'İşlem sırasında hata oluştu' }
-  };
-  const config = variantMap[item.type] || variantMap.info;
-
-  const card = document.createElement('div');
-  card.className = 'tw-flow-card';
-  card.dataset.variant = config.variant;
-
-  const header = document.createElement('div');
-  header.className = 'tw-flow-card-header';
-
-  const iconWrap = document.createElement('div');
-  iconWrap.className = 'tw-flow-card-icon';
-  iconWrap.textContent = item.icon;
-
-  const copy = document.createElement('div');
-  copy.className = 'tw-flow-card-copy';
-  const titleEl = document.createElement('div');
-  titleEl.className = 'tw-flow-card-title';
-  titleEl.textContent = item.title;
-  const subtitleEl = document.createElement('div');
-  subtitleEl.className = 'tw-flow-card-subtitle';
-  subtitleEl.textContent = config.subtitle;
-  copy.appendChild(titleEl);
-  copy.appendChild(subtitleEl);
-
-  const meta = document.createElement('div');
-  meta.className = 'tw-flow-card-meta';
-  const chip = document.createElement('span');
-  chip.className = `tw-flow-chip ${config.variant}`;
-  chip.textContent = config.chip;
-  const timeEl = document.createElement('span');
-  timeEl.className = 'tw-flow-time';
-  timeEl.textContent = item.time || new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
-  meta.appendChild(chip);
-  meta.appendChild(timeEl);
-
-  const body = document.createElement('div');
-  body.className = 'tw-flow-card-content';
-  body.textContent = item.content;
-
-  header.appendChild(iconWrap);
-  header.appendChild(copy);
-  header.appendChild(meta);
-  card.appendChild(header);
-  card.appendChild(body);
-  flow.appendChild(card);
-  requestAnimationFrame(() => card.classList.add('is-visible'));
-  twAutoScroll(flow);
-  if (persist) twPersistCurrentWorkspaceState();
-}
-
-function twRenderFlowFileItem(item, persist = true) {
-  const flow = document.getElementById('twFlowMessages');
-  if (!flow) return;
-  const placeholder = flow.querySelector('div[style*="text-align:center"]');
-  if (placeholder) placeholder.remove();
-
-  const normalized = (item.files || []).map((f) => typeof f === 'string' ? { path: f, status: 'added' } : f);
-  const added = normalized.filter((f) => f.status === 'added');
-  const updated = normalized.filter((f) => f.status === 'updated');
-  const cardId = item.cardId || ('tw-fcard-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6));
-
-  const card = document.createElement('div');
-  card.className = 'tw-flow-card';
-  card.dataset.variant = 'files';
-
-  const summary = [];
-  if (added.length) summary.push(`+${added.length} yeni`);
-  if (updated.length) summary.push(`~${updated.length} güncelleme`);
-  const stepLabel = item.step ? ` · Adım ${item.step}` : '';
-
-  const header = document.createElement('div');
-  header.className = 'tw-flow-card-header';
-  header.dataset.toggleTarget = cardId;
-
-  const iconEl = document.createElement('div');
-  iconEl.className = 'tw-flow-card-icon';
-  iconEl.textContent = item.icon;
-
-  const copy = document.createElement('div');
-  copy.className = 'tw-flow-card-copy';
-  const roleEl = document.createElement('div');
-  roleEl.className = 'tw-flow-card-title';
-  roleEl.textContent = `${item.roleName} — Dosyalar`;
-  const summaryEl = document.createElement('div');
-  summaryEl.className = 'tw-flow-card-subtitle';
-  summaryEl.textContent = `${summary.join(' · ')}${stepLabel}`;
-  copy.appendChild(roleEl);
-  copy.appendChild(summaryEl);
-
-  const meta = document.createElement('div');
-  meta.className = 'tw-flow-card-meta';
-  const chip = document.createElement('span');
-  chip.className = 'tw-flow-chip success';
-  chip.textContent = 'Dosyalar';
-  const timeEl = document.createElement('span');
-  timeEl.className = 'tw-flow-time';
-  timeEl.textContent = item.time || new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
-  const arrow = document.createElement('span');
-  arrow.className = 'tw-flow-time';
-  arrow.dataset.flowArrow = 'true';
-  arrow.textContent = item.open ? '▼' : '▶';
-  meta.appendChild(chip);
-  meta.appendChild(timeEl);
-  meta.appendChild(arrow);
-
-  header.appendChild(iconEl);
-  header.appendChild(copy);
-  header.appendChild(meta);
-
-  const body = document.createElement('div');
-  body.className = 'tw-flow-card-body' + (item.open ? ' open' : '');
-  body.id = cardId;
-  const bodyInner = document.createElement('div');
-  bodyInner.className = 'tw-flow-card-body-inner';
-
-  added.forEach((f) => {
-    const row = document.createElement('div');
-    row.className = 'tw-flow-file-row';
-    const badge = document.createElement('span');
-    badge.className = 'file-badge added';
-    badge.textContent = '+ yeni';
-    const path = document.createElement('span');
-    path.style.fontFamily = 'monospace';
-    path.textContent = f.path;
-    row.appendChild(badge);
-    row.appendChild(path);
-    bodyInner.appendChild(row);
-  });
-
-  updated.forEach((f) => {
-    const row = document.createElement('div');
-    row.className = 'tw-flow-file-row';
-    const badge = document.createElement('span');
-    badge.className = 'file-badge updated';
-    badge.textContent = '~ güncellendi';
-    const path = document.createElement('span');
-    path.style.fontFamily = 'monospace';
-    path.textContent = f.path;
-    row.appendChild(badge);
-    row.appendChild(path);
-    bodyInner.appendChild(row);
-  });
-
-  body.appendChild(bodyInner);
-  card.appendChild(header);
-  card.appendChild(body);
-  flow.appendChild(card);
-  requestAnimationFrame(() => card.classList.add('is-visible'));
-  twAutoScroll(flow);
-  if (persist) twPersistCurrentWorkspaceState();
-}
-
-function twAddFlowMessage(icon, title, content, type) {
-  const item = {
-    kind: 'message',
-    icon,
-    title,
-    groupLabel: twResolveFlowGroupLabel({ title, kind: 'message' }),
-    content,
-    type,
-    time: new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})
-  };
-  twEnsureFlowGroup(item);
-  twPushFlowItem(item);
-}
-
-function twAddFlowFileCard(icon, roleName, files, step) {
-  const item = {
-    kind: 'files',
-    icon,
-    roleName,
-    groupLabel: roleName,
-    files,
-    step,
-    open: false,
-    cardId: 'tw-fcard-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
-    time: new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})
-  };
-  twEnsureFlowGroup(item);
-  twPushFlowItem(item);
-}
-
 function closeTeamWorkspace() {
   const ws = document.getElementById('teamWorkspace');
+  const body = document.getElementById('twBody');
   twPersistCurrentWorkspaceState();
   clearTimeout(twWorkspaceHideTimer);
   ws.classList.remove('tw-visible');
+  if (body) body.classList.remove('tw-code-open');
   twWorkspaceHideTimer = setTimeout(() => {
     ws.style.display = 'none';
   }, 220);
@@ -2251,16 +2257,18 @@ function closeTeamWorkspace() {
 
 async function twSendMemberChat(memberId, useModal = false) {
   if (!twCurrentTeam) return;
-  const input = useModal ? document.getElementById('twMemberModalInput') : document.getElementById(`tw-input-${memberId}`);
+  const input = document.getElementById('twMemberModalInput');
+  if (!input) return;
   const message = input.value.trim();
   if (!message) return;
 
   input.value = '';
-  const content = document.getElementById(`tw-content-${memberId}`);
+  const content = document.getElementById('twMemberModalContent');
+  if (!content) return;
 
-  if (content.textContent === 'Bekleniyor...' || content.textContent === 'Henüz mesaj yok.') {
-    content.textContent = '';
-  }
+  // Clear placeholder text
+  const placeholder = content.querySelector('.tw-modal-placeholder');
+  if (placeholder) placeholder.remove();
 
   const userRow = document.createElement('div');
   userRow.className = 'tw-inline-msg user';
@@ -2275,14 +2283,6 @@ async function twSendMemberChat(memberId, useModal = false) {
 
   const model = selectedModelId || 'bambam:lite';
 
-  if (useModal) {
-    const modalContent = document.getElementById('twMemberModalContent');
-    if (modalContent) {
-      modalContent.innerHTML = content.innerHTML;
-      twAutoScroll(modalContent);
-    }
-  }
-
   try {
     const response = await api.sendTeamChat(twCurrentTeam.id, memberId, message, model);
     if (!response.ok) {
@@ -2291,7 +2291,7 @@ async function twSendMemberChat(memberId, useModal = false) {
     }
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    botRow.textContent = 'Uye su an ciktiyi hazirliyor...';
+    botRow.textContent = 'Çıktı hazırlanıyor...';
     let fullResponse = '';
     while (true) {
       const { done, value } = await reader.read();
@@ -2301,19 +2301,8 @@ async function twSendMemberChat(memberId, useModal = false) {
       const live = extractLiveProgressText(fullResponse, 140);
       botRow.textContent = live ? `Thinking... ${live}` : 'Thinking...';
       twAutoScroll(content);
-      if (useModal) {
-        const modalContent = document.getElementById('twMemberModalContent');
-        if (modalContent) {
-          modalContent.innerHTML = content.innerHTML;
-          twAutoScroll(modalContent);
-        }
-      }
     }
     renderAgentStructuredContent(botRow, fullResponse, true);
-    if (useModal) {
-      const modalContent = document.getElementById('twMemberModalContent');
-      if (modalContent) modalContent.innerHTML = content.innerHTML;
-    }
   } catch (e) {
     botRow.textContent = 'Hata: ' + e.message;
   }
@@ -2327,72 +2316,6 @@ function twAutoScroll(el) {
   if (isNearBottom) el.scrollTop = el.scrollHeight;
 }
 
-// Helper: üye panelinde step block oluştur/güncelle
-function twGetOrCreateStep(memberId, stepNum, totalSteps, desc) {
-  const content = document.getElementById(`tw-content-${memberId}`);
-  if (!content) return null;
-  let stepEl = document.getElementById(`tw-step-${memberId}-${stepNum}`);
-  if (!stepEl) {
-    stepEl = document.createElement('div');
-    stepEl.id = `tw-step-${memberId}-${stepNum}`;
-    stepEl.className = 'tw-step running';
-
-    const header = document.createElement('div');
-    header.className = 'tw-step-header';
-    const spinner = document.createElement('span');
-    spinner.className = 'tw-spinner';
-    spinner.style.width = '10px';
-    spinner.style.height = '10px';
-    spinner.style.borderWidth = '1.5px';
-    const title = document.createElement('span');
-    title.textContent = `Adım ${stepNum}/${totalSteps}: ${desc || ''}`;
-    header.appendChild(spinner);
-    header.appendChild(title);
-
-    const body = document.createElement('div');
-    body.className = 'tw-step-content';
-    body.id = `tw-step-text-${memberId}-${stepNum}`;
-    body.textContent = 'Cikti hazirlaniyor...';
-    body.dataset.raw = '';
-
-    stepEl.appendChild(header);
-    stepEl.appendChild(body);
-    content.appendChild(stepEl);
-    twAutoScroll(content);
-  }
-  return stepEl;
-}
-
-function twSetMemberWorking(memberId, working) {
-  // Workspace panel spinner
-  const spinner = document.getElementById(`tw-spinner-${memberId}`);
-  const status = document.getElementById(`tw-status-${memberId}`);
-  if (spinner) spinner.style.display = working ? 'inline-block' : 'none';
-  if (status) {
-    status.style.display = working ? 'none' : '';
-    if (!working) { status.style.color = '#22c55e'; status.textContent = '✓'; }
-  }
-  // Sidebar spinner
-  const sbSpinner = document.getElementById(`sb-spinner-${memberId}`);
-  if (sbSpinner) sbSpinner.style.display = working ? 'inline-block' : 'none';
-}
-
-function twUpdateTaskBadge(memberId, current, total, state) {
-  // Workspace badge
-  const badge = document.getElementById(`tw-tasks-${memberId}`);
-  if (badge) {
-    badge.style.display = 'inline';
-    badge.textContent = `${current}/${total}`;
-    badge.className = 'tw-task-badge ' + (state || 'active');
-  }
-  // Sidebar badge
-  const sbBadge = document.getElementById(`sb-tasks-${memberId}`);
-  if (sbBadge) {
-    sbBadge.style.display = 'inline';
-    sbBadge.textContent = `${current}/${total}`;
-    sbBadge.className = 'tw-task-badge ' + (state || 'active');
-  }
-}
 
 function twSetCollabEmpty(containerId, text) {
   const el = document.getElementById(containerId);
@@ -2415,15 +2338,15 @@ async function twHandleProposalAction(action, proposalId) {
   try {
     if (action === 'approve') {
       await api.approveProposal(twCurrentTeam.id, proposalId);
-      twAddFlowMessage('✅', 'Reviewer', `Proposal onaylandı: ${proposalId.slice(0, 8)}`, 'success');
+      twAddSystemMessage(`✅ Proposal onaylandı: ${proposalId.slice(0, 8)}`, 'success');
     } else {
       await api.rejectProposal(twCurrentTeam.id, proposalId);
-      twAddFlowMessage('🗑️', 'Reviewer', `Proposal reddedildi: ${proposalId.slice(0, 8)}`, 'info');
+      twAddSystemMessage(`🗑️ Proposal reddedildi: ${proposalId.slice(0, 8)}`);
     }
     await twRefreshCollabPanel();
     twSchedulePreviewRefresh();
   } catch (error) {
-    twAddFlowMessage('❌', 'Reviewer', error.message, 'error');
+    twAddSystemMessage(`❌ ${error.message}`, 'error');
   }
 }
 
@@ -2528,28 +2451,25 @@ async function sendMasterPrompt() {
 
   const teamRef = twCurrentTeam;
 
-  // Akışa prompt mesajı ekle
-  twAddFlowMessage('📨', 'Master Prompt', message, 'info');
+  // Add user message to chat
+  twAddUserMessage(message);
 
-  // Tüm panelleri hazırla
+  // Mark all members as working
   (teamRef.members || []).forEach(m => {
-    const content = document.getElementById(`tw-content-${m.id}`);
-    if (content) {
-      content.textContent = 'Plan oluşturuluyor...';
-      content.style.color = 'var(--muted)';
-    }
-    twSetMemberWorking(m.id, true);
-    twUpdateTaskBadge(m.id, 0, '?', 'active');
+    twSetSidebarMemberStatus(m.id, 'working');
   });
   twPersistCurrentWorkspaceState();
 
-  // Üye bilgilerini cache'le (flow mesajları için)
+  // Cache member info
   const memberInfo = {};
   (teamRef.members || []).forEach(m => {
     memberInfo[m.id] = { role_name: m.role_name, icon: m.icon || '🤖' };
   });
 
   let hasExtracted = false;
+  let hasPlanned = false;
+  const workingMembers = new Set();
+  twHideTodoPanel();
 
   try {
     const response = await api.sendMasterPromptStream(teamRef.id, message, selectedModelId, attachmentPayload);
@@ -2563,7 +2483,7 @@ async function sendMasterPrompt() {
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
-      buffer = lines.pop(); // son satır tamamlanmamış olabilir
+      buffer = lines.pop();
 
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
@@ -2575,176 +2495,78 @@ async function sendMasterPrompt() {
 
         switch (event.type) {
           case 'start':
-            // Üye bilgilerini güncelle
             (event.members || []).forEach(m => {
               memberInfo[m.id] = { role_name: m.role_name, icon: m.icon || '🤖' };
             });
             twCurrentRunId = event.run_id || null;
-            if (event.run_id) {
-              twAddFlowSection(`Run ${event.run_id.slice(0, 8)}`);
-              twAddFlowMessage('🧭', 'Coordinator', `Run başlatıldı: ${event.run_id.slice(0, 8)}`, 'info');
-            }
+            twAddCoordinatorMessage(event.coordinator_message || 'Projenizi inceliyorum, hemen başlıyorum...');
             if (twCollabPanelOpen) twRefreshCollabPanel();
             break;
 
           case 'planning':
-            // Zaten "Plan oluşturuluyor" yazıyor
+            if (!hasPlanned) {
+              hasPlanned = true;
+              twAddCoordinatorMessage('Görevleri planlıyorum ve takıma dağıtıyorum...');
+            }
             break;
 
-          case 'task_blocked': {
-            const content = document.getElementById(`tw-content-${mid}`);
-            if (content) {
-              content.textContent = `Waiting... ${event.blocked_reason || 'Bağımlılık bekleniyor.'}`;
-              content.style.color = 'var(--muted)';
-            }
-            twSetMemberWorking(mid, false);
-            twUpdateTaskBadge(mid, 0, 0, '');
-            const statusEl = document.getElementById(`tw-status-${mid}`);
-            if (statusEl) {
-              statusEl.style.color = '#f59e0b';
-              statusEl.textContent = '⏸';
-            }
-            if (info) twAddFlowMessage('⏸', info.role_name, event.blocked_reason || 'Bağımlılık bekleniyor', 'wait');
+          case 'task_blocked':
+            if (info) twSetMemberMsgBadge(mid, 'bekliyor');
+            twSetSidebarMemberStatus(mid, 'idle');
             if (twCollabPanelOpen) twRefreshCollabPanel();
             break;
-          }
 
-          case 'task_unblocked': {
-            const content = document.getElementById(`tw-content-${mid}`);
-            if (content) {
-              content.textContent = 'Plan oluşturuluyor...';
-              content.style.color = 'var(--muted)';
-            }
-            twSetMemberWorking(mid, true);
-            const statusEl = document.getElementById(`tw-status-${mid}`);
-            if (statusEl) {
-              statusEl.style.color = 'var(--accent)';
-              statusEl.textContent = '●';
-            }
-            if (info) twAddFlowMessage('🔓', info.role_name, 'Bağımlılık açıldı, görev başlıyor.', 'wait');
+          case 'task_unblocked':
+            if (info) twSetMemberMsgBadge(mid, 'çalışıyor...');
+            twSetSidebarMemberStatus(mid, 'working');
             if (twCollabPanelOpen) twRefreshCollabPanel();
             break;
-          }
 
           case 'agent_message':
-            if (info) {
-              const fromInfo = event.from_member_id ? memberInfo[event.from_member_id] : null;
-              const label = fromInfo ? `${fromInfo.role_name} -> ${info.role_name}` : info.role_name;
-              twAddFlowMessage('📨', label, event.content || event.subject || 'Yeni iç mesaj', 'info');
-            }
             if (twCollabPanelOpen) twRefreshCollabPanel();
             break;
 
           case 'task_started':
-            twSetMemberWorking(mid, true);
+            twSetSidebarMemberStatus(mid, 'working');
             break;
 
-          case 'skipped': {
-            const content = document.getElementById(`tw-content-${mid}`);
-            if (content) {
-              content.textContent = '';
-              const skipEl = document.createElement('div');
-              skipEl.style.cssText = 'padding:8px;color:var(--muted);font-size:11px;';
-              skipEl.textContent = `Atlandı: ${event.reason || 'Bu görev benim rolümle ilgili değil.'}`;
-              content.appendChild(skipEl);
-            }
-            twSetMemberWorking(mid, false);
-            const skipStatus = document.getElementById(`tw-status-${mid}`);
-            if (skipStatus) { skipStatus.style.color = 'var(--muted)'; skipStatus.textContent = '—'; }
-            twUpdateTaskBadge(mid, 0, 0, '');
-            const skipBadge = document.getElementById(`tw-tasks-${mid}`);
-            if (skipBadge) { skipBadge.textContent = 'atlandı'; skipBadge.style.display = 'inline'; skipBadge.className = 'tw-task-badge'; }
-            const sbBadge = document.getElementById(`sb-tasks-${mid}`);
-            if (sbBadge) { sbBadge.textContent = 'atlandı'; sbBadge.style.display = 'inline'; sbBadge.className = 'tw-task-badge'; }
-            if (info) twAddFlowMessage('⏭', info.role_name, event.reason || 'Atlandı — rol ile ilgili değil', 'wait');
+          case 'skipped':
+            if (info) twSetMemberMsgBadge(mid, 'atlandı');
+            twSetSidebarMemberStatus(mid, 'done');
             break;
-          }
 
-          case 'plan': {
-            const content = document.getElementById(`tw-content-${mid}`);
-            if (content) {
-              content.textContent = '';
-              // Plan özeti göster
-              const planDiv = document.createElement('div');
-              planDiv.style.cssText = 'padding:4px 0;margin-bottom:6px;';
-              const head = document.createElement('div');
-              head.style.cssText = 'font-size:11px;color:var(--accent);font-weight:600;margin-bottom:4px;';
-              head.textContent = `Plan (${event.total} adım):`;
-              planDiv.appendChild(head);
-
-              (event.steps || []).forEach((stepText, index) => {
-                const stepLine = document.createElement('div');
-                stepLine.style.cssText = 'font-size:11px;color:var(--muted);padding:1px 0;';
-                stepLine.textContent = `${index + 1}. ${stepText}`;
-                planDiv.appendChild(stepLine);
-              });
-
-              content.appendChild(planDiv);
-              content.style.color = 'var(--text)';
-            }
-            twUpdateTaskBadge(mid, 0, event.total, 'active');
-            if (info) twAddFlowMessage(info.icon, info.role_name + ' — Plan', (event.steps || []).map((s,i)=>`${i+1}. ${s}`).join('\n'), 'plan');
-            break;
-          }
-
-          case 'step_start': {
-            twGetOrCreateStep(mid, event.step, event.total, event.description);
-            twUpdateTaskBadge(mid, event.step, event.total, 'active');
-            const content = document.getElementById(`tw-content-${mid}`);
-            twAutoScroll(content);
-            // Paneli aç (accordion)
-            const body = document.getElementById(`tw-body-${mid}`);
-            const arrow = document.getElementById(`tw-arrow-${mid}`);
-            if (body && body.style.display === 'none') {
-              body.style.display = 'flex';
-              if (arrow) arrow.textContent = '▼';
+          case 'plan':
+            if (info) {
+              workingMembers.add(mid);
+              twGetOrCreateMemberMsg(mid, info);
+              twAddMemberPlanSection(mid, event.steps || [], info);
+              twSetMemberMsgBadge(mid, `0/${event.total}`);
+              twAddTodoItems(mid, event.steps || []);
             }
             break;
-          }
 
-          case 'delta': {
-            const textEl = document.getElementById(`tw-step-text-${mid}-${event.step}`);
-            if (textEl) {
-              const prevRaw = textEl.dataset.raw || '';
-              const nextRaw = prevRaw + (event.content || '');
-              textEl.dataset.raw = nextRaw;
-              const liveText = extractLiveProgressText(nextRaw, 160);
-              textEl.textContent = liveText ? `Thinking... ${liveText}` : 'Thinking...';
-              twAutoScroll(document.getElementById(`tw-content-${mid}`));
+          case 'step_start':
+            if (info) {
+              twGetOrCreateStepSection(mid, event.step, event.total, event.description, info);
+              twSetMemberMsgBadge(mid, `${event.step}/${event.total}`);
             }
             break;
-          }
 
-          case 'step_done': {
-            const stepEl = document.getElementById(`tw-step-${mid}-${event.step}`);
-            if (stepEl) {
-              stepEl.className = 'tw-step done';
-              const header = stepEl.querySelector('.tw-step-header');
-              if (header) {
-                const spinnerEl = header.querySelector('.tw-spinner');
-                if (spinnerEl) spinnerEl.outerHTML = '<span style="color:#22c55e;font-size:10px;">✓</span>';
-              }
-
-              const textEl = stepEl.querySelector('.tw-step-content');
-              if (textEl) {
-                const raw = textEl.dataset.raw || textEl.textContent || '';
-                twApplyRuntimeDrafts(raw);
-                renderAgentStructuredContent(textEl, raw, true);
-              }
-            }
-            twUpdateTaskBadge(mid, event.step, event.total, event.step === event.total ? 'done' : 'active');
+          case 'delta':
+            twUpdateStepDelta(mid, event.step, event.content || '');
             break;
-          }
 
-          case 'step_error': {
-            const stepEl = document.getElementById(`tw-step-${mid}-${event.step}`);
-            if (stepEl) {
-              stepEl.className = 'tw-step error';
-              const textEl = stepEl.querySelector('.tw-step-content');
-              if (textEl) textEl.textContent += '\n❌ ' + (event.error || 'Hata');
+          case 'step_done':
+            twSetStepDone(mid, event.step);
+            twMarkTodoDone(mid, event.step);
+            if (info) {
+              twSetMemberMsgBadge(mid, event.step === event.total ? 'tamamlandı ✓' : `${event.step}/${event.total}`);
             }
             break;
-          }
+
+          case 'step_error':
+            twSetStepError(mid, event.step, event.error);
+            break;
 
           case 'files':
             if (event.files && event.files.length > 0) {
@@ -2753,59 +2575,66 @@ async function sendMasterPrompt() {
               if (appliedFiles.length > 0) {
                 hasExtracted = true;
                 twCommitAppliedDraftFiles(appliedFiles);
-                if (info) twAddFlowFileCard(info.icon, info.role_name, appliedFiles, event.step);
+                if (info) twAddMemberFiles(mid, appliedFiles, info);
               }
               if (conflictedFiles.length > 0 && info) {
-                twAddFlowMessage('⚠️', `${info.role_name} — Conflict`, conflictedFiles.map(f => `${f.path} kilitli`).join('\n'), 'error');
+                twAddMemberText(mid, `⚠️ Conflict: ${conflictedFiles.map(f => f.path).join(', ')}`, info);
               }
             }
             if (twCollabPanelOpen) twRefreshCollabPanel();
-            // Auto-refresh file tree if editor panel is open
             if (document.getElementById('twProjectPanel')?.style.display === 'flex') {
               twEditorRefreshTree();
             }
             break;
 
           case 'file_conflict':
-            if (info) twAddFlowMessage('🔒', `${info.role_name} — Dosya Kilidi`, `${event.path || 'Dosya'} başka bir görev tarafından kilitli. Proposal kaydedildi.`, 'error');
+            if (info) twAddMemberText(mid, `🔒 ${event.path || 'Dosya'} başka bir görev tarafından kilitli.`, info);
             if (twCollabPanelOpen) twRefreshCollabPanel();
             break;
 
           case 'member_done':
-            twSetMemberWorking(mid, false);
-            if (info) twAddFlowMessage(info.icon, info.role_name, 'Tamamlandı ✓', 'success');
+            twSetSidebarMemberStatus(mid, 'done');
+            twMarkMemberTodosDone(mid);
+            if (info) {
+              twSetMemberMsgBadge(mid, 'tamamlandı ✓');
+              if (workingMembers.has(mid)) {
+                twAddCoordinatorMessage(`${info.role_name} görevini tamamladı. ✓`);
+              }
+            }
             if (twCollabPanelOpen) twRefreshCollabPanel();
             break;
 
-          case 'error': {
-            twSetMemberWorking(mid, false);
-            const statusEl = document.getElementById(`tw-status-${mid}`);
-            if (statusEl) { statusEl.style.color = 'var(--danger)'; statusEl.textContent = '✕'; }
-            const taskBadge = document.getElementById(`tw-tasks-${mid}`);
-            if (taskBadge) { taskBadge.className = 'tw-task-badge error'; }
-            const errContent = document.getElementById(`tw-content-${mid}`);
-            if (errContent) {
-              errContent.textContent = '';
-              const errLine = document.createElement('div');
-              errLine.style.cssText = 'color:var(--danger);padding:8px;';
-              errLine.textContent = `Hata: ${event.error || 'Hata'}`;
-              errContent.appendChild(errLine);
+          case 'error':
+            twSetSidebarMemberStatus(mid, 'error');
+            if (info) {
+              twAddMemberText(mid, `❌ Hata: ${event.error || 'Bilinmeyen hata'}`, info);
+              twSetMemberMsgBadge(mid, 'hata');
             }
-            if (info) twAddFlowMessage('❌', info.role_name, event.error || 'Hata', 'error');
             if (twCollabPanelOpen) twRefreshCollabPanel();
             break;
-          }
 
           case 'run_error':
-            twAddFlowMessage('❌', 'Coordinator', event.error || 'Run hatası', 'error');
+            twAddSystemMessage(`❌ ${event.error || 'Run hatası'}`, 'error');
             if (twCollabPanelOpen) twRefreshCollabPanel();
             break;
 
-          case 'all_done':
-            twAddFlowMessage('🎉', 'Tamamlandı', 'Tüm takım üyeleri görevlerini bitirdi.', 'success');
+          case 'all_done': {
+            const completedMembers = twGetTodoSummary();
+            const total = twTodoItems.length;
+            const doneCount = twTodoItems.filter(t => t.done).length;
+            let summary = `Tüm görevler tamamlandı!`;
+            if (completedMembers.length > 0) {
+              summary += ` ${completedMembers.join(', ')} başarıyla çalıştı.`;
+            }
+            if (total > 0) {
+              summary += ` Toplam ${doneCount}/${total} adım tamamlandı.`;
+            }
+            summary += ' Projeniz hazır, inceleyebilirsiniz.';
+            twAddCoordinatorMessage(summary);
             if (hasExtracted) twShowProjectPanel();
             if (twCollabPanelOpen) twRefreshCollabPanel();
             break;
+          }
 
           case 'heartbeat':
             break;
@@ -2815,11 +2644,9 @@ async function sendMasterPrompt() {
       }
     }
   } catch (error) {
-    twAddFlowMessage('❌', 'Bağlantı Hatası', error.message, 'error');
+    twAddSystemMessage(`❌ Bağlantı Hatası: ${error.message}`, 'error');
     (teamRef.members || []).forEach(m => {
-      twSetMemberWorking(m.id, false);
-      const status = document.getElementById(`tw-status-${m.id}`);
-      if (status) { status.style.color = 'var(--danger)'; status.textContent = '✕'; }
+      twSetSidebarMemberStatus(m.id, 'error');
     });
     twPersistCurrentWorkspaceState();
   } finally {
@@ -2925,57 +2752,7 @@ function twBuildEffectiveEditorFiles(serverFiles = []) {
 }
 
 function twApplyRuntimeDrafts(rawText) {
-  const drafts = extractDraftFilesFromRaw(rawText);
-  if (!drafts.length) return;
-  const panel = document.getElementById('twProjectPanel');
-  if (panel && panel.style.display !== 'flex') twShowProjectPanel();
-  let activatedPath = null;
-  drafts.forEach((file) => {
-    const previous = twRuntimeDraftFiles[file.path];
-    const nextEntry = {
-      content: file.content,
-      complete: file.complete,
-      previewReady: twIsPreviewReadyDraft(file.path, file)
-    };
-    let entry = nextEntry;
-
-    if (previous) {
-      const prevContent = String(previous.content || '');
-      const nextContent = String(nextEntry.content || '');
-
-      if (!nextEntry.complete && nextContent.length < prevContent.length) {
-        entry = previous;
-      } else if (!nextEntry.complete && previous.previewReady && !nextEntry.previewReady) {
-        entry = {
-          ...previous,
-          content: nextContent.length >= prevContent.length ? nextContent : prevContent,
-          complete: false,
-          previewReady: previous.previewReady
-        };
-      }
-    }
-
-    twRuntimeDraftFiles[file.path] = entry;
-    if (!twShouldPromoteDraftToEditor(file.path, entry)) return;
-    let existingTab = twEditorTabs.find((tab) => tab.path === file.path);
-    if (!existingTab) {
-      existingTab = { path: file.path, content: entry.content, originalContent: entry.content, modified: false };
-      twEditorTabs.push(existingTab);
-    } else if (!existingTab.modified) {
-      existingTab.content = entry.content;
-      existingTab.originalContent = entry.content;
-    }
-    activatedPath = file.path;
-  });
-  twEditorFiles = twBuildEffectiveEditorFiles(twEditorFiles);
-  twRenderFileTree();
-  twRenderEditorTabs();
-  if (activatedPath) {
-    twEditorActivateTab(activatedPath, { highlightLatest: true });
-  } else if (twEditorActiveTab) {
-    twEditorActivateTab(twEditorActiveTab);
-  }
-  twSchedulePreviewRefresh();
+  return;
 }
 
 function twBuildPreviewHtmlFromDrafts() {
@@ -3002,8 +2779,8 @@ function twCommitAppliedDraftFiles(files) {
   if (!applied.length) return;
   const latestPath = applied[applied.length - 1].path;
 
+  twRuntimeDraftFiles = {};
   applied.forEach((file) => {
-    delete twRuntimeDraftFiles[file.path];
     const tab = twEditorTabs.find((entry) => entry.path === file.path && !entry.modified);
     if (tab) {
       tab.originalContent = tab.content;
@@ -3537,20 +3314,29 @@ function twInitEditorResizeHandles() {
 function twToggleProjectPanel() {
   const panel = document.getElementById('twProjectPanel');
   const btn = document.getElementById('twEditorBtn');
+  const body = document.getElementById('twBody');
   if (!panel) return;
   const isOpen = panel.style.display === 'flex';
   if (isOpen) {
     clearTimeout(twProjectHideTimer);
     panel.classList.remove('tw-open');
-    twProjectHideTimer = setTimeout(() => { panel.style.display = 'none'; }, 220);
+    if (body) body.classList.remove('tw-code-open');
+    twProjectHideTimer = setTimeout(() => { panel.style.display = 'none'; }, 350);
     btn.style.background = 'var(--bg)';
     btn.style.color = 'var(--text)';
+    // Restore sidebar if user hadn't manually collapsed it
+    if (!twSidebarCollapsed) twToggleSidebar(false);
   } else {
     clearTimeout(twProjectHideTimer);
     panel.style.display = 'flex';
-    requestAnimationFrame(() => panel.classList.add('tw-open'));
+    requestAnimationFrame(() => {
+      if (body) body.classList.add('tw-code-open');
+      panel.classList.add('tw-open');
+    });
     btn.style.background = 'var(--accent)';
     btn.style.color = '#fff';
+    // Auto-collapse sidebar
+    twToggleSidebar(true);
     twInitMonaco(() => {
       twEditorSwitchView('split');
       twEditorRefreshTree();
@@ -3563,12 +3349,17 @@ function twToggleProjectPanel() {
 async function twShowProjectPanel() {
   const panel = document.getElementById('twProjectPanel');
   const btn = document.getElementById('twEditorBtn');
+  const body = document.getElementById('twBody');
   if (!panel) return;
   clearTimeout(twProjectHideTimer);
   panel.style.display = 'flex';
-  requestAnimationFrame(() => panel.classList.add('tw-open'));
+  requestAnimationFrame(() => {
+    if (body) body.classList.add('tw-code-open');
+    panel.classList.add('tw-open');
+  });
   btn.style.background = 'var(--accent)';
   btn.style.color = '#fff';
+  twToggleSidebar(true);
   twInitMonaco(() => {
     twEditorSwitchView('split');
     twEditorRefreshTree();
@@ -3596,7 +3387,7 @@ function twRefreshPreview() {
 function twSchedulePreviewRefresh() {
   clearTimeout(twPreviewRefreshTimer);
   twPreviewRefreshTimer = setTimeout(() => {
-    twSchedulePreviewRefresh();
+    twRefreshPreview();
   }, 120);
 }
 
