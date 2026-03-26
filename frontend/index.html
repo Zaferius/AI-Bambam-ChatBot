@@ -85,7 +85,7 @@
             </svg>
           </button>
           <div class="model-selector-wrapper">
-            <button class="model-selector-btn" id="modelSelectorBtn" onclick="toggleModelDropdown()">
+            <button class="model-selector-btn" id="modelSelectorBtn" type="button" onclick="toggleModelDropdown(event)">
               <span class="model-selector-name" id="selectedModelName">Bambam 1.2 Lite</span>
               <svg class="model-selector-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -119,25 +119,15 @@
         <div id="mainChatLeft" style="flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;">
           <div class="chat-area" id="chatArea">
             <div class="hero" id="heroSection">
-              <div class="hero-title">Bambam AI</div>
-              <div class="hero-subtitle">Yapay zeka destekli asistanınız. Size nasıl yardımcı olabilirim?</div>
-              <div class="hero-suggestions">
-                <div class="suggestion-card" onclick="useSuggestion('Bir Python web scraper kodu yaz')">
-                  <div class="suggestion-title">💻 Kod Yaz</div>
-                  <div class="suggestion-desc">Bir Python web scraper kodu yaz</div>
-                </div>
-                <div class="suggestion-card" onclick="useSuggestion('Bir blog yazısı için başlık fikirleri ver')">
-                  <div class="suggestion-title">✍️ İçerik Oluştur</div>
-                  <div class="suggestion-desc">Bir blog yazısı için başlık fikirleri ver</div>
-                </div>
-                <div class="suggestion-card" onclick="useSuggestion('Makine öğrenmesi nedir? Basit bir şekilde açıkla')">
-                  <div class="suggestion-title">🎓 Öğren</div>
-                  <div class="suggestion-desc">Makine öğrenmesi nedir? Basit bir şekilde açıkla</div>
-                </div>
-                <div class="suggestion-card" onclick="useSuggestion('Bir proje için görev listesi oluştur')">
-                  <div class="suggestion-title">📋 Plan Yap</div>
-                  <div class="suggestion-desc">Bir proje için görev listesi oluştur</div>
-                </div>
+              <div class="hero-plan-pill">Bambam plan · <span>Upgrade</span></div>
+              <div class="hero-title-wrap">
+                <img src="b-icon.png" alt="Bambam Logo" class="hero-burst hero-brand-logo">
+                <div class="hero-title">What's on your mind?</div>
+              </div>
+              <div class="hero-quick-actions">
+                <button class="hero-chip" onclick="useSuggestion('Bir Python web scraper kodu yaz')">✎ Write</button>
+                <button class="hero-chip" onclick="useSuggestion('Makine öğrenmesi nedir? Basit bir şekilde açıkla')">◌ Learn</button>
+                <button class="hero-chip" onclick="useSuggestion('Senior game developer icin portfolio sitesi kodla')">&lt;/&gt; Code</button>
               </div>
             </div>
             <div class="messages" id="chatMessages"></div>
@@ -180,7 +170,7 @@
         <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid var(--border);background:var(--sidebar-bg);">
           <button onclick="closeTeamWorkspace()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;">←</button>
           <div class="model-selector-wrapper tw-model-selector-wrapper">
-            <button class="model-selector-btn tw-model-selector-btn" id="twModelSelectorBtn" onclick="toggleTwModelDropdown()">
+            <button class="model-selector-btn tw-model-selector-btn" id="twModelSelectorBtn" type="button" onclick="toggleTwModelDropdown(event)">
               <span class="model-selector-name" id="twSelectedModelName">Bambam 1.2 Lite</span>
               <svg class="model-selector-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="6 9 12 15 18 9"></polyline>

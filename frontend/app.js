@@ -507,19 +507,69 @@ function createMessageElement(text, sender, isTyping = false, images = [], model
   return msg;
 }
 
+function createStandaloneMessageRow(text, sender, images = [], modelName = null) {
+  const row = document.createElement("div");
+  row.className = `message-row ${sender === "user" ? "user-row" : "bot-row"}`;
+
+  const msg = document.createElement("div");
+  msg.className = `message ${sender}`;
+
+  if (sender === "bot") {
+    const header = document.createElement("div");
+    header.className = "bot-header";
+    const meta = getCurrentModelDisplayMeta(modelName);
+    header.innerHTML = `
+      <img src="b-icon.png" alt="Bambam Logo" class="bot-header-logo">
+      <span class="bot-header-name">Bambam</span>
+      <span class="bot-header-badge">${meta.badge}</span>
+    `;
+    msg.appendChild(header);
+  }
+
+  if (images && images.length > 0) {
+    const imagesContainer = document.createElement("div");
+    imagesContainer.className = "message-images";
+    images.forEach((imageData) => {
+      const img = document.createElement("img");
+      img.className = "message-image";
+      img.src = imageData;
+      img.alt = "Uploaded image";
+      imagesContainer.appendChild(img);
+    });
+    msg.appendChild(imagesContainer);
+  }
+
+  if (text) {
+    const textDiv = document.createElement("div");
+    textDiv.className = "message-text";
+    if (sender === 'bot') {
+      renderAgentStructuredContent(textDiv, text, true);
+    } else {
+      textDiv.textContent = text;
+    }
+    msg.appendChild(textDiv);
+  }
+
+  row.appendChild(msg);
+  return row;
+}
+
 function addWelcomeMessage() {}
 
 function updateChatAreaState() {
   const heroSection = document.getElementById("heroSection");
+  const mainChatLeft = document.getElementById("mainChatLeft");
   const hasMessages = chatMessages.children.length > 0;
   if (hasMessages) {
     chatArea.classList.add("has-messages");
     heroSection.classList.add("hidden");
     composerWrap.classList.remove("centered");
+    if (mainChatLeft) mainChatLeft.classList.remove("initial-state");
   } else {
     chatArea.classList.remove("has-messages");
     heroSection.classList.remove("hidden");
     composerWrap.classList.add("centered");
+    if (mainChatLeft) mainChatLeft.classList.add("initial-state");
   }
 }
 
@@ -635,7 +685,8 @@ let allModelsData = null;
 let selectedModelId = "bambam:lite";
 let advancedModelsExpanded = false;
 
-function toggleModelDropdown() {
+function toggleModelDropdown(event) {
+  if (event) event.stopPropagation();
   const dropdown = document.getElementById("modelDropdown");
   const btn = document.getElementById("modelSelectorBtn");
   dropdown.classList.toggle("active");
@@ -683,11 +734,7 @@ function createModelOption(model) {
   const option = document.createElement("div");
   option.className = "model-option";
   option.setAttribute("data-model-id", model.id);
-  option.onmousedown = (event) => {
-    event.stopPropagation();
-    event.preventDefault();
-    selectModel(model.id, model.name);
-  };
+  option.dataset.modelName = model.name;
 
   const contentDiv = document.createElement("div");
   contentDiv.className = "model-option-content";
@@ -758,7 +805,8 @@ function renderModelDropdown() {
   }
 }
 
-function toggleTwModelDropdown() {
+function toggleTwModelDropdown(event) {
+  if (event) event.stopPropagation();
   const dropdown = document.getElementById("twModelDropdown");
   const btn = document.getElementById("twModelSelectorBtn");
   if (!dropdown || !btn) return;
@@ -789,11 +837,7 @@ function renderTwModelDropdown() {
   bambamModels.forEach((model) => {
     const option = document.createElement("div");
     option.className = "model-option";
-    option.onmousedown = (event) => {
-      event.stopPropagation();
-      event.preventDefault();
-      twSelectModel(model.id, model.name);
-    };
+    option.dataset.modelName = model.name;
 
     const contentDiv = document.createElement("div");
     contentDiv.className = "model-option-content";
@@ -834,6 +878,20 @@ document.addEventListener("click", (e) => {
   if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
     dropdown.classList.remove("active");
     btn.classList.remove("active");
+  }
+});
+
+document.addEventListener('click', (e) => {
+  const option = e.target.closest('#modelDropdown .model-option');
+  if (option) {
+    e.stopPropagation();
+    selectModel(option.dataset.modelId, option.dataset.modelName || option.textContent || '');
+    return;
+  }
+  const twOption = e.target.closest('#twModelDropdown .model-option');
+  if (twOption) {
+    e.stopPropagation();
+    twSelectModel(twOption.dataset.modelId, twOption.dataset.modelName || twOption.textContent || '');
   }
 });
 
@@ -1713,33 +1771,43 @@ function twOpenMemberChatModal(memberId) {
   document.getElementById('twMemberModalIcon').textContent = member.icon || '🤖';
   document.getElementById('twMemberModalTitle').textContent = member.role_name;
   document.getElementById('twMemberModalDesc').textContent = member.description || member.model || '';
-  content.innerHTML = '<div class="tw-modal-placeholder" style="color:var(--muted);text-align:center;padding:20px;">Mesajlar yükleniyor...</div>';
+  content.innerHTML = '<div class="tw-member-chat-messages"><div class="tw-modal-placeholder" style="color:var(--muted);text-align:center;padding:20px;">Mesajlar yükleniyor...</div></div>';
   // Load member messages from API
   api.getMemberMessages(twCurrentTeam.id, memberId).then(messages => {
+    const wrap = document.createElement('div');
+    wrap.className = 'tw-member-chat-messages';
     content.innerHTML = '';
     if (messages && messages.length > 0) {
       messages.forEach(msg => {
-        const row = document.createElement('div');
-        row.className = `tw-inline-msg ${msg.role === 'user' ? 'user' : 'assistant'}`;
-        if (msg.role === 'user') {
-          row.textContent = msg.content;
-        } else {
-          renderAgentStructuredContent(row, msg.content, true);
-        }
-        content.appendChild(row);
+        wrap.appendChild(createStandaloneMessageRow(msg.content, msg.role === 'user' ? 'user' : 'bot', [], msg.modelName || member.model));
       });
+      content.appendChild(wrap);
       twAutoScroll(content);
     } else {
-      content.innerHTML = '<div class="tw-modal-placeholder" style="color:var(--muted);text-align:center;padding:20px;">Henüz mesaj yok.</div>';
+      wrap.innerHTML = '<div class="tw-modal-placeholder" style="color:var(--muted);text-align:center;padding:20px;">Henüz mesaj yok.</div>';
+      content.appendChild(wrap);
     }
   }).catch(() => {
-    content.innerHTML = '<div class="tw-modal-placeholder" style="color:var(--muted);text-align:center;padding:20px;">Henüz mesaj yok.</div>';
+    content.innerHTML = '<div class="tw-member-chat-messages"><div class="tw-modal-placeholder" style="color:var(--muted);text-align:center;padding:20px;">Henüz mesaj yok.</div></div>';
   });
   overlay.classList.add('active');
   if (input) {
     input.value = '';
     input.focus();
   }
+}
+
+function twGetMemberChatWrap() {
+  const content = document.getElementById('twMemberModalContent');
+  if (!content) return null;
+  let wrap = content.querySelector('.tw-member-chat-messages');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.className = 'tw-member-chat-messages';
+    content.innerHTML = '';
+    content.appendChild(wrap);
+  }
+  return wrap;
 }
 
 function twCloseMemberChatModal() {
@@ -2266,20 +2334,19 @@ async function twSendMemberChat(memberId, useModal = false) {
   input.value = '';
   const content = document.getElementById('twMemberModalContent');
   if (!content) return;
+  const wrap = twGetMemberChatWrap();
+  if (!wrap) return;
 
   // Clear placeholder text
   const placeholder = content.querySelector('.tw-modal-placeholder');
   if (placeholder) placeholder.remove();
 
-  const userRow = document.createElement('div');
-  userRow.className = 'tw-inline-msg user';
-  userRow.textContent = message;
-  content.appendChild(userRow);
+  const userRow = createStandaloneMessageRow(message, 'user');
+  wrap.appendChild(userRow);
 
-  const botRow = document.createElement('div');
-  botRow.className = 'tw-inline-msg assistant';
-  botRow.textContent = 'Düşünüyor...';
-  content.appendChild(botRow);
+  const botRowWrap = createStandaloneMessageRow('Thinking...', 'bot', [], getModelById(selectedModelId)?.name || null);
+  const botRow = botRowWrap.querySelector('.message.bot');
+  wrap.appendChild(botRowWrap);
   twAutoScroll(content);
 
   const model = selectedModelId || 'bambam:lite';
@@ -2287,12 +2354,14 @@ async function twSendMemberChat(memberId, useModal = false) {
   try {
     const response = await api.sendTeamChat(twCurrentTeam.id, memberId, message, model);
     if (!response.ok) {
-      botRow.textContent = 'Hata: ' + (await response.text());
+      const textEl = botRow.querySelector('.message-text');
+      if (textEl) textEl.textContent = 'Hata: ' + (await response.text());
       return;
     }
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    botRow.textContent = 'Çıktı hazırlanıyor...';
+    const textEl = botRow.querySelector('.message-text');
+    if (textEl) textEl.textContent = 'Thinking...';
     let fullResponse = '';
     while (true) {
       const { done, value } = await reader.read();
@@ -2300,12 +2369,13 @@ async function twSendMemberChat(memberId, useModal = false) {
       const chunk = decoder.decode(value, { stream: true });
       fullResponse += chunk;
       const live = extractLiveProgressText(fullResponse, 140);
-      botRow.textContent = live ? `Thinking... ${live}` : 'Thinking...';
+      if (textEl) textEl.textContent = live ? `Thinking... ${live}` : 'Thinking...';
       twAutoScroll(content);
     }
-    renderAgentStructuredContent(botRow, fullResponse, true);
+    if (textEl) renderAgentStructuredContent(textEl, fullResponse, true);
   } catch (e) {
-    botRow.textContent = 'Hata: ' + e.message;
+    const textEl = botRow.querySelector('.message-text');
+    if (textEl) textEl.textContent = 'Hata: ' + e.message;
   }
 }
 
