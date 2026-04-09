@@ -2,6 +2,7 @@
 -Mikrofon ile prompt yazma özelligi
 -LLM modellerinin cogunu ekleme ikonlarını halletme
 -LLM secme penceresi hazırlama
--Site "Thunder" theme olacak.
+-Site "Thunder" ve "Doodle" theme olacak.
 -Image ve Video generation sorunsuz olmalı
--Farklı personalı ai agentlar üretmek ve o işte profesyonel olmaları
+-Farklı personalı ai agentlar üretmek ve o işte profesyonel olmaları.
+-Chat ekranında da görsel veya video üretebilmek.
