@@ -312,6 +312,34 @@ class DatabaseManager:
             "CREATE INDEX IF NOT EXISTS idx_file_proposals_team_path ON file_proposals(team_id, file_path)"
         )
 
+        # ── Credit System ─────────────────────────────────────────────────
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_credits (
+                user_id  TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+                balance  REAL NOT NULL DEFAULT 20.0,
+                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS transactions (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                type        TEXT NOT NULL,
+                amount      REAL NOT NULL,
+                description TEXT,
+                model       TEXT,
+                created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id)"
+        )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at)"
+        )
+
         conn.commit()
         conn.close()
 
@@ -724,6 +752,122 @@ class DatabaseManager:
 
         conn.commit()
         conn.close()
+
+    # ===== CREDIT OPERATIONS =====
+
+    def init_user_credits(self, user_id: str, initial_balance: float = 20.0):
+        """Yeni kullanıcı için kredi kaydı oluştur (signup'ta çağrılır)."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        from datetime import datetime as _dt
+        now = _dt.now().isoformat()
+        cursor.execute(
+            """
+            INSERT OR IGNORE INTO user_credits (user_id, balance, updated_at)
+            VALUES (?, ?, ?)
+            """,
+            (user_id, initial_balance, now),
+        )
+        # Record the welcome bonus transaction
+        cursor.execute(
+            """
+            INSERT INTO transactions (user_id, type, amount, description, created_at)
+            VALUES (?, 'bonus', ?, 'Welcome bonus credits', ?)
+            """,
+            (user_id, initial_balance, now),
+        )
+        conn.commit()
+        conn.close()
+
+    def get_credits(self, user_id: str) -> float:
+        """Kullanıcının kredi bakiyesini getir."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT balance FROM user_credits WHERE user_id = ?", (user_id,))
+        row = cursor.fetchone()
+        conn.close()
+        if row:
+            return float(row["balance"])
+        # Auto-initialize if missing
+        self.init_user_credits(user_id, 0.0)
+        return 0.0
+
+    def deduct_credits(self, user_id: str, amount: float, description: str = "", model: str = "") -> bool:
+        """Krediyi düş. Yetersizse False döner."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        from datetime import datetime as _dt
+        now = _dt.now().isoformat()
+
+        cursor.execute("SELECT balance FROM user_credits WHERE user_id = ?", (user_id,))
+        row = cursor.fetchone()
+        if not row or float(row["balance"]) < amount:
+            conn.close()
+            return False
+
+        new_balance = float(row["balance"]) - amount
+        cursor.execute(
+            "UPDATE user_credits SET balance = ?, updated_at = ? WHERE user_id = ?",
+            (new_balance, now, user_id),
+        )
+        cursor.execute(
+            """
+            INSERT INTO transactions (user_id, type, amount, description, model, created_at)
+            VALUES (?, 'use', ?, ?, ?, ?)
+            """,
+            (user_id, -amount, description, model or None, now),
+        )
+        conn.commit()
+        conn.close()
+        return True
+
+    def add_credits(self, user_id: str, amount: float, description: str = "Top-up") -> float:
+        """Kredi ekle; yeni bakiyeyi döner."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        from datetime import datetime as _dt
+        now = _dt.now().isoformat()
+
+        cursor.execute("SELECT balance FROM user_credits WHERE user_id = ?", (user_id,))
+        row = cursor.fetchone()
+        current = float(row["balance"]) if row else 0.0
+        new_balance = current + amount
+
+        cursor.execute(
+            """
+            INSERT INTO user_credits (user_id, balance, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET balance = ?, updated_at = ?
+            """,
+            (user_id, new_balance, now, new_balance, now),
+        )
+        cursor.execute(
+            """
+            INSERT INTO transactions (user_id, type, amount, description, created_at)
+            VALUES (?, 'purchase', ?, ?, ?)
+            """,
+            (user_id, amount, description, now),
+        )
+        conn.commit()
+        conn.close()
+        return new_balance
+
+    def get_transactions(self, user_id: str, limit: int = 50) -> list:
+        """Kullanıcının işlem geçmişini getir."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT * FROM transactions
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+            LIMIT ?
+            """,
+            (user_id, limit),
+        )
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
 
     # ===== TEAM OPERATIONS =====
 

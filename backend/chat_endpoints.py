@@ -53,9 +53,13 @@ def setup_chat_routes(app, db):
         result = db.create_chat(chat_id, chat.title, chat.user_id)
         return ChatResponse(**result, message_count=0)
     
+    from auth import get_current_user, get_optional_user
+    from fastapi import Depends
+
     @app.get("/api/chats", response_model=List[ChatResponse])
-    async def list_chats(user_id: str = "default", limit: int = 100):
+    async def list_chats(limit: int = 100, current_user: dict = Depends(get_optional_user)):
         """Kullanıcının chatlerini listele"""
+        user_id = current_user["id"] if current_user else "default"
         chats = db.list_chats(user_id, limit)
         return [ChatResponse(**chat) for chat in chats]
     

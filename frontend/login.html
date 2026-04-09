@@ -3,482 +3,338 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bambam AI - Giriş</title>
-  <link rel="icon" type="image/png" href="b-icon.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <title>Sign In — MagAI</title>
+  <meta name="description" content="Sign in to MagAI — your unified AI platform." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    
-    body {
-      font-family: 'Space Grotesk', sans-serif;
-      background: #0a0a0a;
-      color: #e5e5e5;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #0a0a0f;
+      --surface: #0f0f18;
+      --s2:      #14141f;
+      --border:  #1e1e32;
+      --border2: #2a2a42;
+      --accent:  #7c3aed;
+      --accent2: #6d28d9;
+      --glow:    rgba(124,58,237,0.35);
+      --t1: #f1f0ff;
+      --t2: #a89fc8;
+      --t3: #6b6690;
+      --green: #22c55e;
+      --red:   #ef4444;
+    }
+    html, body {
+      height: 100%; background: var(--bg); color: var(--t1);
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
     }
 
-    .auth-container {
-      width: 100%;
-      max-width: 420px;
-      padding: 20px;
+    /* Background grid */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    /* Glow blob */
+    body::after {
+      content: '';
+      position: fixed;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%);
+      top: -100px; left: 50%; transform: translateX(-50%);
+      pointer-events: none;
+      animation: blob-move 8s ease-in-out infinite alternate;
+    }
+    @keyframes blob-move {
+      from { top: -100px; }
+      to   { top: 50px; }
     }
 
-    .auth-logo {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      margin-bottom: 40px;
+    .page {
+      display: flex; align-items: center; justify-content: center;
+      height: 100vh; position: relative; z-index: 1;
     }
 
-    .auth-logo img {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
+    .card {
+      width: 100%; max-width: 420px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 20px;
+      padding: 40px 36px;
+      box-shadow: 0 8px 48px rgba(0,0,0,0.5), 0 0 60px rgba(124,58,237,0.1);
+      animation: card-in 0.4s ease;
+    }
+    @keyframes card-in {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
-    .auth-logo span {
-      font-size: 28px;
-      font-weight: 600;
-      color: #fff;
-    }
-
-    .auth-card {
-      background: #141414;
-      border: 1px solid #262626;
-      border-radius: 16px;
-      padding: 32px;
-    }
-
-    .auth-card h2 {
-      font-size: 22px;
-      font-weight: 600;
-      color: #fff;
+    /* Logo */
+    .logo {
+      display: flex; align-items: center; gap: 12px;
       margin-bottom: 8px;
     }
-
-    .auth-card p {
-      color: #888;
-      font-size: 14px;
-      margin-bottom: 24px;
+    .logo-orb {
+      width: 42px; height: 42px; border-radius: 50%;
+      background: linear-gradient(135deg, #7c3aed, #a855f7, #6366f1);
+      box-shadow: 0 0 30px rgba(124,58,237,0.6);
+      animation: pulse 3s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 20px rgba(124,58,237,0.5); }
+      50%      { box-shadow: 0 0 40px rgba(168,85,247,0.8); }
+    }
+    .logo-name {
+      font-size: 26px; font-weight: 800; letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #c4b5fd, #7c3aed);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
 
-    .form-group {
-      margin-bottom: 16px;
+    .tagline { color: var(--t2); font-size: 14px; margin-bottom: 32px; }
+
+    /* Tabs */
+    .tabs {
+      display: flex; gap: 4px;
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 28px;
+    }
+    .tab-btn {
+      flex: 1; padding: 9px;
+      border-radius: 7px; border: none;
+      background: transparent; color: var(--t2);
+      font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s ease;
+    }
+    .tab-btn.active {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 2px 12px var(--glow);
     }
 
-    .form-group label {
-      display: block;
-      font-size: 13px;
-      font-weight: 500;
-      color: #aaa;
-      margin-bottom: 6px;
-    }
+    /* Forms */
+    .form { display: none; flex-direction: column; gap: 16px; }
+    .form.active { display: flex; }
 
-    .form-group input {
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 12px; font-weight: 600; color: var(--t2); }
+
+    input {
       width: 100%;
       padding: 12px 14px;
-      background: #1a1a1a;
-      border: 1px solid #333;
       border-radius: 10px;
-      color: #fff;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.2s;
+      border: 1.5px solid var(--border2);
+      background: var(--s2);
+      color: var(--t1);
+      font-size: 14px; font-family: inherit;
+      outline: none; transition: border-color 0.15s;
     }
+    input:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--t3); }
 
-    .form-group input:focus {
-      border-color: #646cff;
-    }
-
-    .form-group input::placeholder {
-      color: #555;
-    }
-
-    .auth-btn {
+    .btn-submit {
       width: 100%;
-      padding: 12px;
-      background: #646cff;
-      border: none;
+      padding: 13px;
+      border-radius: 10px; border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+      font-size: 15px; font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      box-shadow: 0 4px 20px var(--glow);
+      margin-top: 4px;
+    }
+    .btn-submit:hover { transform: translateY(-1px); box-shadow: 0 6px 30px var(--glow); }
+    .btn-submit:active { transform: translateY(0); }
+    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .divider { position: relative; text-align: center; margin: 4px 0; }
+    .divider::before {
+      content: ''; position: absolute; top: 50%; left: 0; right: 0;
+      height: 1px; background: var(--border);
+    }
+    .divider span {
+      position: relative; background: var(--surface);
+      padding: 0 12px; font-size: 12px; color: var(--t3);
+    }
+
+    /* Error/success */
+    .alert {
+      padding: 12px 14px;
+      border-radius: 10px; font-size: 13px;
+      display: none;
+    }
+    .alert.error   { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; display: block; }
+    .alert.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #86efac; display: block; }
+
+    .bonus-badge {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(124,58,237,0.1);
+      border: 1px solid rgba(124,58,237,0.25);
       border-radius: 10px;
-      color: #fff;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-      margin-top: 8px;
-    }
-
-    .auth-btn:hover {
-      background: #535bf2;
-    }
-
-    .auth-btn:active {
-      transform: scale(0.98);
-    }
-
-    .auth-btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .auth-switch {
-      text-align: center;
-      margin-top: 20px;
-      font-size: 14px;
-      color: #888;
-    }
-
-    .auth-switch a {
-      color: #646cff;
-      text-decoration: none;
-      font-weight: 500;
-      cursor: pointer;
-    }
-
-    .auth-switch a:hover {
-      text-decoration: underline;
-    }
-
-    .auth-error {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      color: #ef4444;
       padding: 10px 14px;
-      border-radius: 8px;
-      font-size: 13px;
-      margin-bottom: 16px;
-      display: none;
+      font-size: 13px; color: #c4b5fd;
+      margin-top: 4px;
     }
+    .bonus-badge span { font-size: 18px; }
 
-    .auth-error.show {
-      display: block;
-    }
-
-    .auth-success {
-      background: rgba(34, 197, 94, 0.1);
-      border: 1px solid rgba(34, 197, 94, 0.3);
-      color: #22c55e;
-      padding: 10px 14px;
-      border-radius: 8px;
-      font-size: 13px;
-      margin-bottom: 16px;
-      display: none;
-    }
-
-    .auth-success.show {
-      display: block;
-    }
-
-    /* Tab switching */
-    .auth-tabs {
-      display: flex;
-      gap: 0;
-      margin-bottom: 24px;
-      background: #1a1a1a;
-      border-radius: 10px;
-      padding: 4px;
-    }
-
-    .auth-tab {
-      flex: 1;
-      padding: 10px;
-      text-align: center;
-      font-size: 14px;
-      font-weight: 500;
-      color: #888;
-      cursor: pointer;
-      border-radius: 8px;
-      transition: all 0.2s;
-      border: none;
-      background: none;
-      font-family: 'Space Grotesk', sans-serif;
-    }
-
-    .auth-tab.active {
-      background: #262626;
-      color: #fff;
-    }
-
-    .auth-form {
-      display: none;
-    }
-
-    .auth-form.active {
-      display: block;
-    }
-
-    .password-toggle {
-      position: relative;
-    }
-
-    .password-toggle input {
-      padding-right: 42px;
-    }
-
-    .password-toggle button {
-      position: absolute;
-      right: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: #666;
-      cursor: pointer;
-      font-size: 18px;
-      padding: 4px;
-    }
-
-    .loading-spinner {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-radius: 50%;
-      border-top-color: #fff;
-      animation: spin 0.6s linear infinite;
-      margin-right: 8px;
-      vertical-align: middle;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    .footer-note { text-align: center; margin-top: 24px; font-size: 12px; color: var(--t3); }
   </style>
 </head>
 <body>
-  <div class="auth-container">
-    <div class="auth-logo">
-      <img src="b-icon.png" alt="Bambam">
-      <span>Bambam AI</span>
+
+<div class="page">
+  <div class="card">
+    <div class="logo">
+      <div class="logo-orb"></div>
+      <div class="logo-name">MagAI</div>
+    </div>
+    <p class="tagline">Chat · Generate · Create — all in one place</p>
+
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+      <button class="tab-btn" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
     </div>
 
-    <div class="auth-card">
-      <div class="auth-tabs">
-        <button class="auth-tab active" onclick="switchTab('login')">Giriş Yap</button>
-        <button class="auth-tab" onclick="switchTab('signup')">Kayıt Ol</button>
+    <!-- Alert -->
+    <div class="alert" id="alert"></div>
+
+    <!-- Login Form -->
+    <form class="form active" id="form-login" onsubmit="handleLogin(event)">
+      <div class="field">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" placeholder="you@example.com" required autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password" />
+      </div>
+      <button type="submit" class="btn-submit" id="login-btn">Sign In →</button>
+    </form>
+
+    <!-- Signup Form -->
+    <form class="form" id="form-signup" onsubmit="handleSignup(event)">
+      <div class="field">
+        <label for="signup-username">Username</label>
+        <input type="text" id="signup-username" placeholder="yourname" required minlength="3" autocomplete="username" />
+      </div>
+      <div class="field">
+        <label for="signup-email">Email</label>
+        <input type="email" id="signup-email" placeholder="you@example.com" required autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="signup-password">Password <span style="font-weight:400;color:var(--t3)">(min 6 chars)</span></label>
+        <input type="password" id="signup-password" placeholder="••••••••" required minlength="6" autocomplete="new-password" />
       </div>
 
-      <div class="auth-error" id="authError"></div>
-      <div class="auth-success" id="authSuccess"></div>
-
-      <!-- LOGIN FORM -->
-      <form class="auth-form active" id="loginForm" onsubmit="handleLogin(event)">
-        <div class="form-group">
-          <label for="loginEmail">Email</label>
-          <input type="email" id="loginEmail" placeholder="ornek@email.com" required>
-        </div>
-        <div class="form-group">
-          <label for="loginPassword">Şifre</label>
-          <div class="password-toggle">
-            <input type="password" id="loginPassword" placeholder="Şifrenizi girin" required minlength="6">
-            <button type="button" onclick="togglePassword('loginPassword', this)">👁</button>
-          </div>
-        </div>
-        <button type="submit" class="auth-btn" id="loginBtn">Giriş Yap</button>
-      </form>
-
-      <!-- SIGNUP FORM -->
-      <form class="auth-form" id="signupForm" onsubmit="handleSignup(event)">
-        <div class="form-group">
-          <label for="signupUsername">Kullanıcı Adı</label>
-          <input type="text" id="signupUsername" placeholder="kullanici_adi" required minlength="3" maxlength="30" pattern="[a-zA-Z0-9_]+">
-        </div>
-        <div class="form-group">
-          <label for="signupEmail">Email</label>
-          <input type="email" id="signupEmail" placeholder="ornek@email.com" required>
-        </div>
-        <div class="form-group">
-          <label for="signupPassword">Şifre</label>
-          <div class="password-toggle">
-            <input type="password" id="signupPassword" placeholder="En az 6 karakter" required minlength="6">
-            <button type="button" onclick="togglePassword('signupPassword', this)">👁</button>
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="signupPasswordConfirm">Şifre Tekrar</label>
-          <div class="password-toggle">
-            <input type="password" id="signupPasswordConfirm" placeholder="Şifrenizi tekrar girin" required minlength="6">
-            <button type="button" onclick="togglePassword('signupPasswordConfirm', this)">👁</button>
-          </div>
-        </div>
-        <button type="submit" class="auth-btn" id="signupBtn">Kayıt Ol</button>
-      </form>
-
-      <div class="auth-switch" id="authSwitch">
-        Hesabınız yok mu? <a onclick="switchTab('signup')">Kayıt olun</a>
+      <div class="bonus-badge">
+        <span>⚡</span>
+        Get <strong>20 free credits</strong> when you sign up — no card needed!
       </div>
-    </div>
+
+      <button type="submit" class="btn-submit" id="signup-btn">Create Account →</button>
+    </form>
+
+    <p class="footer-note">By continuing you agree to our Terms of Service.</p>
   </div>
+</div>
 
-  <script>
-    const API_BASE = 'http://127.0.0.1:8000';
+<script>
+  // If already logged in → redirect
+  if (localStorage.getItem('magai_token')) {
+    window.location.href = '/';
+  }
 
-    // Sayfa yüklendiğinde token kontrolü
-    (function() {
-      const token = localStorage.getItem('bambam_token');
-      if (token) {
-        // Token'ı doğrula
-        fetch(`${API_BASE}/auth/verify`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(r => {
-          if (r.ok) window.location.href = 'index.html';
-        })
-        .catch(() => {
-          localStorage.removeItem('bambam_token');
-          localStorage.removeItem('bambam_user');
-        });
-      }
-    })();
+  function switchTab(tab) {
+    document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+    document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+    document.getElementById('form-login').classList.toggle('active', tab === 'login');
+    document.getElementById('form-signup').classList.toggle('active', tab === 'signup');
+    clearAlert();
+  }
 
-    function switchTab(tab) {
-      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-      hideMessages();
+  function showAlert(msg, type = 'error') {
+    const el = document.getElementById('alert');
+    el.textContent = msg;
+    el.className = `alert ${type}`;
+  }
+  function clearAlert() {
+    const el = document.getElementById('alert');
+    el.className = 'alert';
+    el.textContent = '';
+  }
 
-      if (tab === 'login') {
-        document.querySelectorAll('.auth-tab')[0].classList.add('active');
-        document.getElementById('loginForm').classList.add('active');
-        document.getElementById('authSwitch').innerHTML = 'Hesabınız yok mu? <a onclick="switchTab(\'signup\')">Kayıt olun</a>';
-      } else {
-        document.querySelectorAll('.auth-tab')[1].classList.add('active');
-        document.getElementById('signupForm').classList.add('active');
-        document.getElementById('authSwitch').innerHTML = 'Zaten hesabınız var mı? <a onclick="switchTab(\'login\')">Giriş yapın</a>';
-      }
+  async function handleLogin(e) {
+    e.preventDefault();
+    clearAlert();
+    const btn = document.getElementById('login-btn');
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+
+    try {
+      const res = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { showAlert(data.detail || 'Login failed'); return; }
+
+      localStorage.setItem('magai_token', data.access_token);
+      localStorage.setItem('magai_user', JSON.stringify(data.user));
+      window.location.href = '/';
+    } catch {
+      showAlert('Network error. Try again.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Sign In →';
     }
+  }
 
-    function togglePassword(inputId, btn) {
-      const input = document.getElementById(inputId);
-      if (input.type === 'password') {
-        input.type = 'text';
-        btn.textContent = '🙈';
-      } else {
-        input.type = 'password';
-        btn.textContent = '👁';
-      }
+  async function handleSignup(e) {
+    e.preventDefault();
+    clearAlert();
+    const btn = document.getElementById('signup-btn');
+    btn.disabled = true;
+    btn.textContent = 'Creating account…';
+
+    const username = document.getElementById('signup-username').value.trim();
+    const email    = document.getElementById('signup-email').value.trim();
+    const password = document.getElementById('signup-password').value;
+
+    try {
+      const res = await fetch('/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { showAlert(data.detail || 'Signup failed'); return; }
+
+      localStorage.setItem('magai_token', data.access_token);
+      localStorage.setItem('magai_user', JSON.stringify(data.user));
+      showAlert('Account created! 🎉 You got 20 free credits!', 'success');
+      setTimeout(() => window.location.href = '/', 1200);
+    } catch {
+      showAlert('Network error. Try again.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Create Account →';
     }
-
-    function showError(msg) {
-      const el = document.getElementById('authError');
-      el.textContent = msg;
-      el.classList.add('show');
-      document.getElementById('authSuccess').classList.remove('show');
-    }
-
-    function showSuccess(msg) {
-      const el = document.getElementById('authSuccess');
-      el.textContent = msg;
-      el.classList.add('show');
-      document.getElementById('authError').classList.remove('show');
-    }
-
-    function hideMessages() {
-      document.getElementById('authError').classList.remove('show');
-      document.getElementById('authSuccess').classList.remove('show');
-    }
-
-    function setLoading(btnId, loading) {
-      const btn = document.getElementById(btnId);
-      if (loading) {
-        btn.disabled = true;
-        btn.innerHTML = '<span class="loading-spinner"></span> Yükleniyor...';
-      } else {
-        btn.disabled = false;
-        btn.textContent = btnId === 'loginBtn' ? 'Giriş Yap' : 'Kayıt Ol';
-      }
-    }
-
-    async function handleLogin(e) {
-      e.preventDefault();
-      hideMessages();
-      setLoading('loginBtn', true);
-
-      const email = document.getElementById('loginEmail').value.trim();
-      const password = document.getElementById('loginPassword').value;
-
-      try {
-        const res = await fetch(`${API_BASE}/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          showError(data.detail || 'Giriş başarısız');
-          setLoading('loginBtn', false);
-          return;
-        }
-
-        // Token ve user kaydet
-        localStorage.setItem('bambam_token', data.access_token);
-        localStorage.setItem('bambam_user', JSON.stringify(data.user));
-
-        showSuccess('Giriş başarılı! Yönlendiriliyorsunuz...');
-        setTimeout(() => {
-          window.location.href = 'index.html';
-        }, 500);
-
-      } catch (err) {
-        showError('Sunucuya bağlanılamadı. Backend çalışıyor mu?');
-        setLoading('loginBtn', false);
-      }
-    }
-
-    async function handleSignup(e) {
-      e.preventDefault();
-      hideMessages();
-
-      const username = document.getElementById('signupUsername').value.trim();
-      const email = document.getElementById('signupEmail').value.trim();
-      const password = document.getElementById('signupPassword').value;
-      const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
-
-      if (password !== passwordConfirm) {
-        showError('Şifreler eşleşmiyor');
-        return;
-      }
-
-      setLoading('signupBtn', true);
-
-      try {
-        const res = await fetch(`${API_BASE}/auth/signup`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, username, password })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          showError(data.detail || 'Kayıt başarısız');
-          setLoading('signupBtn', false);
-          return;
-        }
-
-        // Token ve user kaydet
-        localStorage.setItem('bambam_token', data.access_token);
-        localStorage.setItem('bambam_user', JSON.stringify(data.user));
-
-        showSuccess('Hesap oluşturuldu! Yönlendiriliyorsunuz...');
-        setTimeout(() => {
-          window.location.href = 'index.html';
-        }, 500);
-
-      } catch (err) {
-        showError('Sunucuya bağlanılamadı. Backend çalışıyor mu?');
-        setLoading('signupBtn', false);
-      }
-    }
-  </script>
+  }
+</script>
 </body>
 </html>

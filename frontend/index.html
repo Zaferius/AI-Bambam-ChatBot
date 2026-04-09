@@ -3,468 +3,601 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Bambam Chatbot</title>
-  <link rel="icon" type="image/png" href="b-icon.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <title>MagAI — Your AI Universe</title>
+  <meta name="description" content="Chat with any AI model, generate images & videos, use AI tools — all in one place." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="app">
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-header">
-        <div class="sidebar-brand">
-          <div class="sidebar-brand-icon-wrap">
-            <img src="b-icon.png" alt="Bambam Logo" class="logo-icon sidebar-main-logo">
-          </div>
-          <span class="logo-text">Bambam</span>
-        </div>
-        <button class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Kenar cubugunu daralt / genislet" aria-label="Kenar cubugunu daralt / genislet">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M15 6l-6 6 6 6"></path>
-          </svg>
+
+<!-- ════════════════════════════════════════════════════════════
+     AUTH GATE — shown until user is logged in
+════════════════════════════════════════════════════════════ -->
+<div id="auth-gate" class="auth-gate hidden">
+  <div class="auth-gate-content">
+    <div class="auth-logo">
+      <div class="logo-orb">
+        <img src="b-icon-white.png" alt="Logo" class="logo-img-inner" />
+      </div>
+      <span>MagAI</span>
+    </div>
+    <p class="auth-gate-sub">Please <a href="login.html">sign in</a> to continue.</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     APP SHELL
+════════════════════════════════════════════════════════════ -->
+<div id="app" class="app-shell hidden">
+
+  <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <div class="logo-orb">
+        <img src="b-icon-white.png" alt="Logo" class="logo-img-inner" />
+      </div>
+      <span class="logo-text">MagAI</span>
+      <button class="sidebar-toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    </div>
+
+    <!-- Nav -->
+    <nav class="sidebar-nav" id="sidebar-nav">
+      <div class="nav-group">
+        <button class="nav-item active" data-panel="dashboard" id="nav-dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Dashboard</span>
+        </button>
+        <button class="nav-item" data-panel="chat" id="nav-chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Chats</span>
+        </button>
+        <button class="nav-item" data-panel="image" id="nav-image">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span>Images</span>
+        </button>
+        <button class="nav-item" data-panel="video" id="nav-video">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          <span>Video</span>
+        </button>
+        <button class="nav-item" data-panel="tools" id="nav-tools">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          <span>Tools</span>
         </button>
       </div>
 
-      <div class="sidebar-nav">
-        <button class="nav-item" onclick="createNewChat()" title="Yeni görev">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 5v14M5 12h14"></path>
-          </svg>
-          <span>Yeni görev</span>
-        </button>
-        <button class="nav-item" title="Teams" onclick="location.href='teams.html'">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M12 1v6m0 6v6M1 12h6m6 0h6"></path>
-          </svg>
-          <span>Teams</span>
-        </button>
-        <button class="nav-item" title="Ara" onclick="handleNavClick(() => toggleSearch(true))">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
-          </svg>
-          <span>Ara</span>
-        </button>
-        <button class="nav-item" title="Kütüphane">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-          </svg>
-          <span>Kütüphane</span>
+      <div class="nav-group secondary">
+        <button class="nav-item btn-buy-credits" id="btn-buy-credits">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>Credits: <span id="credits-balance-mini">—</span></span>
         </button>
       </div>
+    </nav>
 
-      <div class="sidebar-section" id="teamSection">
-        <div class="section-header">
-          <span class="section-title">Takımlar</span>
+    <!-- Chat History List -->
+    <div class="chat-history-container" id="chat-history-container" style="flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column;">
+      <div style="padding: 4px 4px 8px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; flex-shrink:0;">Yakın Zamandakiler</div>
+      <div id="chat-list-items" style="display: flex; flex-direction: column; gap: 2px; overflow-y:auto;">
+      </div>
+    </div>
+
+    <!-- Bottom Actions -->
+    <div class="sidebar-bottom">
+      <button class="btn-quick-action" id="btn-new-chat-sidebar">
+        + Quick Action
+        <span class="shortcut-hint">⌘+N</span>
+      </button>
+
+      <div class="sidebar-user" id="sidebar-user">
+        <div class="user-avatar" id="user-avatar">
+          <img src="b-icon-white.png" style="width:14px; opacity:0.8" />
         </div>
-        <div class="chat-list" id="teamList"></div>
-        <button class="chat-item" onclick="location.href='teams.html'" style="color:var(--muted); margin-top:6px;">
-          <span class="chat-item-title">+ Takım ekle</span>
+        <div class="user-name" id="user-name">Loading…</div>
+        <button class="btn-icon logout-btn" id="logout-btn" title="Logout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </button>
       </div>
+    </div>
+  </aside>
 
-      <div class="sidebar-section">
-        <div class="section-header">
-          <span class="section-title">Tüm görevler</span>
-        </div>
-        <div class="chat-list" id="chatList"></div>
+  <!-- ── MAIN ────────────────────────────────────────────── -->
+  <main class="main-area" id="main-area">
+
+    <!-- ══ PANEL: DASHBOARD ══════════════════════════════════════ -->
+    <section class="panel active" id="panel-dashboard">
+      <div class="dashboard-header">
+        <h2 class="dashboard-title">Dashboard</h2>
       </div>
-    </aside>
-    <main class="main" id="mainContent">
-      <div class="topbar">
-        <div class="top-left">
-          <button class="mobile-menu-btn" onclick="toggleSidebar()" title="Menu">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="3" y1="12" x2="21" y2="12"></line>
-              <line x1="3" y1="6" x2="21" y2="6"></line>
-              <line x1="3" y1="18" x2="21" y2="18"></line>
-            </svg>
-          </button>
-          <div class="model-selector-wrapper">
-            <button class="model-selector-btn" id="modelSelectorBtn" type="button" onclick="toggleModelDropdown(event)">
-              <span class="model-selector-name" id="selectedModelName">Bambam 1.2 Lite</span>
-              <svg class="model-selector-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </button>
-            <div class="model-dropdown" id="modelDropdown">
-              <div class="model-dropdown-content" id="modelDropdownContent">
-                <!-- Models will be loaded here -->
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="dashboard-body">
 
-        <div class="top-right">
-          <div class="user-menu" id="userMenu" style="display:none;">
-            <span class="user-name" id="userNameDisplay"></span>
-            <button class="logout-btn" onclick="api.logout()" title="Çıkış">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
+        <!-- LEFT COLUMN -->
+        <div class="dashboard-left">
 
-      <div id="mainChatWrap" style="flex:1;display:flex;overflow:hidden;position:relative;">
-
-        <!-- Sol: Genel akış -->
-        <div id="mainChatLeft" style="flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;">
-          <div class="chat-area" id="chatArea">
-            <div class="hero" id="heroSection">
-              <div class="hero-plan-pill">Bambam plan · <span>Upgrade</span></div>
-              <div class="hero-title-wrap">
-                <img src="b-icon.png" alt="Bambam Logo" class="hero-burst hero-brand-logo">
-                <div class="hero-title">What's on your mind?</div>
-              </div>
-              <div class="hero-quick-actions">
-                <button class="hero-chip" onclick="useSuggestion('Bir Python web scraper kodu yaz')">✎ Write</button>
-                <button class="hero-chip" onclick="useSuggestion('Makine öğrenmesi nedir? Basit bir şekilde açıkla')">◌ Learn</button>
-                <button class="hero-chip" onclick="useSuggestion('Senior game developer icin portfolio sitesi kodla')">&lt;/&gt; Code</button>
-              </div>
-            </div>
-            <div class="messages" id="chatMessages"></div>
-          </div>
-
-          <div class="composer-wrap" id="composerWrap">
-            <div class="composer">
-              <div class="composer-left">
-                <div class="attachment-preview" id="attachmentPreview"></div>
-                <div class="input-row">
-                  <button class="attach-btn" id="attachBtn" title="Attach file">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-                    </svg>
-                  </button>
-                  <input type="file" id="fileInput" style="display: none;" multiple accept="image/*,.pdf,.txt,.doc,.docx">
-                  <textarea
-                    id="messageInput"
-                    placeholder="Type your message..."
-                    rows="1"
-                  ></textarea>
+          <!-- Quick Create -->
+          <div class="dashboard-section">
+            <h3 class="dashboard-section-title">Quick Create</h3>
+            <div class="quick-create-list">
+              <button class="quick-create-btn qc-chat" id="qc-new-chat">
+                <div class="qc-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 </div>
-              </div>
-              <button class="send-btn" id="sendBtn" onclick="sendMessage()"><span class="arrow">↑</span></button>
+                <span class="qc-label">Start a New Chat</span>
+                <div class="qc-plus">+</div>
+              </button>
+              <button class="quick-create-btn qc-image" id="qc-new-image">
+                <div class="qc-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                </div>
+                <span class="qc-label">Generate an Image</span>
+                <div class="qc-plus">+</div>
+              </button>
+              <button class="quick-create-btn qc-video" id="qc-new-video">
+                <div class="qc-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                </div>
+                <span class="qc-label">Generate a Video</span>
+                <div class="qc-plus">+</div>
+              </button>
             </div>
-            <div class="footer-note">Enter sends · Shift+Enter line break</div>
           </div>
 
-          <div class="offline-banner" id="offlineBanner">
-            <span>Backend is offline</span>
-            <button id="retryButton" onclick="attemptReconnect()">Retry Connection</button>
+          <!-- Recent Chats -->
+          <div class="dashboard-section">
+            <h3 class="dashboard-section-title">Recent Chats</h3>
+            <div class="dash-chat-list" id="dash-chat-list">
+              <div class="dash-chat-loading">Loading…</div>
+            </div>
           </div>
+
         </div>
 
+        <!-- RIGHT COLUMN -->
+        <div class="dashboard-right">
+          <h3 class="dashboard-section-title">Announcements</h3>
+
+          <div class="announce-card announce-featured">
+            <div class="announce-body">
+              <h4 class="announce-title">Free Perk: The AI Academy ($300 Value!)</h4>
+              <p class="announce-desc">As a MagAI user you get FREE ACCESS to The AI Academy—an ongoing learning hub filled with AI lessons and weekly live streams.</p>
+              <button class="announce-link-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                Join the Academy
+              </button>
+            </div>
+            <div class="announce-icon announce-icon-orange">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
+            </div>
+          </div>
+
+          <div class="announce-card">
+            <div class="announce-body">
+              <h4 class="announce-title">Join the Facebook Group!</h4>
+              <p class="announce-desc">We created a private Facebook group where MagAI users can share their creations, share tips, and get advice on how to maximize their AI content creation.</p>
+              <button class="announce-link-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                Join the Group
+              </button>
+            </div>
+            <div class="announce-icon announce-icon-blue">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ PANEL: CHAT ══════════════════════════════════════ -->
+    <section class="panel" id="panel-chat">
+      <!-- Top bar -->
+      <div class="panel-topbar">
+        <div class="chat-topbar-actions">
+          <!-- Model selector -->
+          <div class="model-selector-wrap" id="model-selector-wrap">
+            <button class="model-selector-btn" id="model-selector-btn">
+              <img src="b-icon-white.png" class="model-icon-dark" style="filter: invert(1); width:18px;" />
+              <span id="model-selector-label">Claude 3.5 Sonnet</span>
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="model-dropdown hidden" id="model-dropdown">
+              <div class="model-search-wrap">
+                <input type="text" class="model-search-input" id="model-search-input" placeholder="Search models…" />
+              </div>
+              <div class="model-list" id="model-list"></div>
+            </div>
+          </div>
+          <!-- Active model badge -->
+          <span id="chat-model-label" style="font-size:12px;color:var(--text-muted);align-self:center;"></span>
+        </div>
       </div>
 
-      <!-- Team Workspace -->
-      <div id="teamWorkspace" style="display:none;position:absolute;inset:0;background:var(--bg);z-index:40;flex-direction:column;">
-        <!-- Header -->
-        <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid var(--border);background:var(--sidebar-bg);">
-          <button onclick="closeTeamWorkspace()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;">←</button>
-          <div class="model-selector-wrapper tw-model-selector-wrapper">
-            <button class="model-selector-btn tw-model-selector-btn" id="twModelSelectorBtn" type="button" onclick="toggleTwModelDropdown(event)">
-              <span class="model-selector-name" id="twSelectedModelName">Bambam 1.2 Lite</span>
-              <svg class="model-selector-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </button>
-            <div class="model-dropdown tw-model-dropdown" id="twModelDropdown">
-              <div class="model-dropdown-content" id="twModelDropdownContent"></div>
-            </div>
-          </div>
-          <span id="twTeamName" style="font-weight:600;font-size:16px;"></span>
-          <span id="twProjectName" style="font-size:13px;color:var(--muted);"></span>
-          <span id="twTeamDesc" style="font-size:12px;color:var(--muted);margin-left:8px;flex:1;"></span>
-          <button id="twCollabBtn" onclick="twToggleCollabPanel()" style="padding:6px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;">🧠 Collaboration</button>
-          <button id="twEditorBtn" onclick="twToggleProjectPanel()" style="padding:6px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;">◇ Kod</button>
-          <button id="twProjectBtn" onclick="twToggleProjectsManager()" style="padding:6px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;">📁 Projeler</button>
-        </div>
+      <!-- Messages -->
+      <div class="messages-wrap" id="messages-wrap">
+        <div class="messages-inner" id="messages-inner">
+          <!-- Welcome -->
+          <div class="welcome-screen" id="welcome-screen">
+            <h1 class="welcome-title">Hi, <span id="welcome-name">Bob</span>! How can I help?</h1>
+            
+            <div class="chat-input-hero">
+              <div class="chat-input-box hero-box" id="hero-box">
+                <!-- File attachment preview (hero) -->
+                <div class="file-attachments-preview hidden" id="hero-file-preview"></div>
 
-        <!-- Member Chat Modal -->
-        <div class="search-overlay" id="twMemberChatOverlay">
-          <div class="member-settings-modal tw-member-chat-modal" role="dialog" aria-modal="true">
-            <div class="member-settings-header">
-              <div class="member-settings-title-wrap">
-                <span id="twMemberModalIcon" class="member-settings-icon">🤖</span>
-                <div>
-                  <div id="twMemberModalTitle" class="member-settings-title">Takım Üyesi</div>
-                  <div id="twMemberModalDesc" class="member-settings-subtitle"></div>
-                </div>
-              </div>
-              <button class="search-close-btn" onclick="twCloseMemberChatModal()" aria-label="Kapat">×</button>
-            </div>
-            <div id="twMemberModalContent" class="tw-member-chat-modal-content"></div>
-            <div class="member-settings-footer">
-              <button class="search-new-chat" onclick="twCloseMemberChatModal()">Kapat</button>
-              <div style="display:flex;gap:8px;flex:1;justify-content:flex-end;">
-                <input id="twMemberModalInput" type="text" placeholder="Mesaj yaz..." style="flex:1;max-width:420px;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:var(--text);font-family:inherit;outline:none;">
-                <button class="member-settings-save" onclick="twSendMemberChat(twOpenMemberModalId, true)">Gönder</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Main Body: Sidebar + Chat -->
-        <div id="twBody" class="tw-chat-layout">
-
-          <!-- Sol: Üye Sidebar -->
-          <div id="twMembersSidebar" class="tw-members-sidebar">
-            <div class="tw-sidebar-header">
-              <span class="tw-sidebar-title">Takım Üyeleri</span>
-              <button class="tw-sidebar-toggle" id="twSidebarToggle" onclick="twToggleSidebar()" title="Daralt / Genişlet">◀</button>
-            </div>
-            <div id="twMembersList" class="tw-members-list"></div>
-          </div>
-
-          <!-- Sağ: Chat Area -->
-          <div class="tw-chat-area">
-            <div class="tw-chat-scroll" id="twChatMessages">
-              <div class="tw-chat-inner">
-                <div class="tw-chat-welcome" id="twChatWelcome">
-                  <div class="tw-chat-welcome-icon">🚀</div>
-                  <div class="tw-chat-welcome-title">Takıma görev verin</div>
-                  <div class="tw-chat-welcome-sub">Ne yapmalarını istediğinizi yazın, takım hemen çalışmaya başlasın.</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Todo Panel (composer üstü, yukarı açılır) -->
-            <div class="tw-todo-panel" id="twTodoPanel" style="display:none;">
-              <div class="tw-todo-header" onclick="twToggleTodoPanel()">
-                <span class="tw-todo-header-title">📋 Görev Planı</span>
-                <span class="tw-todo-header-count" id="twTodoCount">0/0</span>
-                <span class="tw-todo-header-chevron" id="twTodoChevron">▲</span>
-              </div>
-              <div class="tw-todo-body" id="twTodoBody">
-                <div class="tw-todo-list" id="twTodoList"></div>
-              </div>
-            </div>
-
-            <!-- Composer (altta) -->
-            <div class="tw-composer-wrap">
-              <div class="tw-composer">
-                <div class="tw-composer-left">
-                  <div class="attachment-preview" id="twAttachmentPreview"></div>
-                  <div class="tw-composer-input-row">
-                    <button class="attach-btn" id="twAttachBtn" title="Dosya ekle" type="button">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-                      </svg>
+                <input type="file" id="hero-file-input" class="hidden" multiple />
+                <textarea
+                  id="chat-textarea-hero"
+                  class="chat-textarea"
+                  placeholder="Write a message or attach files…"
+                  rows="1"
+                ></textarea>
+                
+                <div class="chat-input-toolbar">
+                  <div class="toolbar-left">
+                    <label class="toolbar-btn" for="hero-file-input" title="Attach file">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                    </label>
+                  </div>
+                  <div class="toolbar-right">
+                    <span class="send-label">Send Prompt</span>
+                    <button class="chat-send-btn hero-send" id="chat-send-btn-hero">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                     </button>
-                    <input type="file" id="twFileInput" style="display:none;" multiple accept="image/*,.pdf,.txt,.md,.json,.js,.ts,.tsx,.html,.css,.py,.doc,.docx">
-                    <textarea id="twMasterInput" placeholder="Takıma ne yaptırmak istiyorsunuz? (ör: Doodle efektli to-do web sitesi yap)" rows="1"></textarea>
-                    <button class="send-btn" type="button" id="twSendBtn" onclick="sendMasterPrompt();return false;"><span class="arrow">↑</span></button>
                   </div>
                 </div>
               </div>
-              <div class="tw-composer-hint">Enter gönderir · Shift+Enter satır atlar</div>
             </div>
-          </div>
-        </div>
 
-        <!-- Project Code Editor Panel (Manus-style) -->
-        <div id="twProjectPanel" class="tw-editor-panel" style="display:none;">
-          <!-- Editor Toolbar -->
-          <div class="tw-editor-toolbar">
-            <div class="tw-editor-toolbar-left">
-              <button class="tw-editor-icon-btn" onclick="twEditorSwitchView('split')" title="Split görünüm">◫</button>
-              <button class="tw-editor-icon-btn" onclick="twEditorSwitchView('code')" title="Kod görünümü">⌘</button>
-              <button class="tw-editor-tab-btn active" data-view="split" onclick="twEditorSwitchView('split')">&lt;/&gt; Kod</button>
-              <button class="tw-editor-icon-btn" onclick="twEditorSwitchView('preview')" title="Önizleme">◧</button>
-            </div>
-            <div class="tw-editor-toolbar-right">
-              <button onclick="twRefreshPreview()" class="tw-editor-icon-btn" title="Yenile">↻</button>
-              <button onclick="twEditorRefreshTree()" class="tw-editor-icon-btn" title="Dosyaları yenile">☰</button>
-              <button onclick="twEditorNewFile()" class="tw-editor-icon-btn" title="Yeni Dosya">＋</button>
-              <button onclick="twDownloadProject()" id="twDownloadBtn" class="tw-editor-icon-btn" title="İndir">⇩</button>
-              <button onclick="twToggleProjectPanel()" class="tw-editor-icon-btn close" title="Kapat">✕</button>
-            </div>
-          </div>
-          <!-- Editor Body -->
-          <div class="tw-editor-body">
-            <!-- File Tree -->
-            <div class="tw-editor-sidebar" id="twEditorSidebar">
-              <div class="tw-editor-sidebar-header">
-                <span>Dosyalar</span>
-                <button onclick="twEditorRefreshTree()" title="Yenile" class="tw-editor-sidebar-btn">↻</button>
-              </div>
-              <div class="tw-editor-file-tree" id="twEditorFileTree"></div>
-            </div>
-            <div class="tw-editor-sidebar-resize" id="twEditorSidebarResize"></div>
-            <!-- Code Area -->
-            <div class="tw-editor-main">
-              <!-- Tabs -->
-              <div class="tw-editor-tabs" id="twEditorTabs"></div>
-              <!-- Monaco Container -->
-              <div class="tw-editor-monaco" id="twEditorMonaco">
-                <div class="tw-editor-welcome">
-                  <div style="font-size:28px;margin-bottom:8px;">◇</div>
-                  <div style="font-size:14px;font-weight:600;">Bambam Code Editor</div>
-                  <div style="font-size:12px;color:var(--muted);margin-top:4px;">Sol panelden bir dosya seçin veya yeni dosya oluşturun</div>
-                </div>
-              </div>
-            </div>
-            <div class="tw-editor-split-resize" id="twEditorSplitResize"></div>
-            <!-- Preview -->
-            <div class="tw-editor-preview" id="twEditorPreview">
-              <div class="tw-editor-preview-topbar">
-                <div class="tw-editor-preview-switches">
-                  <button class="tw-editor-preview-switch active">◨</button>
-                  <button class="tw-editor-preview-switch">▣</button>
-                </div>
-                <div class="tw-editor-preview-address">/</div>
-                <div class="tw-editor-preview-actions">
-                  <button onclick="twOpenFullPreview()" class="tw-editor-preview-btn" title="Düzenle">↗</button>
-                  <button onclick="twRefreshPreview()" class="tw-editor-preview-btn" title="Yenile">↻</button>
-                </div>
-              </div>
-              <iframe id="twPreviewFrame" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-popups-to-escape-sandbox" allow="camera;microphone;fullscreen;clipboard-read;clipboard-write"></iframe>
-            </div>
-          </div>
-          <!-- Status Bar -->
-          <div class="tw-editor-statusbar" id="twEditorStatusbar">
-            <span id="twEditorStatusFile">Dosya seçilmedi</span>
-            <span class="tw-editor-statusbar-sep">•</span>
-            <span id="twEditorStatusSave">—</span>
-            <span class="tw-editor-statusbar-sep">•</span>
-            <span id="twEditorStatusLang">—</span>
-            <span style="flex:1;"></span>
-            <span id="twEditorStatusCursor">Ln 1, Col 1</span>
-          </div>
-          </div>
-        </div>
-
-        <div id="twCollabPanel" class="tw-collab-panel" style="display:none;">
-          <div class="tw-collab-header">
-            <div>
-              <div class="tw-collab-title">Collaboration Run</div>
-              <div id="twCollabMeta" class="tw-collab-meta">Henüz run yok.</div>
-            </div>
-            <div class="tw-collab-actions">
-              <button onclick="twRefreshCollabPanel()" class="tw-collab-action-btn">↻ Yenile</button>
-              <button onclick="twToggleCollabPanel()" class="tw-collab-close">✕</button>
-            </div>
-          </div>
-          <div class="tw-collab-grid">
-            <section class="tw-collab-section">
-              <div class="tw-collab-section-title">Shared Memory</div>
-              <div id="twCollabMemory" class="tw-collab-list"></div>
-            </section>
-            <section class="tw-collab-section">
-              <div class="tw-collab-section-title">Handoff Messages</div>
-              <div id="twCollabMessages" class="tw-collab-list"></div>
-            </section>
-            <section class="tw-collab-section">
-              <div class="tw-collab-section-title">Dependencies</div>
-              <div id="twCollabDeps" class="tw-collab-list"></div>
-            </section>
-            <section class="tw-collab-section">
-              <div class="tw-collab-section-title">File Proposals</div>
-              <div id="twCollabProposals" class="tw-collab-list"></div>
-            </section>
-          </div>
-        </div>
-
-        <div id="twProjectGate" style="display:none;position:absolute;inset:0;background:rgba(10,10,10,0.82);z-index:45;align-items:center;justify-content:center;padding:24px;">
-          <div style="width:min(760px,92vw);background:var(--bg);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.45);">
-            <div style="padding:16px 20px;border-bottom:1px solid var(--border);background:var(--sidebar-bg);display:flex;justify-content:space-between;align-items:center;gap:12px;">
-              <div>
-                <div style="font-weight:600;font-size:16px;">Takım Projeleri</div>
-                <div id="twProjectGateHint" style="font-size:12px;color:var(--muted);margin-top:4px;">Workspace'e girmeden önce bu takım için bir proje seç veya oluştur.</div>
-              </div>
-              <button onclick="twToggleProjectsManager(false)" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">✕</button>
-            </div>
-            <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px;max-height:70vh;overflow:auto;">
-              <div style="display:flex;gap:8px;">
-                <input id="twNewProjectInput" type="text" placeholder="Yeni proje adı" style="flex:1;padding:10px 12px;background:var(--sidebar-bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;">
-                <button onclick="twCreateProject()" style="padding:10px 14px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-family:inherit;cursor:pointer;">+ Oluştur</button>
-              </div>
-              <div id="twProjectSelectList" style="display:flex;flex-direction:column;gap:10px;"></div>
+            <div class="welcome-chips">
+              <button class="chip" data-prompt="Summarize a YouTube video for me.">📺 Summarize Video</button>
+              <button class="chip" data-prompt="Brainstorm ideas for a new blog post.">💡 Brainstorm Ideas</button>
+              <button class="chip" data-prompt="Surprise me with a random interesting fact.">🤩 Surprise me</button>
             </div>
           </div>
         </div>
       </div>
-    </main>
-  </div>
 
-  <div class="search-overlay" id="searchOverlay">
-    <div class="search-panel" role="dialog" aria-modal="true">
-      <div class="search-panel-header">
-        <span>Sohbetlerde ara...</span>
-        <button class="search-close-btn" onclick="toggleSearch(false)" aria-label="Kapat">×</button>
-      </div>
-      <div class="search-panel-body">
-        <div class="search-panel-input">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
-          </svg>
-          <input id="searchOverlayInput" type="text" placeholder="Sohbetlerde ara..." autocomplete="off" />
+      <!-- Input Sticky (hidden until chat starts) -->
+      <div class="chat-input-wrap hidden" id="chat-input-wrap">
+        <div class="chat-input-box wrapper-border" id="sticky-input-box">
+          <input type="file" id="chat-file-input" class="hidden" multiple />
+
+          <!-- File attachment preview (sticky) -->
+          <div class="file-attachments-preview hidden" id="sticky-file-preview"></div>
+
+          <textarea
+            id="chat-textarea"
+            class="chat-textarea"
+            placeholder="Type a message…"
+            rows="1"
+          ></textarea>
+          
+          <div class="chat-input-toolbar">
+            <div class="toolbar-left">
+              <label class="toolbar-btn" for="chat-file-input" title="Attach file">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              </label>
+            </div>
+            <div class="toolbar-right">
+              <button class="chat-send-btn" id="chat-send-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
+          </div>
         </div>
-        <button class="search-new-chat" id="searchNewChatBtn">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 5v14M5 12h14"></path>
-          </svg>
-          Yeni sohbet
+      </div>
+    </section>
+
+    <!-- ══ PANEL: IMAGE ══════════════════════════════════════ -->
+    <section class="panel" id="panel-image">
+
+      <!-- Generated Image Canvas (left) -->
+      <div class="img-canvas-area" id="image-results">
+        <div class="img-canvas-placeholder" id="img-canvas-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" width="80" height="80"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <p>Your beautiful images will appear here</p>
+        </div>
+      </div>
+
+      <!-- Tool Picker Strip (between canvas and sidebar) -->
+      <div class="img-tool-picker" id="img-tool-picker">
+        <button class="img-tool-card" data-tool="inpainting" title="Inpainting">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span>Inpainting</span>
         </button>
-        <div class="search-results-list" id="searchResultsList"></div>
+        <button class="img-tool-card" data-tool="upscaler" title="Upscaler">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          <span>Upscaler</span>
+        </button>
+        <button class="img-tool-card" data-tool="cropper" title="Cropper">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polyline points="6.13 1 6 16 21 16"/><polyline points="1 6.13 16 6 16 21"/></svg>
+          <span>Cropper</span>
+        </button>
+        <button class="img-tool-card" data-tool="bg-remover" title="BG Remover">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M20 20H7L3 16l11-11 7 7-1 8z"/><path d="M6 11l8-8"/></svg>
+          <span>BG Remover</span>
+        </button>
       </div>
-    </div>
-  </div>
 
-  <div class="search-overlay" id="memberSettingsOverlay">
-    <div class="member-settings-modal" role="dialog" aria-modal="true">
-      <div class="member-settings-header">
-        <div class="member-settings-title-wrap">
-          <span id="memberChatIcon" class="member-settings-icon">🤖</span>
-          <div>
-            <div id="memberChatName" class="member-settings-title">Takım Üyesi</div>
-            <div id="memberChatDesc" class="member-settings-subtitle"></div>
+      <!-- Controls Sidebar (right) -->
+      <div class="img-controls-sidebar">
+
+        <!-- PANEL: Generate (default) -->
+        <div class="img-sidebar-panel active" id="img-panel-generate">
+
+          <!-- Prompt -->
+          <div class="img-prompt-area">
+            <textarea id="image-prompt" class="img-prompt-input" placeholder="Describe your image in detail…" rows="3"></textarea>
+            <button class="img-prompt-plus-btn" title="Expand">+</button>
+          </div>
+
+          <!-- Model -->
+          <div class="img-control-row">
+            <span class="img-ctrl-dot" style="background:#22c55e;"></span>
+            <select id="image-model" class="img-ctrl-select">
+              <option value="fal-ai/flux/schnell">Flux Schnell (fast)</option>
+              <option value="fal-ai/flux/dev">Flux Dev (quality)</option>
+              <option value="fal-ai/flux-pro">Flux Pro (best)</option>
+            </select>
+          </div>
+
+          <!-- Size -->
+          <div class="img-control-row">
+            <span class="img-ctrl-label-icon">◻</span>
+            <select id="image-size-select" class="img-ctrl-select">
+              <option value="1024x1024">Size: Square (1:1)</option>
+              <option value="768x1344">Size: Portrait (9:16)</option>
+              <option value="1344x768">Size: Landscape (16:9)</option>
+            </select>
+          </div>
+
+          <!-- Style -->
+          <div class="img-control-row">
+            <span class="img-ctrl-label-icon">🎨</span>
+            <select id="image-style-select" class="img-ctrl-select">
+              <option value="">Style: None (Optional)</option>
+              <option value="photorealistic">Style: Photorealistic</option>
+              <option value="anime">Style: Anime</option>
+              <option value="digital art">Style: Digital Art</option>
+              <option value="oil painting">Style: Oil Painting</option>
+              <option value="watercolor">Style: Watercolor</option>
+            </select>
+          </div>
+
+          <!-- Hidden inputs for JS compatibility -->
+          <input type="hidden" id="image-count" value="1" />
+          <input type="hidden" id="image-width" value="1024" />
+          <input type="hidden" id="image-height" value="1024" />
+          <input type="hidden" id="image-neg-prompt" value="" />
+
+          <!-- Generate Button -->
+          <button class="btn-generate-img" id="btn-generate-image">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z"/></svg>
+            Generate <span class="img-cost-badge" id="image-cost-label">2⚡</span>
+          </button>
+
+          <div class="gen-status hidden" id="image-status">
+            <div class="spinner"></div>
+            <span id="image-status-text">Generating…</span>
+          </div>
+
+        </div>
+
+        <!-- PANEL: Inpainting -->
+        <div class="img-sidebar-panel" id="img-panel-inpainting">
+          <div class="tool-placeholder-panel">
+            <div class="tool-ph-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            </div>
+            <h4 class="tool-ph-title">Inpainting</h4>
+            <p class="tool-ph-desc">Paint over specific areas to regenerate only those regions with your prompt.</p>
+            <span class="tool-ph-badge">Coming Soon</span>
           </div>
         </div>
-        <button class="search-close-btn" onclick="closeMemberChat()" aria-label="Kapat">×</button>
-      </div>
-      <div id="memberSettingsBody" class="member-settings-body">
-        <div class="member-settings-grid">
-          <label class="member-settings-field member-settings-field-wide">
-            <span>Rol Adı</span>
-            <input id="memberSettingsRole" type="text" />
-          </label>
-          <label class="member-settings-field">
-            <span>İkon</span>
-            <input id="memberSettingsIcon" type="text" />
-          </label>
-          <label class="member-settings-field member-settings-field-wide">
-            <span>Açıklama</span>
-            <input id="memberSettingsDesc" type="text" />
-          </label>
-          <div class="member-settings-field member-settings-field-wide">
-            <span>Bağımlılıklar</span>
-            <div id="memberSettingsDeps" class="member-settings-deps"></div>
+
+        <!-- PANEL: Upscaler -->
+        <div class="img-sidebar-panel" id="img-panel-upscaler">
+          <div class="tool-placeholder-panel">
+            <div class="tool-ph-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+            </div>
+            <h4 class="tool-ph-title">Upscaler</h4>
+            <p class="tool-ph-desc">Enhance resolution up to 4× and recover fine details using AI upscaling.</p>
+            <span class="tool-ph-badge">Coming Soon</span>
           </div>
-          <label class="member-settings-field member-settings-field-wide">
-            <span>System Prompt</span>
-            <textarea id="memberSettingsPrompt" rows="12"></textarea>
-          </label>
+        </div>
+
+        <!-- PANEL: Cropper -->
+        <div class="img-sidebar-panel" id="img-panel-cropper">
+          <div class="tool-placeholder-panel">
+            <div class="tool-ph-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32"><polyline points="6.13 1 6 16 21 16"/><polyline points="1 6.13 16 6 16 21"/></svg>
+            </div>
+            <h4 class="tool-ph-title">Cropper</h4>
+            <p class="tool-ph-desc">Crop and resize to any aspect ratio or custom dimensions with precision.</p>
+            <span class="tool-ph-badge">Coming Soon</span>
+          </div>
+        </div>
+
+        <!-- PANEL: Background Remover -->
+        <div class="img-sidebar-panel" id="img-panel-bg-remover">
+          <div class="tool-placeholder-panel">
+            <div class="tool-ph-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32"><path d="M20 20H7L3 16l11-11 7 7-1 8z"/><path d="M6 11l8-8"/></svg>
+            </div>
+            <h4 class="tool-ph-title">Background Remover</h4>
+            <p class="tool-ph-desc">Automatically detect and remove backgrounds from any image in one click.</p>
+            <span class="tool-ph-badge">Coming Soon</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Tool Icon Strip (far right) -->
+      <div class="img-tool-strip">
+        <button class="img-strip-btn" title="Fullscreen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+        </button>
+        <button class="img-strip-btn" title="Download" id="btn-download-image">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+        <button class="img-strip-btn" title="Aspect Ratio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="1"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+        </button>
+        <button class="img-strip-btn" title="Enhance">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        </button>
+        <button class="img-strip-btn" title="Edit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="img-strip-btn" title="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+
+    </section>
+
+    <!-- ══ PANEL: VIDEO ══════════════════════════════════════ -->
+    <section class="panel" id="panel-video">
+
+      <!-- Video Canvas (left) -->
+      <div class="img-canvas-area" id="video-result-area">
+        <div class="img-canvas-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" width="80" height="80"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          <p>Your generated video will appear here</p>
         </div>
       </div>
-      <div class="member-settings-footer">
-        <button class="search-new-chat" onclick="closeMemberChat()">Kapat</button>
-        <button class="member-settings-save" onclick="saveMemberSettings()">Kaydet</button>
-      </div>
-    </div>
-  </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
-  <script src="api.js"></script>
-  <script src="app.js"></script>
+      <!-- Controls Sidebar (right) -->
+      <div class="img-controls-sidebar">
+
+        <!-- Prompt -->
+        <div class="img-prompt-area">
+          <textarea id="video-prompt" class="img-prompt-input" placeholder="Describe your cinematic scene…" rows="3"></textarea>
+          <button class="img-prompt-plus-btn" title="Expand">+</button>
+        </div>
+
+        <!-- Model -->
+        <div class="img-control-row">
+          <span class="img-ctrl-dot" style="background:#6366f1;"></span>
+          <select id="video-model" class="img-ctrl-select">
+            <option value="fal-ai/kling-video/v1/standard/text-to-video">Kling Standard</option>
+            <option value="fal-ai/stable-video">Stable Video</option>
+          </select>
+        </div>
+
+        <!-- Duration -->
+        <div class="img-control-row">
+          <span class="img-ctrl-label-icon">⏱</span>
+          <select id="video-duration" class="img-ctrl-select">
+            <option value="5">Duration: 5 seconds</option>
+            <option value="10">Duration: 10 seconds</option>
+          </select>
+        </div>
+
+        <!-- Generate Button -->
+        <button class="btn-generate-img btn-generate-vid" id="btn-generate-video">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          Generate <span class="img-cost-badge" id="video-cost-label">12⚡</span>
+        </button>
+
+        <div class="gen-status hidden" id="video-status">
+          <div class="spinner"></div>
+          <span id="video-status-text">Generating…</span>
+        </div>
+
+      </div>
+
+      <!-- Tool Icon Strip (far right) -->
+      <div class="img-tool-strip">
+        <button class="img-strip-btn" title="Fullscreen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+        </button>
+        <button class="img-strip-btn" title="Download">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+        <button class="img-strip-btn" title="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+
+    </section>
+
+    <!-- ══ PANEL: TOOLS ══════════════════════════════════════ -->
+    <section class="panel" id="panel-tools">
+      <div class="panel-topbar">
+        <div class="panel-title"><span>AI Tools</span></div>
+      </div>
+
+      <div class="tools-grid" id="tools-grid">
+        <button class="tool-card active-tool" data-tool="face-swap" id="tool-card-face-swap">
+          <div class="tool-icon">🔄</div>
+          <div class="tool-name">Face Swap</div>
+          <div class="tool-cost">5⚡</div>
+        </button>
+        <button class="tool-card" data-tool="edit" id="tool-card-edit">
+          <div class="tool-icon">✏️</div>
+          <div class="tool-name">Image Edit</div>
+          <div class="tool-cost">4⚡</div>
+        </button>
+      </div>
+
+      <div class="tool-workspace" id="tool-workspace">
+        <div class="tool-panel active" id="tool-face-swap">
+          <div class="tool-workspace-grid">
+            <div class="image-upload-zone" id="face-source-zone">
+              <input type="file" id="face-source-input" accept="image/*" class="hidden" />
+              <label for="face-source-input" class="upload-label">
+                Upload Source Face
+              </label>
+              <img id="face-source-preview" class="upload-preview hidden" />
+            </div>
+            <div class="swap-arrow">→</div>
+            <div class="image-upload-zone" id="face-target-zone">
+              <input type="file" id="face-target-input" accept="image/*" class="hidden" />
+              <label for="face-target-input" class="upload-label">
+                Upload Target Image
+              </label>
+              <img id="face-target-preview" class="upload-preview hidden" />
+            </div>
+          </div>
+          <button class="btn-generate" id="btn-face-swap" style="max-width:300px;">
+            Swap Faces <span class="btn-cost">5⚡</span>
+          </button>
+          <div class="gen-status hidden" id="face-swap-status"><div class="spinner"></div></div>
+          
+          <div class="tool-output" id="face-swap-output" style="margin-top:20px; max-width:600px;"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ── Modal ──────────────────────────── -->
+<div class="modal-overlay hidden" id="lightbox-modal">
+  <div class="modal lightbox-content" id="lightbox-modal-inner" style="background:transparent; padding:0; box-shadow:none; display:flex; flex-direction:column; align-items:center; width: auto; max-width: 95vw;">
+    <button id="lightbox-close" style="align-self:flex-end; margin-bottom:10px; background:rgba(255,255,255,0.2); border:none; border-radius:50%; width:32px; height:32px; color:white; cursor:pointer;" title="Close">✕</button>
+    <img id="lightbox-img" src="" alt="Full preview" style="max-width:90vw; max-height:85vh; border-radius:8px; object-fit:contain;" />
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="credits-modal">
+  <!-- Simplified modal to save lines -->
+  <div class="modal" id="credits-modal-inner" style="background:white; color:black; padding:24px;">
+    <h2>Buy Credits</h2>
+    <div style="display:flex; gap:10px; margin-top:20px;" id="credit-packs">
+      <div class="credit-pack" data-pack="50">50⚡ - $5.99</div>
+      <div class="credit-pack" data-pack="100">100⚡ - $9.99</div>
+    </div>
+    <button id="credits-modal-close" style="margin-top:20px; padding:10px; border-radius:8px;">Close</button>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script src="api.js?v=20260409g"></script>
+<script src="app.js?v=20260409g"></script>
 </body>
 </html>

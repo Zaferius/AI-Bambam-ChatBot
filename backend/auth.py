@@ -184,6 +184,12 @@ async def signup(req: SignupRequest):
     if user is None:
         raise HTTPException(status_code=500, detail="Kullanıcı oluşturulamadı")
     
+    # Yeni kullanıcıya 20 hoş geldin kredisi ver
+    try:
+        db.init_user_credits(user["id"], initial_balance=20.0)
+    except Exception:
+        pass  # Non-critical — don't block signup if credits fail
+
     # Token oluştur
     token = create_access_token(user["id"], user["username"])
     
@@ -192,7 +198,8 @@ async def signup(req: SignupRequest):
         user={
             "id": user["id"],
             "email": user["email"],
-            "username": user["username"]
+            "username": user["username"],
+            "credits": 20.0,
         }
     )
 

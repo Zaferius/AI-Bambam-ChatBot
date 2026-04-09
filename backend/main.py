@@ -13,7 +13,14 @@ from typing import Dict, List, Optional
 import asyncio
 import base64
 import io
-import google.generativeai as genai
+# google.generativeai is optional (incompatible with Python 3.14+)
+try:
+    import google.generativeai as genai
+    _genai_available = True
+except Exception:
+    genai = None
+    _genai_available = False
+
 from database import DatabaseManager
 from auth import (
     router as auth_router,
@@ -22,29 +29,31 @@ from auth import (
     get_optional_user,
     decode_token,
 )
-from team_endpoints import router as team_router, init_teams
-from project_files import router as project_router, init_projects
+# Teams & projects are disabled in MagAI MVP (kept for future reactivation)
+# from team_endpoints import router as team_router, init_teams
+# from project_files import router as project_router, init_projects
+from ai_router import router as ai_router, init_ai_router
+from credits_router import router as credits_router, init_credits_router
 from collections import defaultdict
 import time
 
 load_dotenv()
 
-app = FastAPI(title="Bambam AI Chat API", version="1.0.0")
+app = FastAPI(title="MagAI Platform API", version="2.0.0")
 
-# Database Manager'ı başlat
+# Database Managerâ€™Ä± baÅŸlat
 db = DatabaseManager()
 
-# Auth modülünü başlat
+# Auth modÃ¼lÃ¼nÃ¼ baÅŸlat
 init_auth(db)
 app.include_router(auth_router)
 
-# Team modülünü başlat
-init_teams(db)
-app.include_router(team_router)
+# Teams disabled for MVP
+# init_teams(db)
+# app.include_router(team_router)
+# init_projects(db)
+# app.include_router(project_router)
 
-# Project files modülünü başlat
-init_projects(db)
-app.include_router(project_router)
 
 # CORS
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
@@ -73,7 +82,7 @@ RATE_LIMIT_AUTH = 10  # max requests per minute for auth
 
 
 def check_rate_limit(client_ip: str, limit: int = RATE_LIMIT_CHAT) -> bool:
-    """Rate limit kontrolü - True = izin ver, False = engelle"""
+    """Rate limit kontrolÃ¼ - True = izin ver, False = engelle"""
     now = time.time()
     # 1 dakikadan eski istekleri temizle
     rate_limit_store[client_ip] = [
@@ -85,7 +94,7 @@ def check_rate_limit(client_ip: str, limit: int = RATE_LIMIT_CHAT) -> bool:
     return True
 
 
-# OpenAI Client (sadece API key varsa oluştur)
+# OpenAI Client (sadece API key varsa oluÅŸtur)
 openai_client = None
 if os.getenv("OPENAI_API_KEY"):
     openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -99,7 +108,7 @@ if os.getenv("GROQ_API_KEY"):
 
 # Gemini Client
 gemini_client = None
-if os.getenv("GEMINI_API_KEY"):
+if os.getenv("GEMINI_API_KEY") and _genai_available:
     genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
     gemini_client = True  # Flag to indicate Gemini is configured
 
@@ -117,7 +126,7 @@ class CloudModelManager:
         self.refresh_models()
 
     def refresh_models(self):
-        """Cloud modelleri yükle - hızlı, network isteği yok"""
+        """Cloud modelleri yÃ¼kle - hÄ±zlÄ±, network isteÄŸi yok"""
         models = []
 
         # Bambam Branded Models
@@ -125,7 +134,7 @@ class CloudModelManager:
             {
                 "id": "bambam:lite",
                 "name": "Bambam 1.2 Lite",
-                "description": "Günlük görevler için hafif bir ajan.",
+                "description": "GÃ¼nlÃ¼k gÃ¶revler iÃ§in hafif bir ajan.",
                 "provider": "bambam",
                 "model_name": "groq:llama-3.1-8b-instant",
                 "icon": "",
@@ -135,7 +144,7 @@ class CloudModelManager:
             {
                 "id": "bambam:standard",
                 "name": "Bambam 1.2",
-                "description": "Çoğu görevi yapabilen çok yönlü bir ajan.",
+                "description": "Ã‡oÄŸu gÃ¶revi yapabilen Ã§ok yÃ¶nlÃ¼ bir ajan.",
                 "provider": "bambam",
                 "model_name": "gpt-4o-mini",
                 "icon": "",
@@ -145,7 +154,7 @@ class CloudModelManager:
             {
                 "id": "bambam:max",
                 "name": "Bambam 1.2 Max",
-                "description": "Karmaşık görevler için tasarlanmış yüksek performanslı bir ajan.",
+                "description": "KarmaÅŸÄ±k gÃ¶revler iÃ§in tasarlanmÄ±ÅŸ yÃ¼ksek performanslÄ± bir ajan.",
                 "provider": "bambam",
                 "model_name": "openrouter:anthropic/claude-3.5-sonnet",
                 "icon": "",
@@ -217,7 +226,7 @@ class CloudModelManager:
         return models
 
     def get_provider_and_model(self, model_id: str):
-        """Model ID'sinden provider ve gerçek model adını al"""
+        """Model ID'sinden provider ve gerÃ§ek model adÄ±nÄ± al"""
         return "openai", "gpt-4o"
 
         # Bambam branded modelleri underlying modele map et
@@ -252,9 +261,12 @@ class CloudModelManager:
                 yield delta
 
 
-# Cloud Model Manager'ı başlat
+# Cloud Model Manager'Ä± baÅŸlat
 llm_manager = CloudModelManager()
 
+# Credits Router'Ä± baÅŸlat (MemoryManager'dan Ã¶nce, baÄŸÄ±msÄ±z)
+init_credits_router(db)
+app.include_router(credits_router)
 
 class ChatRequest(BaseModel):
     message: str
@@ -297,14 +309,14 @@ class MemoryManager:
             print(f"Memory save error: {e}")
 
     def extract_important_info(self, message: str, role: str) -> List[str]:
-        """Mesajlardan önemli bilgileri çıkar"""
+        """Mesajlardan Ã¶nemli bilgileri Ã§Ä±kar"""
         important_patterns = [
-            r"(?:benim adım|ismim|call me)\s+([A-Za-zÇĞİÖŞÜçğıöşü]+)",
-            r"(?:çalışıyorum|occupation|job)\s+(?:olarak|as)\s+([^\s.,!?]+)",
+            r"(?:benim adÄ±m|ismim|call me)\s+([A-Za-zÃ‡ÄÄ°Ã–ÅÃœÃ§ÄŸÄ±Ã¶ÅŸÃ¼]+)",
+            r"(?:Ã§alÄ±ÅŸÄ±yorum|occupation|job)\s+(?:olarak|as)\s+([^\s.,!?]+)",
             r"(?:proje|project)\s+([^\s.,!?]+)",
             r"(?:hobby|hobilerim|interests?)\s+(?:olarak|are)\s+([^\s.,!?]+)",
-            r"(?:yaşım|age)\s+(\d+)",
-            r"(?:şehir|city|living)\s+(?:inde|in)\s+([^\s.,!?]+)",
+            r"(?:yaÅŸÄ±m|age)\s+(\d+)",
+            r"(?:ÅŸehir|city|living)\s+(?:inde|in)\s+([^\s.,!?]+)",
             r"(?:email|mail)\s+([^\s@]+@[^\s@]+\.[^\s]+)",
             r"(?:telefon|phone)\s+(\d+)",
         ]
@@ -320,7 +332,7 @@ class MemoryManager:
         return important_info
 
     def update_long_term_memory(self, chat_id: str, message: str, role: str):
-        """Uzun süreli hafızayı güncelle"""
+        """Uzun sÃ¼reli hafÄ±zayÄ± gÃ¼ncelle"""
         important_info = self.extract_important_info(message, role)
 
         if chat_id not in self.long_term_memory:
@@ -333,7 +345,7 @@ class MemoryManager:
 
         memory = self.long_term_memory[chat_id]
 
-        # Önemli bilgileri kaydet
+        # Ã–nemli bilgileri kaydet
         for info in important_info:
             if info.lower() not in [x.lower() for x in memory["important_topics"]]:
                 memory["important_topics"].append(info)
@@ -341,14 +353,14 @@ class MemoryManager:
         memory["last_updated"] = datetime.now().isoformat()
 
     def get_relevant_memory(self, chat_id: str, current_message: str) -> str:
-        """Mevcut mesajla ilgili hafıza bilgisini getir"""
+        """Mevcut mesajla ilgili hafÄ±za bilgisini getir"""
         if chat_id not in self.long_term_memory:
             return ""
 
         memory = self.long_term_memory[chat_id]
         relevant_info = []
 
-        # Mesajdaki kelimelerle eşleşen önemli bilgileri bul
+        # Mesajdaki kelimelerle eÅŸleÅŸen Ã¶nemli bilgileri bul
         message_words = current_message.lower().split()
 
         for topic in memory["important_topics"]:
@@ -357,7 +369,7 @@ class MemoryManager:
                 relevant_info.append(topic)
 
         if relevant_info:
-            return f"Önemli bilgiler: {', '.join(relevant_info)}"
+            return f"Ã–nemli bilgiler: {', '.join(relevant_info)}"
 
         return ""
 
@@ -366,31 +378,31 @@ class MemoryManager:
         if chat_id not in self.chat_histories:
             self.chat_histories[chat_id] = []
 
-        # Mesajı ekle
+        # MesajÄ± ekle
         self.chat_histories[chat_id].append(
             {"role": role, "content": message, "timestamp": datetime.now().isoformat()}
         )
 
-        # Kısa süreli hafızayı sınırla
+        # KÄ±sa sÃ¼reli hafÄ±zayÄ± sÄ±nÄ±rla
         if len(self.chat_histories[chat_id]) > self.max_short_term:
             self.chat_histories[chat_id] = self.chat_histories[chat_id][
                 -self.max_short_term :
             ]
 
-        # Uzun süreli hafızayı güncelle
+        # Uzun sÃ¼reli hafÄ±zayÄ± gÃ¼ncelle
         self.update_long_term_memory(chat_id, message, role)
 
         if persist:
             self.save_memory()
 
     def get_chat_history(self, chat_id: str) -> List[Dict]:
-        """Sohbet geçmişini getir"""
+        """Sohbet geÃ§miÅŸini getir"""
         if chat_id not in self.chat_histories:
             self.chat_histories[chat_id] = []
         return self.chat_histories[chat_id]
 
     def get_chat_history_for_llm(self, chat_id: str) -> List[Dict]:
-        """LLM'e gönderilecek temiz sohbet geçmişini getir"""
+        """LLM'e gÃ¶nderilecek temiz sohbet geÃ§miÅŸini getir"""
         history = self.get_chat_history(chat_id)
         return [
             {"role": message["role"], "content": message["content"]}
@@ -398,14 +410,34 @@ class MemoryManager:
         ]
 
     def reset_chat(self, chat_id: str):
-        """Belirli bir sohbeti sıfırla"""
+        """Belirli bir sohbeti sÄ±fÄ±rla"""
         if chat_id in self.chat_histories:
             self.chat_histories[chat_id] = []
         self.save_memory()
 
 
-# Memory Manager'ı başlat
+# Memory Manager'Ä± baÅŸlat
 memory_manager = MemoryManager()
+
+# AI Router'Ä± baÅŸlat (memory_manager artÄ±k hazÄ±r)
+init_ai_router(
+    db=db,
+    memory_manager=memory_manager,
+    openai_client=openai_client,
+    groq_client=groq_client,
+    openrouter_client=openrouter_client,
+    gemini_client=gemini_client,
+)
+app.include_router(ai_router)
+
+# AI router'a gerÃ§ek auth dependency'Ä± inject et
+for route in ai_router.routes:
+    if hasattr(route, "endpoint") and route.endpoint.__name__ == "ai_generate":
+        from fastapi import Depends
+        route.dependencies = [Depends(get_current_user)]
+
+# Credits router'a da get_current_user inject et
+# (Artık credits_router.py içinde direkt Depends(get_current_user) kullanılıyor, buradaki inject iptal)
 
 # Chat endpoints'leri setup et
 from chat_endpoints import setup_chat_routes
@@ -414,9 +446,9 @@ setup_chat_routes(app, db)
 
 SYSTEM_MESSAGE = {
     "role": "system",
-    "content": """Sen çok akıllı bir AI asistanısın. Kullanıcıyla önceki konuşmalarını hatırlıyorsun ve önemli bilgileri saklıyorsun. 
-    Kullanıcının tercihlerini, ismini, projelerini ve diğer önemli detayları hatırla ve bunları konuşmalarında kullan.
-    Samimi, dostane ve yardımsever ol. Cevaplarını net ve pratik tut.""",
+    "content": """Sen Ã§ok akÄ±llÄ± bir AI asistanÄ±sÄ±n. KullanÄ±cÄ±yla Ã¶nceki konuÅŸmalarÄ±nÄ± hatÄ±rlÄ±yorsun ve Ã¶nemli bilgileri saklÄ±yorsun. 
+    KullanÄ±cÄ±nÄ±n tercihlerini, ismini, projelerini ve diÄŸer Ã¶nemli detaylarÄ± hatÄ±rla ve bunlarÄ± konuÅŸmalarÄ±nda kullan.
+    Samimi, dostane ve yardÄ±msever ol. CevaplarÄ±nÄ± net ve pratik tut.""",
 }
 
 
@@ -425,17 +457,17 @@ async def chat(req: ChatRequest):
     chat_id = req.chat_id if req.chat_id else "default"
     memory_manager.add_message(chat_id, req.message, "user", persist=False)
 
-    # İlgili hafıza bilgisini al
+    # Ä°lgili hafÄ±za bilgisini al
     relevant_memory = memory_manager.get_relevant_memory(chat_id, req.message)
 
-    # Mesajları hazırla
+    # MesajlarÄ± hazÄ±rla
     messages = [SYSTEM_MESSAGE]
 
-    # Önemli hafıza bilgisini ekle
+    # Ã–nemli hafÄ±za bilgisini ekle
     if relevant_memory:
         messages.append({"role": "system", "content": relevant_memory})
 
-    # Sohbet geçmişini ekle
+    # Sohbet geÃ§miÅŸini ekle
     chat_history = memory_manager.get_chat_history_for_llm(chat_id)
     messages.extend(chat_history)
 
@@ -479,10 +511,10 @@ async def chat_stream(
     if not check_rate_limit(client_ip, RATE_LIMIT_CHAT):
         return JSONResponse(
             status_code=429,
-            content={"detail": "Çok fazla istek. Lütfen biraz bekleyin."},
+            content={"detail": "Ã‡ok fazla istek. LÃ¼tfen biraz bekleyin."},
         )
 
-    # Auth - token varsa doğrula, yoksa anonim devam et
+    # Auth - token varsa doÄŸrula, yoksa anonim devam et
     auth_header = request.headers.get("authorization", "")
     user_id = "default"
     if auth_header.startswith("Bearer "):
@@ -520,10 +552,10 @@ async def chat_stream(
         if not thinking_level:
             thinking_level = "medium"
 
-    # Kullanıcı mesajını memory'ye kaydet
+    # KullanÄ±cÄ± mesajÄ±nÄ± memory'ye kaydet
     memory_manager.add_message(chat_id, message, "user", persist=False)
 
-    # Database'e kullanıcı mesajını kaydet
+    # Database'e kullanÄ±cÄ± mesajÄ±nÄ± kaydet
     try:
         user_images = (
             [
@@ -534,24 +566,28 @@ async def chat_stream(
             if file_contents
             else None
         )
-        db.add_message(chat_id, "user", message, model_name=model, images=user_images)
+        if not db.get_chat(chat_id):
+            title = message[:30] + "..." if message and len(message) > 30 else "Image Task"
+            db.create_chat(chat_id, title, user_id)
+            
+        db.add_message(chat_id, "user", message or "", model_name=model, images=user_images)
     except Exception as e:
         print(f"DB save user message error: {e}")
 
-    # İlgili hafıza bilgisini al
+    # Ä°lgili hafÄ±za bilgisini al
     relevant_memory = memory_manager.get_relevant_memory(chat_id, message)
 
-    # Mesajları hazırla
+    # MesajlarÄ± hazÄ±rla
     messages = [SYSTEM_MESSAGE]
 
     if relevant_memory:
         messages.append({"role": "system", "content": relevant_memory})
 
-    # Sohbet geçmişini ekle
+    # Sohbet geÃ§miÅŸini ekle
     chat_history = memory_manager.get_chat_history_for_llm(chat_id)
     messages.extend(chat_history[:-1])
 
-    # Kullanıcı mesajını dosyalarla birlikte hazırla
+    # KullanÄ±cÄ± mesajÄ±nÄ± dosyalarla birlikte hazÄ±rla
     user_message_content = []
 
     if message:
@@ -667,7 +703,7 @@ async def chat_stream(
             except Exception as e:
                 yield f"OpenRouter error: {str(e)}"
 
-        # Bot cevabını memory ve database'e kaydet
+        # Bot cevabÄ±nÄ± memory ve database'e kaydet
         memory_manager.add_message(chat_id, full_reply, "assistant")
         try:
             db.add_message(chat_id, "assistant", full_reply, model_name=model)
@@ -686,7 +722,7 @@ async def reset_chat(req: ChatRequest):
 
 @app.get("/memory/{chat_id}")
 async def get_memory(chat_id: str):
-    """Belirli bir sohbetin hafıza bilgisini getir"""
+    """Belirli bir sohbetin hafÄ±za bilgisini getir"""
     if chat_id not in memory_manager.long_term_memory:
         return {"memory": None}
 
@@ -698,13 +734,13 @@ async def get_memory(chat_id: str):
 
 @app.get("/models")
 def get_available_models():
-    """Mevcut tüm modelleri getir - hızlı, cache'den"""
+    """Mevcut tÃ¼m modelleri getir - hÄ±zlÄ±, cache'den"""
     models = []
 
-    # Cloud modelleri al (cache'den, hızlı)
+    # Cloud modelleri al (cache'den, hÄ±zlÄ±)
     cloud_models = list(llm_manager.available_models.values())
 
-    # Bambam modelleri önce ekle
+    # Bambam modelleri Ã¶nce ekle
     bambam_models = [m for m in cloud_models if m.get("is_bambam")]
     for model in bambam_models:
         models.append(model)
@@ -766,7 +802,7 @@ def get_available_models():
                 "id": "groq-group",
                 "name": "Groq",
                 "provider": "groq",
-                "icon": "⚡",
+                "icon": "âš¡",
                 "is_group": True,
             }
         )
@@ -784,7 +820,7 @@ def get_available_models():
                 "id": "gemini-group",
                 "name": "Google Gemini",
                 "provider": "gemini",
-                "icon": "🔷",
+                "icon": "ğŸ”·",
                 "is_group": True,
             }
         )
@@ -804,7 +840,7 @@ def get_available_models():
                 "id": "openrouter-group",
                 "name": "OpenRouter",
                 "provider": "openrouter",
-                "icon": "🌐",
+                "icon": "ğŸŒ",
                 "is_group": True,
             }
         )
@@ -832,19 +868,19 @@ def health_check():
     }
 
 
-# Preview: Proje dosyalarını iframe'de serve et (auth gerektirmez, doğrudan erişim)
+# Preview: Proje dosyalarÄ±nÄ± iframe'de serve et (auth gerektirmez, doÄŸrudan eriÅŸim)
 from fastapi.staticfiles import StaticFiles
 import pathlib
 
 
 @app.get("/preview/{team_id}/{file_path:path}")
 async def serve_preview(team_id: str, file_path: str):
-    """Proje dosyasını doğrudan serve et (iframe preview için)"""
+    """Proje dosyasÄ±nÄ± doÄŸrudan serve et (iframe preview iÃ§in)"""
     import mimetypes
     from project_files import get_project_dir, auto_fix_index_html
 
     project_dir = get_project_dir(team_id)
-    # index.html serve edilirken otomatik düzelt
+    # index.html serve edilirken otomatik dÃ¼zelt
     if file_path == "index.html":
         auto_fix_index_html(project_dir)
     fpath = project_dir / file_path
@@ -855,7 +891,7 @@ async def serve_preview(team_id: str, file_path: str):
     if not fpath.exists() or not fpath.is_file():
         return JSONResponse({"error": "Not found"}, status_code=404)
 
-    # Doğru MIME type belirle
+    # DoÄŸru MIME type belirle
     mime_map = {
         ".html": "text/html",
         ".css": "text/css",
@@ -887,7 +923,7 @@ async def serve_preview(team_id: str, file_path: str):
     return FR(fpath, media_type=media_type)
 
 
-# Frontend statik dosyalarını serve et
+# Frontend statik dosyalarÄ±nÄ± serve et
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import pathlib
@@ -909,3 +945,4 @@ async def serve_html(filename: str):
 
 
 app.mount("/", StaticFiles(directory=str(FRONTEND_DIR)), name="frontend")
+

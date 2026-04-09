@@ -1,580 +1,272 @@
-// Backend API Client
-// Handles all communication with the backend server
+/**
+ * api.js — MagAI backend API wrapper
+ * All fetch calls go through these helpers.
+ */
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const BASE_URL = '';  // Same-origin; FastAPI serves frontend
 
-class BambamAPI {
-  constructor(baseUrl = API_BASE_URL) {
-    this.baseUrl = baseUrl;
+// ── Token helpers ─────────────────────────────────────────────────────────
+const Auth = {
+  getToken: () => localStorage.getItem('magai_token'),
+  setToken: (t) => localStorage.setItem('magai_token', t),
+  clearToken: () => localStorage.removeItem('magai_token'),
+  getUser: () => {
+    try { return JSON.parse(localStorage.getItem('magai_user') || 'null'); }
+    catch { return null; }
+  },
+  setUser: (u) => localStorage.setItem('magai_user', JSON.stringify(u)),
+  clearUser: () => localStorage.removeItem('magai_user'),
+  isLoggedIn: () => !!localStorage.getItem('magai_token'),
+};
+
+// ── Base fetch ────────────────────────────────────────────────────────────
+async function apiFetch(path, options = {}) {
+  const token = Auth.getToken();
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(BASE_URL + path, { ...options, headers });
+
+  if (res.status === 401) {
+    Auth.clearToken();
+    Auth.clearUser();
+    window.location.href = '/login.html';
+    throw new Error('Unauthorized');
   }
 
-  getAuthHeaders(extra = {}) {
-    const headers = { ...extra };
-    const token = localStorage.getItem('bambam_token');
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    return headers;
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`;
+    try { const json = await res.json(); detail = json.detail || detail; } catch {}
+    throw new Error(detail);
   }
 
-  getUserId() {
-    try {
-      const user = JSON.parse(localStorage.getItem('bambam_user'));
-      return user ? user.id : 'default';
-    } catch {
-      return 'default';
-    }
-  }
-
-  getUsername() {
-    try {
-      const user = JSON.parse(localStorage.getItem('bambam_user'));
-      return user ? user.username : null;
-    } catch {
-      return null;
-    }
-  }
-
-  isLoggedIn() {
-    return !!localStorage.getItem('bambam_token');
-  }
-
-  logout() {
-    localStorage.removeItem('bambam_token');
-    localStorage.removeItem('bambam_user');
-    window.location.href = 'login.html';
-  }
-
-  // ===== CHAT OPERATIONS =====
-
-  async createChat(title = "New Chat", userId = null) {
-    try {
-      const uid = userId || this.getUserId();
-      const response = await fetch(`${this.baseUrl}/api/chats`, {
-        method: "POST",
-        headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ title, user_id: uid })
-      });
-      if (!response.ok) throw new Error("Failed to create chat");
-      return await response.json();
-    } catch (error) {
-      console.error("Create chat error:", error);
-      return null;
-    }
-  }
-
-  async listChats(userId = null, limit = 100) {
-    try {
-      const uid = userId || this.getUserId();
-      const response = await fetch(`${this.baseUrl}/api/chats?user_id=${uid}&limit=${limit}`, {
-        headers: this.getAuthHeaders()
-      });
-      if (!response.ok) throw new Error("Failed to list chats");
-      return await response.json();
-    } catch (error) {
-      console.error("List chats error:", error);
-      return [];
-    }
-  }
-
-  async getChat(chatId) {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/chats/${chatId}`, {
-        headers: this.getAuthHeaders()
-      });
-      if (!response.ok) throw new Error("Failed to get chat");
-      return await response.json();
-    } catch (error) {
-      console.error("Get chat error:", error);
-      return null;
-    }
-  }
-
-  async updateChatTitle(chatId, title) {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/chats/${chatId}`, {
-        method: "PUT",
-        headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ title })
-      });
-      if (!response.ok) throw new Error("Failed to update chat");
-      return await response.json();
-    } catch (error) {
-      console.error("Update chat error:", error);
-      return null;
-    }
-  }
-
-  async deleteChat(chatId) {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/chats/${chatId}`, {
-        method: "DELETE",
-        headers: this.getAuthHeaders()
-      });
-      if (!response.ok) throw new Error("Failed to delete chat");
-      return await response.json();
-    } catch (error) {
-      console.error("Delete chat error:", error);
-      return null;
-    }
-  }
-
-  // ===== MESSAGE OPERATIONS =====
-
-  async getMessages(chatId, limit = null, offset = 0) {
-    try {
-      let url = `${this.baseUrl}/api/chats/${chatId}/messages?offset=${offset}`;
-      if (limit) url += `&limit=${limit}`;
-      
-      const response = await fetch(url, { headers: this.getAuthHeaders() });
-      if (!response.ok) throw new Error("Failed to get messages");
-      return await response.json();
-    } catch (error) {
-      console.error("Get messages error:", error);
-      return [];
-    }
-  }
-
-  async sendMessage(message, model, chatId, thinkingLevel = "medium", files = []) {
-    if (files.length > 0) {
-      const formData = new FormData();
-      formData.append("message", message);
-      formData.append("model", model);
-      formData.append("chat_id", chatId);
-      formData.append("thinking_level", thinkingLevel);
-      files.forEach((file) => { formData.append("files", file); });
-      
-      return await fetch(`${this.baseUrl}/chat/stream`, {
-        method: "POST",
-        headers: this.getAuthHeaders(),
-        body: formData
-      });
-    } else {
-      return await fetch(`${this.baseUrl}/chat/stream`, {
-        method: "POST",
-        headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({
-          message,
-          model,
-          chat_id: chatId,
-          thinking_level: thinkingLevel
-        })
-      });
-    }
-  }
-
-  // ===== MODEL OPERATIONS =====
-
-  async getModels() {
-    try {
-      const response = await fetch(`${this.baseUrl}/models`, {
-        headers: this.getAuthHeaders()
-      });
-      if (!response.ok) throw new Error("Failed to get models");
-      return await response.json();
-    } catch (error) {
-      console.error("Get models error:", error);
-      return { models: [] };
-    }
-  }
-
-  async refreshModels() {
-    try {
-      const response = await fetch(`${this.baseUrl}/models/refresh`, {
-        method: "POST"
-      });
-      if (!response.ok) throw new Error("Failed to refresh models");
-      return await response.json();
-    } catch (error) {
-      console.error("Refresh models error:", error);
-      return null;
-    }
-  }
-
-  // ===== STATS & CLEANUP =====
-
-  async getStats() {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/stats`);
-      if (!response.ok) throw new Error("Failed to get stats");
-      return await response.json();
-    } catch (error) {
-      console.error("Get stats error:", error);
-      return null;
-    }
-  }
-
-  async cleanup(days = 30, userId = "default") {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/cleanup?days=${days}&user_id=${userId}`, {
-        method: "POST"
-      });
-      if (!response.ok) throw new Error("Failed to cleanup");
-      return await response.json();
-    } catch (error) {
-      console.error("Cleanup error:", error);
-      return null;
-    }
-  }
-
-  // ===== TEAM OPERATIONS =====
-
-  async createTeam(name, description, members) {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/teams`, {
-        method: "POST",
-        headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ name, description, members })
-      });
-      if (!response.ok) { const err = await response.json(); throw new Error(err.detail || "Failed"); }
-      return await response.json();
-    } catch (error) {
-      console.error("Create team error:", error);
-      throw error;
-    }
-  }
-
-  async listTeams() {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/teams`, {
-        headers: this.getAuthHeaders()
-      });
-      if (!response.ok) throw new Error("Failed to list teams");
-      return await response.json();
-    } catch (error) {
-      console.error("List teams error:", error);
-      return [];
-    }
-  }
-
-  async getTeam(teamId) {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/teams/${teamId}`, {
-        headers: this.getAuthHeaders()
-      });
-      if (!response.ok) throw new Error("Failed to get team");
-      return await response.json();
-    } catch (error) {
-      console.error("Get team error:", error);
-      return null;
-    }
-  }
-
-  async updateTeam(teamId, payload) {
-    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}`, {
-      method: "PUT",
-      headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify(payload)
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || "Failed to update team");
-    }
-    return await response.json();
-  }
-
-  async deleteTeam(teamId) {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/teams/${teamId}`, {
-        method: "DELETE",
-        headers: this.getAuthHeaders()
-      });
-      if (!response.ok) throw new Error("Failed to delete team");
-      return await response.json();
-    } catch (error) {
-      console.error("Delete team error:", error);
-      return null;
-    }
-  }
-
-  async addTeamMember(teamId, member) {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/members`, {
-        method: "POST",
-        headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify(member)
-      });
-      if (!response.ok) throw new Error("Failed to add member");
-      return await response.json();
-    } catch (error) {
-      console.error("Add member error:", error);
-      return null;
-    }
-  }
-
-  async removeTeamMember(teamId, memberId) {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/members/${memberId}`, {
-        method: "DELETE",
-        headers: this.getAuthHeaders()
-      });
-      if (!response.ok) throw new Error("Failed to remove member");
-      return await response.json();
-    } catch (error) {
-      console.error("Remove member error:", error);
-      return null;
-    }
-  }
-
-  async getMemberMessages(teamId, memberId) {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/members/${memberId}/messages`, {
-        headers: this.getAuthHeaders()
-      });
-      if (!response.ok) throw new Error("Failed to get messages");
-      return await response.json();
-    } catch (error) {
-      console.error("Get member messages error:", error);
-      return [];
-    }
-  }
-
-  async sendTeamChat(teamId, memberId, message, model = "gpt-4o-mini") {
-    return await fetch(`${this.baseUrl}/api/teams/${teamId}/members/${memberId}/chat`, {
-      method: "POST",
-      headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ message, model })
-    });
-  }
-
-  async updateMemberModel(teamId, memberId, model, depends_on, extra = {}) {
-    try {
-      const payload = { ...extra };
-      if (typeof model !== "undefined") payload.model = model;
-      if (typeof depends_on !== "undefined") payload.depends_on = depends_on;
-      const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/members/${memberId}`, {
-        method: "PATCH",
-        headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify(payload)
-      });
-      if (!response.ok) { const err = await response.json(); throw new Error(err.detail || "Failed"); }
-      return await response.json();
-    } catch (error) {
-      console.error("Update member model error:", error);
-      throw error;
-    }
-  }
-
-  async listTeamProjects(teamId) {
-    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/projects`, {
-      headers: this.getAuthHeaders()
-    });
-    if (!response.ok) throw new Error("Failed to list team projects");
-    return await response.json();
-  }
-
-  async createTeamProject(teamId, name) {
-    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/projects`, {
-      method: "POST",
-      headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ name })
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || "Failed to create project");
-    }
-    return await response.json();
-  }
-
-  async activateTeamProject(teamId, projectId) {
-    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/projects/${projectId}/activate`, {
-      method: "POST",
-      headers: this.getAuthHeaders()
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || "Failed to activate project");
-    }
-    return await response.json();
-  }
-
-  async deleteTeamProject(teamId, projectId) {
-    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/projects/${projectId}`, {
-      method: "DELETE",
-      headers: this.getAuthHeaders()
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || "Failed to delete project");
-    }
-    return await response.json();
-  }
-
-  async sendMasterPrompt(teamId, message, model = "gpt-4o-mini") {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/master`, {
-        method: "POST",
-        headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ message, model })
-      });
-      if (!response.ok) { const err = await response.json(); throw new Error(err.detail || "Failed"); }
-      return await response.json();
-    } catch (error) {
-      console.error("Master prompt error:", error);
-      throw error;
-    }
-  }
-
-  async sendMasterPromptStream(teamId, message, model = "gpt-4o-mini", attachments = []) {
-    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/master-stream`, {
-      method: "POST",
-      headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ message, model, attachments })
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || "Stream failed");
-    }
-    return response;
-  }
-
-  async getTeamRun(teamId, runId) {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/runs/${runId}`, {
-        headers: this.getAuthHeaders()
-      });
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.detail || "Failed to get run");
-      }
-      return await response.json();
-    } catch (error) {
-      console.error("Get team run error:", error);
-      throw error;
-    }
-  }
-
-  async approveProposal(teamId, proposalId) {
-    const response = await fetch(`${this.baseUrl}/api/projects/${teamId}/proposals/approve`, {
-      method: "POST",
-      headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ proposal_id: proposalId })
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || "Failed to approve proposal");
-    }
-    return await response.json();
-  }
-
-  async rejectProposal(teamId, proposalId) {
-    const response = await fetch(`${this.baseUrl}/api/projects/${teamId}/proposals/reject`, {
-      method: "POST",
-      headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ proposal_id: proposalId })
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || "Failed to reject proposal");
-    }
-    return await response.json();
-  }
-
-  // ===== PROJECT FILES =====
-
-  async listProjectFiles(teamId) {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/projects/${teamId}/files`, {
-        headers: this.getAuthHeaders()
-      });
-      if (!response.ok) { const err = await response.json(); throw new Error(err.detail || "Failed"); }
-      const data = await response.json();
-      return data.files || [];
-    } catch (error) {
-      console.error("List project files error:", error);
-      return [];
-    }
-  }
-
-  async readProjectFile(teamId, filePath) {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/projects/${teamId}/files/${filePath}`, {
-        headers: this.getAuthHeaders()
-      });
-      if (!response.ok) { const err = await response.json(); throw new Error(err.detail || "Failed"); }
-      return await response.json();
-    } catch (error) {
-      console.error("Read project file error:", error);
-      throw error;
-    }
-  }
-
-  async writeProjectFile(teamId, path, content) {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/projects/${teamId}/files`, {
-        method: "POST",
-        headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ path, content })
-      });
-      if (!response.ok) { const err = await response.json(); throw new Error(err.detail || "Failed"); }
-      return await response.json();
-    } catch (error) {
-      console.error("Write project file error:", error);
-      throw error;
-    }
-  }
-
-  async deleteProjectFile(teamId, filePath) {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/projects/${teamId}/files`, {
-        method: "DELETE",
-        headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ path: filePath })
-      });
-      if (!response.ok) { const err = await response.json(); throw new Error(err.detail || "Failed"); }
-      return await response.json();
-    } catch (error) {
-      console.error("Delete project file error:", error);
-      throw error;
-    }
-  }
-
-  async extractProjectFiles(teamId) {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/projects/${teamId}/extract`, {
-        method: "POST",
-        headers: this.getAuthHeaders()
-      });
-      if (!response.ok) { const err = await response.json(); throw new Error(err.detail || "Failed"); }
-      return await response.json();
-    } catch (error) {
-      console.error("Extract project files error:", error);
-      throw error;
-    }
-  }
-
-  async resetProject(teamId) {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/projects/${teamId}/reset`, {
-        method: "DELETE",
-        headers: this.getAuthHeaders()
-      });
-      if (!response.ok) { const err = await response.json(); throw new Error(err.detail || "Failed"); }
-      return await response.json();
-    } catch (error) {
-      console.error("Reset project error:", error);
-      throw error;
-    }
-  }
-
-  getPreviewUrl(teamId, filePath = "index.html") {
-    return `${this.baseUrl}/preview/${teamId}/${filePath}`;
-  }
-
-  // ===== CONNECTIVITY =====
-
-  async checkConnection() {
-    try {
-      const response = await fetch(`${this.baseUrl}/health`, {
-        method: "GET",
-        signal: AbortSignal.timeout(3000)
-      });
-      return response.ok;
-    } catch (error) {
-      return false;
-    }
-  }
+  return res.json();
 }
 
-// Export API instance
-const api = new BambamAPI();
+// ── Auth ─────────────────────────────────────────────────────────────────
+const API = {
+  auth: {
+    signup: (email, username, password) =>
+      apiFetch('/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({ email, username, password }),
+      }),
+
+    login: (email, password) =>
+      apiFetch('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      }),
+
+    me: () => apiFetch('/auth/me'),
+    verify: () => apiFetch('/auth/verify', { method: 'POST' }),
+  },
+
+  // ── Models ──────────────────────────────────────────────────────────────
+  models: {
+    list: () => apiFetch('/models'),
+  },
+
+  // ── Credits ─────────────────────────────────────────────────────────────
+  credits: {
+    balance: () => apiFetch('/credits/balance'),
+    transactions: (limit = 50) => apiFetch(`/credits/transactions?limit=${limit}`),
+    packs: () => apiFetch('/credits/packs'),
+    purchase: (pack) =>
+      apiFetch('/credits/purchase', { method: 'POST', body: JSON.stringify({ pack }) }),
+    add: (amount, description = 'Manual top-up') =>
+      apiFetch('/credits/add', { method: 'POST', body: JSON.stringify({ amount, description }) }),
+  },
+
+  // ── AI Generate ──────────────────────────────────────────────────────────
+  ai: {
+    /**
+     * Chat — returns a ReadableStream (text/plain).
+     * The last line will be: \n\n__CREDITS__{"credits_used":..., "credits_remaining":...}
+     */
+    chatStream: async (model, prompt, chatId, systemPrompt, onChunk, onDone, onError) => {
+      const token = Auth.getToken();
+      const body = JSON.stringify({
+        type: 'chat',
+        model,
+        prompt,
+        chat_id: chatId,
+        system_prompt: systemPrompt || null,
+      });
+
+      try {
+        const res = await fetch(BASE_URL + '/ai/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body,
+        });
+
+        if (!res.ok) {
+          let detail = `HTTP ${res.status}`;
+          try { const j = await res.json(); detail = j.detail || detail; } catch {}
+          onError(detail);
+          return;
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // Check for credits metadata at end
+          const creditsMarker = '__CREDITS__';
+          const markerIdx = buffer.indexOf(creditsMarker);
+          if (markerIdx !== -1) {
+            const textPart = buffer.slice(0, markerIdx).replace(/\n\n$/, '');
+            const metaPart = buffer.slice(markerIdx + creditsMarker.length);
+            if (textPart) onChunk(textPart);
+            try {
+              const meta = JSON.parse(metaPart);
+              onDone(meta);
+            } catch { onDone(null); }
+            return;
+          }
+
+          onChunk(buffer);
+          buffer = '';
+        }
+
+        onDone(null);
+      } catch (err) {
+        onError(err.message || 'Network error');
+      }
+    },
+
+    /**
+     * Image generation — POST /ai/generate with type=image
+     */
+    generateImage: (model, prompt, options = {}) =>
+      apiFetch('/ai/generate', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'image',
+          model,
+          prompt,
+          negative_prompt: options.negative_prompt || '',
+          width: options.width || 1024,
+          height: options.height || 1024,
+          num_images: options.num_images || 1,
+          options: options.extra || {},
+        }),
+      }),
+
+    /**
+     * Video generation
+     */
+    generateVideo: (model, prompt, duration = '5') =>
+      apiFetch('/ai/generate', {
+        method: 'POST',
+        body: JSON.stringify({ type: 'video', model, prompt, duration }),
+      }),
+
+    /**
+     * Image edit (img2img)
+     */
+    editImage: (model, prompt, imageUrl, strength = 0.75) =>
+      apiFetch('/ai/generate', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'edit',
+          model: model || 'fal-ai/flux/dev/image-to-image',
+          prompt,
+          image_url: imageUrl,
+          strength,
+        }),
+      }),
+
+    /**
+     * Face swap
+     */
+    faceSwap: (sourceUrl, targetUrl) =>
+      apiFetch('/ai/generate', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'face-swap',
+          model: 'fal-ai/face-swap',
+          prompt: '',
+          image_url: sourceUrl,
+          target_image_url: targetUrl,
+        }),
+      }),
+  },
+
+  // ── Legacy chat (backward-compat) ────────────────────────────────────────
+  chat: {
+    streamLegacy: async (message, model, chatId, files, onChunk, onDone, onError) => {
+      const token = Auth.getToken();
+      const formData = new FormData();
+      formData.append('message', message);
+      formData.append('model', model || 'gpt-4o-mini');
+      formData.append('chat_id', chatId || 'default');
+
+      if (files && files.length) {
+        for (const f of files) formData.append('files', f);
+      }
+
+      try {
+        const res = await fetch(BASE_URL + '/chat/stream', {
+          method: 'POST',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          onError(j.detail || `HTTP ${res.status}`);
+          return;
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          onChunk(chunk);
+        }
+        onDone();
+      } catch (err) {
+        onError(err.message || 'Network error');
+      }
+    },
+
+    listChats: () => apiFetch('/api/chats'),
+    getMessages: (chatId) => apiFetch(`/api/chats/${chatId}/messages`),
+    deleteChat: (chatId) => apiFetch(`/api/chats/${chatId}`, { method: 'DELETE' }),
+  },
+
+  // ── Utilities ────────────────────────────────────────────────────────────
+  health: () => apiFetch('/health'),
+};
+
+/**
+ * Upload an image File and return a temporary data: URL for sending to fal.ai.
+ * For production: upload to S3/R2 and return the public URL.
+ * Here we convert to base64 data URL as a dev fallback.
+ */
+async function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+window.API = API;
+window.Auth = Auth;
+window.fileToDataURL = fileToDataURL;
