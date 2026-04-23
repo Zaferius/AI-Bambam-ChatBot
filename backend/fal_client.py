@@ -126,24 +126,6 @@ class FalAIClient:
         images = result.get("images", [])
         return [img["url"] if isinstance(img, dict) else img for img in images]
 
-    async def face_swap(
-        self,
-        source_image_url: str,
-        target_image_url: str,
-    ) -> str:
-        """Swap face from source onto target. Returns result URL."""
-        model = "fal-ai/face-swap"
-        payload = {
-            "source_image_url": source_image_url,
-            "target_image_url": target_image_url,
-        }
-        result = await self._run(model, payload)
-        images = result.get("images", [])
-        if images:
-            img = images[0]
-            return img["url"] if isinstance(img, dict) else img
-        return result.get("image", {}).get("url", "")
-
     async def generate_video(
         self,
         model: str,

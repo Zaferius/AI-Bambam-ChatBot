@@ -15,17 +15,18 @@ const State = {
   maxCredits: 20,
   models: [],
   isStreaming: false,
+  isListening: false,
   attachedFiles: [],     // Array of File objects
   stylePreset: '',
-  currentTool: 'face-swap',
-  // file URLs for tools
-  faceSourceUrl: null,
-  faceTargetUrl: null,
+  chatMode: 'chat',
+  theme: localStorage.getItem('magai_theme') || 'doodle',
+  currentImageTool: 'generate',
   editSourceUrl: null,
-  styleSourceUrl: null,
   // active input context: 'hero' | 'sticky'
   activeInput: 'hero',
 };
+
+let speechRecognition = null;
 
 /* ══════════════════════════════════════════════════════════
    TOAST
@@ -50,6 +51,43 @@ function generateChatId() {
 function autoResize(textarea) {
   textarea.style.height = 'auto';
   textarea.style.height = Math.min(textarea.scrollHeight, 160) + 'px';
+}
+
+function getPrimaryTextarea() {
+  const hero = document.getElementById('chat-textarea-hero');
+  const sticky = document.getElementById('chat-textarea');
+  if (hero && hero.offsetParent !== null) return hero;
+  if (sticky) return sticky;
+  return document.getElementById('chat-textarea');
+}
+
+function applyTheme(themeName) {
+  const theme = themeName === 'doodle' ? 'doodle' : 'thunder';
+  State.theme = theme;
+  document.body.classList.remove('theme-doodle', 'theme-thunder');
+  document.body.classList.add(`theme-${theme}`);
+  localStorage.setItem('magai_theme', theme);
+
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.theme === theme);
+  });
+}
+
+function setChatMode(mode) {
+  const allowed = ['chat', 'image', 'video'];
+  State.chatMode = allowed.includes(mode) ? mode : 'chat';
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === State.chatMode);
+  });
+
+  const labelMap = {
+    chat: 'Send Prompt',
+    image: 'Generate Image',
+    video: 'Generate Video',
+  };
+  document.querySelectorAll('.send-label').forEach(el => {
+    el.textContent = labelMap[State.chatMode];
+  });
 }
 
 function escapeHtml(str) {
@@ -94,6 +132,58 @@ window.closeLightbox = function() {
   }
 };
 
+function initSpeechRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  const recog = new SR();
+  recog.lang = navigator.language || 'en-US';
+  recog.continuous = false;
+  recog.interimResults = true;
+
+  recog.onresult = (event) => {
+    const textarea = getPrimaryTextarea();
+    if (!textarea) return;
+    let transcript = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript;
+    }
+    const prefix = textarea.value.trim() ? `${textarea.value.trim()} ` : '';
+    textarea.value = `${prefix}${transcript}`;
+    autoResize(textarea);
+    updateSendButtonsState();
+  };
+
+  recog.onstart = () => {
+    State.isListening = true;
+    document.querySelectorAll('.mic-btn').forEach(btn => btn.classList.add('listening'));
+  };
+
+  recog.onend = () => {
+    State.isListening = false;
+    document.querySelectorAll('.mic-btn').forEach(btn => btn.classList.remove('listening'));
+  };
+
+  recog.onerror = () => {
+    State.isListening = false;
+    document.querySelectorAll('.mic-btn').forEach(btn => btn.classList.remove('listening'));
+    toast('Voice input failed. Please try again.', 'error');
+  };
+
+  return recog;
+}
+
+function toggleVoiceInput() {
+  if (!speechRecognition) {
+    toast('Speech recognition is not supported in this browser.', 'error');
+    return;
+  }
+  if (State.isListening) {
+    speechRecognition.stop();
+  } else {
+    speechRecognition.start();
+  }
+}
+
 /* ══════════════════════════════════════════════════════════
    CREDITS
 ══════════════════════════════════════════════════════════ */
@@ -129,6 +219,16 @@ function switchPanel(panelId) {
 
   State.currentPanel = panelId;
   if (panelId === 'dashboard') loadDashboardChats();
+}
+
+function switchImageTool(toolId) {
+  State.currentImageTool = toolId === 'edit' ? 'edit' : 'generate';
+  document.querySelectorAll('.img-tool-card').forEach(card => {
+    card.classList.toggle('active', card.dataset.imageTool === State.currentImageTool);
+  });
+  document.querySelectorAll('.img-sidebar-panel').forEach(panel => {
+    panel.classList.toggle('active', panel.id === `img-panel-${State.currentImageTool}`);
+  });
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -430,8 +530,25 @@ async function switchChat(chatId, title) {
     const msgs = await API.chat.getMessages(chatId);
     msgs.forEach(m => {
       let filesData = [];
-      if (m.images && m.images.length > 0) {
-        filesData = m.images.map((b64, i) => ({ isImage: true, url: `data:image/png;base64,${b64}`, name: `image-${i}.png` }));
+      if (m.attachments && m.attachments.length > 0) {
+        filesData = m.attachments.map((att, i) => {
+          const isImage = (att.mime_type || '').startsWith('image/');
+          const fallbackUrl = att.data_url || (att.base64 ? `data:${att.mime_type || 'image/png'};base64,${att.base64}` : '');
+          return {
+            isImage,
+            url: fallbackUrl,
+            name: att.name || `attachment-${i}`,
+            ext: (att.name || '').split('.').pop()?.toUpperCase().slice(0, 4) || 'FILE',
+            sizeKb: att.size_kb || '?',
+          };
+        });
+      } else if (m.images && m.images.length > 0) {
+        filesData = m.images.map((img, i) => {
+          const url = typeof img === 'string' && (img.startsWith('http') || img.startsWith('data:'))
+            ? img
+            : `data:image/png;base64,${img}`;
+          return { isImage: true, url, name: `image-${i}.png` };
+        });
       }
       const bubble = appendMessage(m.role, m.content, null, filesData);
       if (m.role === 'assistant' && bubble) {
@@ -538,6 +655,37 @@ function removeTypingIndicator() {
   document.getElementById('typing-indicator')?.remove();
 }
 
+function appendMediaAssistantMessage(type, prompt, output, creditsUsed, creditsRemaining) {
+  const bubble = appendMessage('assistant', '');
+  if (!bubble) return;
+
+  if (type === 'image') {
+    const urls = Array.isArray(output) ? output : [output];
+    const safe = urls.filter(Boolean);
+    bubble.innerHTML = `Generated image for: <em>${escapeHtml(prompt)}</em>`;
+    if (safe.length) {
+      const grid = document.createElement('div');
+      grid.className = 'msg-files-display';
+      grid.style.cssText = 'display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;';
+      safe.forEach((url) => {
+        const wrap = document.createElement('div');
+        wrap.innerHTML = `<img src="${url}" style="width:140px;height:140px;object-fit:cover;border-radius:10px;cursor:zoom-in;" />`;
+        wrap.onclick = () => openLightbox(url);
+        grid.appendChild(wrap);
+      });
+      bubble.appendChild(grid);
+    }
+  } else if (type === 'video') {
+    const url = output;
+    bubble.innerHTML = `Generated video for: <em>${escapeHtml(prompt)}</em>${url ? `<div style="margin-top:10px;"><video src="${url}" controls style="max-width:100%;border-radius:10px;"></video></div>` : ''}`;
+  }
+
+  const creditsEl = document.createElement('div');
+  creditsEl.className = 'msg-credits';
+  creditsEl.textContent = `⚡ ${Number(creditsUsed || 0).toFixed(3)} used · ${Number(creditsRemaining || 0).toFixed(1)} remaining`;
+  bubble.parentElement.appendChild(creditsEl);
+}
+
 async function sendChatMessage(textareaId = 'chat-textarea', sendBtnId = 'chat-send-btn') {
   const textarea = document.getElementById(textareaId);
   const msg = textarea.value.trim();
@@ -560,12 +708,36 @@ async function sendChatMessage(textareaId = 'chat-textarea', sendBtnId = 'chat-s
 
   // get files data representation to show inside message bubble
   let filesToRender = [];
+  let attachmentsPayload = [];
   if (State.attachedFiles.length > 0) {
     filesToRender = await Promise.all(State.attachedFiles.map(async file => {
       const isImage = file.type.startsWith('image/');
       if (isImage) {
-        return { isImage: true, url: await window.fileToDataURL(file), name: file.name };
+        const dataUrl = await window.fileToDataURL(file);
+        attachmentsPayload.push({
+          name: file.name,
+          mime_type: file.type || 'image/png',
+          data_url: dataUrl,
+          size_kb: Math.round(file.size / 1024),
+        });
+        return { isImage: true, url: dataUrl, name: file.name };
       } else {
+        const ext = file.name.split('.').pop().toLowerCase();
+        const isTextLike = (file.type && file.type.startsWith('text/')) || ['txt', 'md', 'json', 'csv', 'py', 'js', 'ts', 'html', 'css'].includes(ext);
+        let textContent = null;
+        if (isTextLike) {
+          try {
+            textContent = (await file.text()).slice(0, 12000);
+          } catch {
+            textContent = null;
+          }
+        }
+        attachmentsPayload.push({
+          name: file.name,
+          mime_type: file.type || 'application/octet-stream',
+          text_content: textContent,
+          size_kb: Math.round(file.size / 1024),
+        });
         return { isImage: false, name: file.name, ext: file.name.split('.').pop().toUpperCase().slice(0, 4), sizeKb: (file.size / 1024).toFixed(0) };
       }
     }));
@@ -574,54 +746,105 @@ async function sendChatMessage(textareaId = 'chat-textarea', sendBtnId = 'chat-s
   appendMessage('user', displayMsg, null, filesToRender);
   appendTypingIndicator();
 
-  let assistantBubble = null;
-  let fullText = '';
-
-  API.ai.chatStream(
-    State.currentModel,
-    displayMsg,
-    State.chatId,
-    null,
-    // onChunk
-    (chunk) => {
-      fullText += chunk;
-      removeTypingIndicator();
-      if (!assistantBubble) {
-        assistantBubble = appendMessage('assistant', '');
+  if (State.chatMode === 'image' || State.chatMode === 'video') {
+    try {
+      let res;
+      if (State.chatMode === 'image') {
+        const imageModel = document.getElementById('image-model')?.value || 'fal-ai/flux/schnell';
+        const width = parseInt(document.getElementById('image-width')?.value || '1024', 10);
+        const height = parseInt(document.getElementById('image-height')?.value || '1024', 10);
+        res = await API.ai.generateImage(imageModel, displayMsg, { width, height, num_images: 1 });
+      } else {
+        const videoModel = document.getElementById('video-model')?.value || 'fal-ai/kling-video/v1/standard/text-to-video';
+        const duration = document.getElementById('video-duration')?.value || '5';
+        res = await API.ai.generateVideo(videoModel, displayMsg, duration);
       }
-      assistantBubble.innerHTML = markdownToHtml(fullText);
-      scrollToBottom();
-    },
-    // onDone
-    (meta) => {
+
+      removeTypingIndicator();
+      appendMediaAssistantMessage(State.chatMode, displayMsg, res.output, res.credits_used, res.credits_remaining);
+      updateCreditsUI(res.credits_remaining);
+
+      try {
+        await API.chat.addMessage(State.chatId, 'user', displayMsg, `chat-${State.chatMode}`, null, attachmentsPayload);
+        await API.chat.addMessage(State.chatId, 'assistant', `[${State.chatMode.toUpperCase()}] ${Array.isArray(res.output) ? res.output.join(', ') : res.output}`, `chat-${State.chatMode}`, Array.isArray(res.output) ? res.output : [res.output]);
+      } catch {}
+    } catch (err) {
+      removeTypingIndicator();
+      toast(err.message || 'Generation failed', 'error');
+      const bubble = appendMessage('assistant', '');
+      if (bubble) bubble.innerHTML = `<span style="color:#ef4444">Error: ${escapeHtml(err.message || 'Generation failed')}</span>`;
+    } finally {
       State.isStreaming = false;
       if (sendBtn) sendBtn.disabled = false;
-      if (meta) {
-        updateCreditsUI(meta.credits_remaining);
+      updateSendButtonsState();
+      loadChatHistory();
+    }
+  } else {
+    let assistantBubble = null;
+    let fullText = '';
+
+    API.ai.chatStream(
+      State.currentModel,
+      displayMsg,
+      State.chatId,
+      null,
+      attachmentsPayload,
+      (chunk) => {
+        fullText += chunk;
+        removeTypingIndicator();
+        if (!assistantBubble) {
+          assistantBubble = appendMessage('assistant', '');
+        }
+        assistantBubble.innerHTML = markdownToHtml(fullText);
+        scrollToBottom();
+      },
+      (meta) => {
+        State.isStreaming = false;
+        if (sendBtn) sendBtn.disabled = false;
+        if (meta) {
+          updateCreditsUI(meta.credits_remaining);
+          if (meta.deduction_failed) {
+            toast('Credit deduction failed after generation. Please retry.', 'error');
+          }
+          if (assistantBubble) {
+            const creditsEl = document.createElement('div');
+            creditsEl.className = 'msg-credits';
+            creditsEl.textContent = `⚡ ${meta.credits_used.toFixed(3)} used · ${meta.credits_remaining.toFixed(1)} remaining`;
+            assistantBubble.parentElement.appendChild(creditsEl);
+          }
+        }
+        loadChatHistory();
+      },
+      (err) => {
+        State.isStreaming = false;
+        if(sendBtn) sendBtn.disabled = false;
+        removeTypingIndicator();
+        toast(err, 'error');
         if (assistantBubble) {
-          const creditsEl = document.createElement('div');
-          creditsEl.className = 'msg-credits';
-          creditsEl.textContent = `⚡ ${meta.credits_used.toFixed(3)} used · ${meta.credits_remaining.toFixed(1)} remaining`;
-          assistantBubble.parentElement.appendChild(creditsEl);
+          assistantBubble.innerHTML = `<span style="color:#ef4444">Error: ${escapeHtml(err)}</span>`;
         }
       }
-      loadChatHistory(); // refresh the history list
-    },
-    // onError
-    (err) => {
-      State.isStreaming = false;
-      if(sendBtn) sendBtn.disabled = false;
-      removeTypingIndicator();
-      toast(err, 'error');
-      if (assistantBubble) {
-        assistantBubble.innerHTML = `<span style="color:#ef4444">Error: ${escapeHtml(err)}</span>`;
-      }
-    }
-  );
+    );
+  }
 
   // Clear attachments
   State.attachedFiles = [];
   clearFilePreviews();
+}
+
+function updateSendButtonsState() {
+  const tHero = document.getElementById('chat-textarea-hero');
+  const bHero = document.getElementById('chat-send-btn-hero');
+  const t = document.getElementById('chat-textarea');
+  const b = document.getElementById('chat-send-btn');
+  const hasFiles = State.attachedFiles.length > 0;
+
+  if (tHero && bHero) {
+    bHero.disabled = (!tHero.value.trim() && !hasFiles) || State.isStreaming;
+  }
+  if (t && b) {
+    b.disabled = (!t.value.trim() && !hasFiles) || State.isStreaming;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -757,20 +980,6 @@ async function generateVideo() {
   }
 }
 
-/* ══════════════════════════════════════════════════════════
-   TOOLS
-══════════════════════════════════════════════════════════ */
-function switchTool(toolId) {
-  State.currentTool = toolId;
-  document.querySelectorAll('.tool-card').forEach(c => {
-    c.classList.toggle('active-tool', c.dataset.tool === toolId);
-  });
-  document.querySelectorAll('.tool-panel').forEach(p => {
-    p.classList.toggle('active', p.id === `tool-${toolId}`);
-    p.classList.toggle('hidden', p.id !== `tool-${toolId}`);
-  });
-}
-
 function setupImageUpload(inputId, previewId, stateKey) {
   const input = document.getElementById(inputId);
   const preview = document.getElementById(previewId);
@@ -784,30 +993,6 @@ function setupImageUpload(inputId, previewId, stateKey) {
     preview.src = dataUrl;
     preview.classList.remove('hidden');
   });
-}
-
-async function runFaceSwap() {
-  if (!State.faceSourceUrl || !State.faceTargetUrl) {
-    toast('Upload both source and target images', 'error'); return;
-  }
-  const btn = document.getElementById('btn-face-swap');
-  const status = document.getElementById('face-swap-status');
-  btn.disabled = true;
-  status.classList.remove('hidden');
-
-  try {
-    const res = await API.ai.faceSwap(State.faceSourceUrl, State.faceTargetUrl);
-    const url = res.output;
-    document.getElementById('face-swap-output').innerHTML =
-      `<img src="${url}" style="width:100%;height:100%;object-fit:cover;" />`;
-    updateCreditsUI(res.credits_remaining);
-    toast(`Face swap done! ⚡ ${res.credits_used} used`, 'success');
-  } catch (err) {
-    toast(err.message, 'error');
-  } finally {
-    btn.disabled = false;
-    status.classList.add('hidden');
-  }
 }
 
 async function runEditImage() {
@@ -824,35 +1009,9 @@ async function runEditImage() {
   try {
     const res = await API.ai.editImage(null, prompt, State.editSourceUrl, strength);
     const urls = Array.isArray(res.output) ? res.output : [res.output];
-    document.getElementById('edit-output').innerHTML =
-      `<img src="${urls[0]}" style="width:100%;height:100%;object-fit:cover;" />`;
+    renderImageResults(urls);
     updateCreditsUI(res.credits_remaining);
     toast(`Edit done! ⚡ ${res.credits_used} used`, 'success');
-  } catch (err) {
-    toast(err.message, 'error');
-  } finally {
-    btn.disabled = false;
-    status.classList.add('hidden');
-  }
-}
-
-async function runStyleTransfer() {
-  const prompt = document.getElementById('style-prompt').value.trim();
-  if (!prompt) { toast('Enter a style prompt', 'error'); return; }
-  if (!State.styleSourceUrl) { toast('Upload a photo', 'error'); return; }
-
-  const btn = document.getElementById('btn-style-transfer');
-  const status = document.getElementById('style-status');
-  btn.disabled = true;
-  status.classList.remove('hidden');
-
-  try {
-    const res = await API.ai.editImage(null, prompt, State.styleSourceUrl, 0.85);
-    const urls = Array.isArray(res.output) ? res.output : [res.output];
-    document.getElementById('style-output').innerHTML =
-      `<img src="${urls[0]}" style="width:100%;height:100%;object-fit:cover;" />`;
-    updateCreditsUI(res.credits_remaining);
-    toast(`Style applied! ⚡ ${res.credits_used} used`, 'success');
   } catch (err) {
     toast(err.message, 'error');
   } finally {
@@ -902,6 +1061,58 @@ async function checkAuth() {
   }
 }
 
+function startNewChat() {
+  State.chatId = generateChatId();
+  clearFilePreviews();
+  document.querySelectorAll('.chat-history-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('messages-inner').innerHTML = `
+    <div class="welcome-screen" id="welcome-screen">
+      <h1 class="welcome-title">Hi, <span id="welcome-name">${Auth.getUser()?.username || 'User'}</span>! How can I help?</h1>
+      <div class="chat-input-hero">
+        <div class="chat-input-box hero-box" id="hero-box">
+          <div class="file-attachments-preview hidden" id="hero-file-preview"></div>
+          <input type="file" id="hero-file-input" class="hidden" multiple />
+          <textarea id="chat-textarea-hero" class="chat-textarea" placeholder="Write a message or attach files..." rows="1"></textarea>
+          <div class="chat-input-toolbar">
+            <div class="toolbar-left">
+              <label class="toolbar-btn" for="hero-file-input" title="Attach file">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              </label>
+              <button class="toolbar-btn mic-btn" id="mic-btn-hero" title="Voice input">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              </button>
+            </div>
+            <div class="toolbar-right">
+              <span class="send-label">Send Prompt</span>
+              <button class="chat-send-btn hero-send" id="chat-send-btn-hero">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="prompt-mode-switch" id="prompt-mode-hero">
+            <button class="mode-btn active" data-mode="chat">Chat</button>
+            <button class="mode-btn" data-mode="image">Generate Image</button>
+            <button class="mode-btn" data-mode="video">Generate Video</button>
+          </div>
+        </div>
+      </div>
+      <div class="welcome-chips">
+        <button class="chip" data-prompt="Summarize a YouTube video for me.">📺 Summarize Video</button>
+        <button class="chip" data-prompt="Brainstorm ideas for a new blog post.">💡 Brainstorm Ideas</button>
+        <button class="chip" data-prompt="Surprise me with a random interesting fact.">🤩 Surprise me</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('chat-input-wrap')?.classList.add('hidden');
+  document.getElementById('chat-input-wrap')?.classList.remove('sticky');
+  bindChatInputEvents();
+  bindChipEvents();
+  bindFileInput('hero-file-input');
+  bindVoiceButtons();
+  bindModeButtons();
+  updateSendButtonsState();
+}
+
 function setupUserUI() {
   const user = Auth.getUser();
   if (!user) return;
@@ -925,44 +1136,14 @@ function bindEvents() {
 
   // New chat
   document.getElementById('btn-new-chat-sidebar')?.addEventListener('click', () => {
-    State.chatId = generateChatId();
-    clearFilePreviews();
-    document.querySelectorAll('.chat-history-item').forEach(el => el.classList.remove('active'));
-    document.getElementById('messages-inner').innerHTML = `
-      <div class="welcome-screen" id="welcome-screen">
-        <h1 class="welcome-title">Hi, <span id="welcome-name">${Auth.getUser()?.username || 'User'}</span>! How can I help?</h1>
-        <div class="chat-input-hero">
-          <div class="chat-input-box hero-box" id="hero-box">
-            <div class="file-attachments-preview hidden" id="hero-file-preview"></div>
-            <input type="file" id="hero-file-input" class="hidden" multiple />
-            <textarea id="chat-textarea-hero" class="chat-textarea" placeholder="Write a message or attach files\u2026" rows="1"></textarea>
-            <div class="chat-input-toolbar">
-              <div class="toolbar-left">
-                <label class="toolbar-btn" for="hero-file-input" title="Attach file">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                </label>
-              </div>
-              <div class="toolbar-right">
-                <span class="send-label">Send Prompt</span>
-                <button class="chat-send-btn hero-send" id="chat-send-btn-hero">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="welcome-chips">
-          <button class="chip" data-prompt="Summarize a YouTube video for me.">📺 Summarize Video</button>
-          <button class="chip" data-prompt="Brainstorm ideas for a new blog post.">💡 Brainstorm Ideas</button>
-          <button class="chip" data-prompt="Surprise me with a random interesting fact.">🤩 Surprise me</button>
-        </div>
-      </div>
-    `;
-    document.getElementById('chat-input-wrap')?.classList.add('hidden');
-    document.getElementById('chat-input-wrap')?.classList.remove('sticky');
-    bindChatInputEvents();
-    bindChipEvents();
-    bindFileInput('hero-file-input');
+    switchPanel('chat');
+    startNewChat();
+  });
+
+  // Sidebar toggle (collapse/expand)
+  document.querySelector('.sidebar-toggle')?.addEventListener('click', () => {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('collapsed');
   });
 
   // Model selector
@@ -985,6 +1166,36 @@ function bindEvents() {
   // File attach inputs
   bindFileInput('chat-file-input');
   bindFileInput('hero-file-input');
+  bindVoiceButtons();
+  bindModeButtons();
+  updateSendButtonsState();
+
+  const quickActionsBtn = document.getElementById('btn-quick-actions');
+  const quickActionsMenu = document.getElementById('quick-actions-menu');
+  quickActionsBtn?.addEventListener('click', () => {
+    quickActionsMenu?.classList.toggle('hidden');
+  });
+  quickActionsMenu?.addEventListener('click', (e) => {
+    const action = e.target.closest('.quick-action-item')?.dataset.action;
+    if (!action) return;
+    quickActionsMenu.classList.add('hidden');
+    if (action === 'chat') {
+      switchPanel('chat');
+      startNewChat();
+      return;
+    }
+    if (action === 'image') {
+      switchPanel('image');
+      switchImageTool('generate');
+      return;
+    }
+    if (action === 'video') switchPanel('video');
+  });
+  document.addEventListener('click', (e) => {
+    if (!quickActionsBtn?.contains(e.target) && !quickActionsMenu?.contains(e.target)) {
+      quickActionsMenu?.classList.add('hidden');
+    }
+  });
 
   // Welcome chips (delegated)
   bindChipEvents();
@@ -999,31 +1210,13 @@ function bindEvents() {
   // Dashboard Quick Create
   document.getElementById('qc-new-chat')?.addEventListener('click', () => {
     switchPanel('chat');
-    document.getElementById('btn-new-chat-sidebar')?.click();
+    startNewChat();
   });
   document.getElementById('qc-new-image')?.addEventListener('click', () => {
     switchPanel('image');
   });
   document.getElementById('qc-new-video')?.addEventListener('click', () => {
     switchPanel('video');
-  });
-
-  // Image Tool Picker — switch sidebar panels
-  document.getElementById('img-tool-picker')?.addEventListener('click', (e) => {
-    const card = e.target.closest('.img-tool-card');
-    if (!card) return;
-    const tool = card.dataset.tool;
-    const isActive = card.classList.contains('active');
-
-    document.querySelectorAll('#img-tool-picker .img-tool-card').forEach(c => c.classList.remove('active'));
-    document.querySelectorAll('#panel-image .img-sidebar-panel').forEach(p => p.classList.remove('active'));
-
-    if (isActive) {
-      document.getElementById('img-panel-generate')?.classList.add('active');
-    } else {
-      card.classList.add('active');
-      document.getElementById(`img-panel-${tool}`)?.classList.add('active');
-    }
   });
 
   // Image generate
@@ -1047,35 +1240,21 @@ function bindEvents() {
     State.stylePreset = e.target.value;
   });
 
-  // Style presets
-  document.getElementById('style-presets')?.addEventListener('click', (e) => {
-    const chip = e.target.closest('.style-chip');
-    if (!chip) return;
-    document.querySelectorAll('.style-chip').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    State.stylePreset = chip.dataset.style || '';
-  });
-
   // Video
   document.getElementById('btn-generate-video')?.addEventListener('click', generateVideo);
   document.getElementById('video-model')?.addEventListener('change', updateVideoCostLabel);
 
-  // Tools
-  document.getElementById('tools-grid')?.addEventListener('click', (e) => {
-    const card = e.target.closest('.tool-card');
-    if (card) switchTool(card.dataset.tool);
+  // Image tools
+  document.getElementById('img-tool-picker')?.addEventListener('click', (e) => {
+    const card = e.target.closest('.img-tool-card');
+    if (card) switchImageTool(card.dataset.imageTool);
   });
 
   // Tool buttons
-  document.getElementById('btn-face-swap')?.addEventListener('click', runFaceSwap);
   document.getElementById('btn-edit-image')?.addEventListener('click', runEditImage);
-  document.getElementById('btn-style-transfer')?.addEventListener('click', runStyleTransfer);
 
   // Tool image uploads
-  setupImageUpload('face-source-input', 'face-source-preview', 'faceSourceUrl');
-  setupImageUpload('face-target-input', 'face-target-preview', 'faceTargetUrl');
   setupImageUpload('edit-source-input', 'edit-source-preview', 'editSourceUrl');
-  setupImageUpload('style-source-input', 'style-source-preview', 'styleSourceUrl');
 
   // Edit strength slider
   document.getElementById('edit-strength')?.addEventListener('input', (e) => {
@@ -1098,13 +1277,21 @@ function bindEvents() {
     const pack = e.target.closest('.credit-pack');
     if (pack) purchasePack(pack.dataset.pack);
   });
+
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {
+      e.preventDefault();
+      switchPanel('chat');
+      startNewChat();
+    }
+  });
 }
 
 function bindChatInputEvents() {
   const t_hero = document.getElementById('chat-textarea-hero');
   const b_hero = document.getElementById('chat-send-btn-hero');
   if(t_hero && b_hero) {
-    t_hero.addEventListener('input', () => { autoResize(t_hero); b_hero.disabled = !t_hero.value.trim() || State.isStreaming; });
+    t_hero.addEventListener('input', () => { autoResize(t_hero); updateSendButtonsState(); });
     t_hero.addEventListener('keydown', (e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if(!b_hero.disabled) sendChatMessage('chat-textarea-hero', 'chat-send-btn-hero'); } });
     b_hero.addEventListener('click', () => sendChatMessage('chat-textarea-hero', 'chat-send-btn-hero'));
   }
@@ -1112,10 +1299,28 @@ function bindChatInputEvents() {
   const t = document.getElementById('chat-textarea');
   const b = document.getElementById('chat-send-btn');
   if(t && b) {
-    t.addEventListener('input', () => { autoResize(t); b.disabled = !t.value.trim() || State.isStreaming; });
+    t.addEventListener('input', () => { autoResize(t); updateSendButtonsState(); });
     t.addEventListener('keydown', (e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if(!b.disabled) sendChatMessage('chat-textarea', 'chat-send-btn'); } });
     b.addEventListener('click', () => sendChatMessage('chat-textarea', 'chat-send-btn'));
   }
+}
+
+function bindVoiceButtons() {
+  ['mic-btn-hero', 'mic-btn-sticky'].forEach((id) => {
+    const btn = document.getElementById(id);
+    if (!btn || btn.dataset.bound === 'true') return;
+    btn.addEventListener('click', toggleVoiceInput);
+    btn.dataset.bound = 'true';
+  });
+}
+
+function bindModeButtons() {
+  document.querySelectorAll('.prompt-mode-switch .mode-btn').forEach(btn => {
+    if (btn.dataset.bound === 'true') return;
+    btn.addEventListener('click', () => setChatMode(btn.dataset.mode));
+    btn.dataset.bound = 'true';
+  });
+  setChatMode(State.chatMode);
 }
 
 function bindChipEvents() {
@@ -1217,6 +1422,7 @@ function renderAllFilePreviews() {
 function clearFilePreviews() {
   State.attachedFiles = [];
   renderAllFilePreviews();
+  updateSendButtonsState();
   // Reset file inputs so same file can be re-attached
   const inputs = ['chat-file-input', 'hero-file-input'];
   inputs.forEach(id => {
@@ -1232,6 +1438,7 @@ function bindFileInput(inputId) {
     const newFiles = Array.from(e.target.files);
     State.attachedFiles = [...State.attachedFiles, ...newFiles];
     renderAllFilePreviews();
+    updateSendButtonsState();
     e.target.value = ''; // reset so same file triggers change again
   });
 }
@@ -1240,6 +1447,10 @@ function bindFileInput(inputId) {
    BOOTSTRAP
 ══════════════════════════════════════════════════════════ */
 async function init() {
+  speechRecognition = initSpeechRecognition();
+  applyTheme('thunder');
+  setChatMode('chat');
+
   const authed = await checkAuth();
   if (!authed) return;
 

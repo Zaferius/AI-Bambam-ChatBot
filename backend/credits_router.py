@@ -9,6 +9,7 @@ GET  /credits/packs          -> list available packs
 """
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+import os
 
 from auth import get_current_user
 
@@ -76,6 +77,9 @@ async def add_credits_manual(
     current_user: dict = Depends(get_current_user),
 ):
     """DEV ONLY — manually add credits."""
+    if os.getenv("ALLOW_MANUAL_CREDIT_ADD", "false").lower() != "true":
+        raise HTTPException(status_code=403, detail="Manual credit add is disabled")
+
     user_id = current_user["id"]
     new_balance = _db.add_credits(user_id, req.amount, req.description)
     return {

@@ -84,7 +84,7 @@ const API = {
      * Chat — returns a ReadableStream (text/plain).
      * The last line will be: \n\n__CREDITS__{"credits_used":..., "credits_remaining":...}
      */
-    chatStream: async (model, prompt, chatId, systemPrompt, onChunk, onDone, onError) => {
+    chatStream: async (model, prompt, chatId, systemPrompt, attachments, onChunk, onDone, onError) => {
       const token = Auth.getToken();
       const body = JSON.stringify({
         type: 'chat',
@@ -92,6 +92,7 @@ const API = {
         prompt,
         chat_id: chatId,
         system_prompt: systemPrompt || null,
+        attachments: attachments || [],
       });
 
       try {
@@ -187,20 +188,6 @@ const API = {
         }),
       }),
 
-    /**
-     * Face swap
-     */
-    faceSwap: (sourceUrl, targetUrl) =>
-      apiFetch('/ai/generate', {
-        method: 'POST',
-        body: JSON.stringify({
-          type: 'face-swap',
-          model: 'fal-ai/face-swap',
-          prompt: '',
-          image_url: sourceUrl,
-          target_image_url: targetUrl,
-        }),
-      }),
   },
 
   // ── Legacy chat (backward-compat) ────────────────────────────────────────
@@ -246,6 +233,11 @@ const API = {
 
     listChats: () => apiFetch('/api/chats'),
     getMessages: (chatId) => apiFetch(`/api/chats/${chatId}/messages`),
+    addMessage: (chatId, role, content, model_name = null, images = null, attachments = null) =>
+      apiFetch(`/api/chats/${chatId}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ chat_id: chatId, role, content, model_name, images, attachments }),
+      }),
     deleteChat: (chatId) => apiFetch(`/api/chats/${chatId}`, { method: 'DELETE' }),
   },
 

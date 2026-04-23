@@ -227,8 +227,6 @@ class CloudModelManager:
 
     def get_provider_and_model(self, model_id: str):
         """Model ID'sinden provider ve gerÃ§ek model adÄ±nÄ± al"""
-        return "openai", "gpt-4o"
-
         # Bambam branded modelleri underlying modele map et
         if model_id.startswith("bambam:"):
             if model_id in self.available_models:
@@ -454,47 +452,10 @@ SYSTEM_MESSAGE = {
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
-    chat_id = req.chat_id if req.chat_id else "default"
-    memory_manager.add_message(chat_id, req.message, "user", persist=False)
-
-    # Ä°lgili hafÄ±za bilgisini al
-    relevant_memory = memory_manager.get_relevant_memory(chat_id, req.message)
-
-    # MesajlarÄ± hazÄ±rla
-    messages = [SYSTEM_MESSAGE]
-
-    # Ã–nemli hafÄ±za bilgisini ekle
-    if relevant_memory:
-        messages.append({"role": "system", "content": relevant_memory})
-
-    # Sohbet geÃ§miÅŸini ekle
-    chat_history = memory_manager.get_chat_history_for_llm(chat_id)
-    messages.extend(chat_history)
-
-    # Provider ve model belirle
-    provider, model_name = llm_manager.get_provider_and_model(req.model)
-
-    def generate():
-        full_reply = ""
-
-        if provider == "openai":
-            if not openai_client:
-                yield "OpenAI API key not configured. Please set OPENAI_API_KEY environment variable."
-                return
-
-            stream = openai_client.chat.completions.create(
-                model=model_name, messages=messages, stream=True
-            )
-
-            for chunk in stream:
-                delta = chunk.choices[0].delta.content
-                if delta:
-                    full_reply += delta
-                    yield delta
-
-        memory_manager.add_message(chat_id, full_reply, "assistant")
-
-    return StreamingResponse(generate(), media_type="text/plain")
+    return JSONResponse(
+        status_code=410,
+        content={"detail": "Legacy endpoint disabled. Use POST /ai/generate with type='chat'."},
+    )
 
 
 @app.post("/chat/stream")
@@ -506,6 +467,11 @@ async def chat_stream(
     thinking_level: str = Form(None),
     files: List[UploadFile] = File(None),
 ):
+    return JSONResponse(
+        status_code=410,
+        content={"detail": "Legacy endpoint disabled. Use POST /ai/generate with type='chat'."},
+    )
+
     # Rate limiting
     client_ip = request.client.host if request.client else "unknown"
     if not check_rate_limit(client_ip, RATE_LIMIT_CHAT):
@@ -721,14 +687,20 @@ async def reset_chat(req: ChatRequest):
 
 
 @app.get("/memory/{chat_id}")
-async def get_memory(chat_id: str):
+async def get_memory(chat_id: str, current_user: dict = Depends(get_current_user)):
     """Belirli bir sohbetin hafÄ±za bilgisini getir"""
-    if chat_id not in memory_manager.long_term_memory:
+    chat = db.get_chat_for_user(chat_id, current_user["id"])
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+
+    memory_key = f"{current_user['id']}:{chat_id}"
+
+    if memory_key not in memory_manager.long_term_memory:
         return {"memory": None}
 
     return {
-        "memory": memory_manager.long_term_memory[chat_id],
-        "chat_length": len(memory_manager.get_chat_history(chat_id)),
+        "memory": memory_manager.long_term_memory[memory_key],
+        "chat_length": len(memory_manager.get_chat_history(memory_key)),
     }
 
 

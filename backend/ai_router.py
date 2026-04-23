@@ -1,7 +1,7 @@
 """
 ai_router.py — Unified AI generation endpoint.
 
-POST /ai/generate  →  chat | image | video | edit | face-swap
+POST /ai/generate  →  chat | image | video | edit
 All requests:
   • require valid JWT
   • deduct credits automatically
@@ -31,12 +31,13 @@ router = APIRouter(prefix="/ai", tags=["AI"])
 # Request / Response models
 # ─────────────────────────────────────────────────────────────────────────────
 class AIGenerateRequest(BaseModel):
-    type: Literal["chat", "image", "video", "edit", "face-swap"] = "chat"
+    type: Literal["chat", "image", "video", "edit"] = "chat"
     model: str = "openai/gpt-4o-mini"
     prompt: str
     # Chat specific
     chat_id: Optional[str] = None
     system_prompt: Optional[str] = None
+    attachments: list[dict] = Field(default_factory=list)
     # Image specific
     negative_prompt: Optional[str] = None
     width: int = Field(default=1024, ge=128, le=2048)
@@ -44,12 +45,11 @@ class AIGenerateRequest(BaseModel):
     num_images: int = Field(default=1, ge=1, le=4)
     # Video specific
     duration: str = "5"
-    # Edit / face-swap
+    # Edit
     image_url: Optional[str] = None
-    target_image_url: Optional[str] = None
     strength: float = Field(default=0.75, ge=0.0, le=1.0)
     # Extra fal.ai params
-    options: dict = {}
+    options: dict = Field(default_factory=dict)
 
 
 class AIGenerateResponse(BaseModel):
@@ -102,17 +102,63 @@ def _get_chat_client_and_model(model_id: str):
     return _openai_client, bare
 
 
-def _build_chat_messages(req: AIGenerateRequest) -> list:
+def _memory_chat_key(user_id: str, chat_id: Optional[str]) -> Optional[str]:
+    if not chat_id:
+        return None
+    return f"{user_id}:{chat_id}"
+
+
+def _build_chat_messages(req: AIGenerateRequest, user_id: str) -> list:
     system = req.system_prompt or (
         "You are a helpful, smart AI assistant. Be concise and accurate."
     )
     messages = [{"role": "system", "content": system}]
 
-    if _memory_manager and req.chat_id:
-        history = _memory_manager.get_chat_history_for_llm(req.chat_id)
+    if req.chat_id and _db:
+        db_memory = _db.get_long_term_memory(req.chat_id)
+        if db_memory and db_memory.get("important_topics"):
+            topics = ", ".join(db_memory["important_topics"][:20])
+            messages.append({
+                "role": "system",
+                "content": f"Relevant long-term context from earlier conversation: {topics}",
+            })
+
+    memory_key = _memory_chat_key(user_id, req.chat_id)
+    if _memory_manager and memory_key:
+        history = _memory_manager.get_chat_history_for_llm(memory_key)
         messages.extend(history[:-1] if history else [])
 
-    messages.append({"role": "user", "content": req.prompt})
+    user_parts = []
+    prompt_text = (req.prompt or "").strip()
+    if prompt_text:
+        user_parts.append({"type": "text", "text": prompt_text})
+
+    for attachment in req.attachments or []:
+        mime_type = (attachment.get("mime_type") or "").lower()
+        data_url = attachment.get("data_url")
+        text_content = attachment.get("text_content")
+        name = attachment.get("name") or "attachment"
+
+        if mime_type.startswith("image/") and data_url:
+            user_parts.append({"type": "image_url", "image_url": {"url": data_url}})
+        elif text_content:
+            user_parts.append({
+                "type": "text",
+                "text": f"[Attachment: {name}]\n{text_content}",
+            })
+        else:
+            user_parts.append({
+                "type": "text",
+                "text": f"[Attachment: {name}] (binary file attached; no text extracted)",
+            })
+
+    if not user_parts:
+        user_parts.append({"type": "text", "text": "[Empty message]"})
+
+    if len(user_parts) == 1 and user_parts[0]["type"] == "text":
+        messages.append({"role": "user", "content": user_parts[0]["text"]})
+    else:
+        messages.append({"role": "user", "content": user_parts})
     return messages
 
 
@@ -124,8 +170,7 @@ async def ai_generate(
     req: AIGenerateRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    from auth import get_current_user
-    from model_costs import get_llm_cost, get_fal_cost, estimate_llm_credits
+    from model_costs import get_fal_cost
     from fal_client import get_fal_client
 
     # ── Credit pre-check ────────────────────────────────────────────
@@ -137,7 +182,6 @@ async def ai_generate(
         "image": 1.0,
         "video": 5.0,
         "edit": 1.0,
-        "face-swap": 3.0,
     }
     if balance < MIN_REQUIRED.get(req.type, 0.01):
         raise HTTPException(
@@ -151,7 +195,7 @@ async def ai_generate(
 
     elif req.type == "image":
         fal = get_fal_client()
-        cost = get_fal_cost(req.model)
+        cost = get_fal_cost(req.model) * max(req.num_images, 1)
         urls = await fal.generate_image(
             model=req.model,
             prompt=req.prompt,
@@ -218,27 +262,6 @@ async def ai_generate(
             type="edit",
         )
 
-    elif req.type == "face-swap":
-        if not req.image_url or not req.target_image_url:
-            raise HTTPException(400, "Both image_url (source) and target_image_url are required.")
-        fal = get_fal_client()
-        cost = get_fal_cost("fal-ai/face-swap")
-        url = await fal.face_swap(
-            source_image_url=req.image_url,
-            target_image_url=req.target_image_url,
-        )
-        ok = _db.deduct_credits(user_id, cost, "Face swap", "fal-ai/face-swap")
-        if not ok:
-            raise HTTPException(402, "Could not deduct credits.")
-        new_balance = _db.get_credits(user_id)
-        return AIGenerateResponse(
-            output=url,
-            credits_used=cost,
-            credits_remaining=new_balance,
-            model="fal-ai/face-swap",
-            type="face-swap",
-        )
-
     raise HTTPException(400, f"Unknown type: {req.type}")
 
 
@@ -249,7 +272,12 @@ def _handle_chat_stream(req: AIGenerateRequest, user_id: str, balance: float):
     """Return StreamingResponse for chat. Credits deducted after stream."""
     from model_costs import get_llm_cost
 
-    messages = _build_chat_messages(req)
+    if req.chat_id:
+        existing_chat = _db.get_chat(req.chat_id)
+        if existing_chat and existing_chat.get("user_id") != user_id:
+            raise HTTPException(status_code=403, detail="You do not have access to this chat")
+
+    messages = _build_chat_messages(req, user_id)
     client, bare_model = _get_chat_client_and_model(req.model)
 
     if client is None:
@@ -293,9 +321,21 @@ def _handle_chat_stream(req: AIGenerateRequest, user_id: str, balance: float):
 
         # ── Post-stream: save memory + deduct credits ─────────────
         if req.chat_id:
+            memory_key = _memory_chat_key(user_id, req.chat_id)
             if _memory_manager:
-                _memory_manager.add_message(req.chat_id, req.prompt, "user", persist=False)
-                _memory_manager.add_message(req.chat_id, full_reply, "assistant")
+                _memory_manager.add_message(memory_key, req.prompt, "user", persist=False)
+                _memory_manager.add_message(memory_key, full_reply, "assistant")
+
+                memory_record = _memory_manager.long_term_memory.get(memory_key, {})
+                try:
+                    _db.save_long_term_memory(
+                        req.chat_id,
+                        memory_record.get("user_info", {}),
+                        memory_record.get("preferences", {}),
+                        memory_record.get("important_topics", []),
+                    )
+                except Exception:
+                    pass
             
             # Save to SQLite Database
             if not _db.get_chat(req.chat_id):
@@ -303,7 +343,13 @@ def _handle_chat_stream(req: AIGenerateRequest, user_id: str, balance: float):
                 _db.create_chat(req.chat_id, title, user_id)
             
             try:
-                _db.add_message(req.chat_id, "user", req.prompt, req.model)
+                _db.add_message(
+                    req.chat_id,
+                    "user",
+                    req.prompt,
+                    req.model,
+                    attachments=req.attachments,
+                )
                 _db.add_message(req.chat_id, "assistant", full_reply, req.model)
             except Exception as e:
                 print(f"Error saving chat to DB: {e}")
@@ -313,11 +359,15 @@ def _handle_chat_stream(req: AIGenerateRequest, user_id: str, balance: float):
         credits_used = round((estimated_tokens / 1000) * cost_per_1k, 4)
         credits_used = max(credits_used, 0.01)
 
-        _db.deduct_credits(user_id, credits_used, "Chat", req.model)
+        deducted = _db.deduct_credits(user_id, credits_used, "Chat", req.model)
         new_balance = _db.get_credits(user_id)
 
         # Send credit info as final SSE metadata line
-        meta = json.dumps({"credits_used": credits_used, "credits_remaining": new_balance})
+        meta = json.dumps({
+            "credits_used": credits_used if deducted else 0,
+            "credits_remaining": new_balance,
+            "deduction_failed": not deducted,
+        })
         yield f"\n\n__CREDITS__{meta}"
 
     return StreamingResponse(generate(), media_type="text/plain")

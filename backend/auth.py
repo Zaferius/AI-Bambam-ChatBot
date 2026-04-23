@@ -7,9 +7,17 @@ from datetime import datetime, timedelta
 from typing import Optional
 import os
 import re
+import time
+from collections import defaultdict
 
 # JWT Config
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "bambam-super-secret-key-change-in-production-2024")
+APP_ENV = os.getenv("APP_ENV", "development").lower()
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    if APP_ENV in ("development", "dev", "local"):
+        SECRET_KEY = "dev-insecure-key-change-me"
+    else:
+        raise RuntimeError("JWT_SECRET_KEY is required outside development")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 
@@ -23,11 +31,31 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 # DB reference - will be set from main.py
 db = None
+auth_rate_limit_store = defaultdict(list)
+AUTH_RATE_LIMIT = 15
 
 def init_auth(database):
     """Auth modülünü database ile başlat"""
     global db
     db = database
+
+
+def _dev_auth_bypass_enabled() -> bool:
+    return (
+        os.getenv("ALLOW_DEV_AUTH_BYPASS", "false").lower() == "true"
+        and APP_ENV in ("development", "dev", "local")
+    )
+
+
+def _check_auth_rate_limit(client_ip: str, limit: int = AUTH_RATE_LIMIT) -> bool:
+    now = time.time()
+    auth_rate_limit_store[client_ip] = [
+        t for t in auth_rate_limit_store[client_ip] if now - t < 60
+    ]
+    if len(auth_rate_limit_store[client_ip]) >= limit:
+        return False
+    auth_rate_limit_store[client_ip].append(now)
+    return True
 
 
 # ===== MODELS =====
@@ -98,7 +126,7 @@ def decode_token(token: str) -> Optional[dict]:
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """JWT token'dan mevcut kullanıcıyı al"""
     # Dev bypass (env: BYPASS_AUTH=true)
-    if os.getenv("BYPASS_AUTH", "false").lower() == "true":
+    if _dev_auth_bypass_enabled():
         return {
             "id": "dev-bypass",
             "email": "dev@bambam.local",
@@ -133,7 +161,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 async def get_optional_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Opsiyonel auth - token yoksa None döner"""
     # Dev bypass (env: BYPASS_AUTH=true)
-    if os.getenv("BYPASS_AUTH", "false").lower() == "true":
+    if _dev_auth_bypass_enabled():
         return {
             "id": "dev-bypass",
             "email": "dev@bambam.local",
@@ -165,8 +193,12 @@ async def get_optional_user(credentials: HTTPAuthorizationCredentials = Depends(
 # ===== ENDPOINTS =====
 
 @router.post("/signup", response_model=TokenResponse)
-async def signup(req: SignupRequest):
+async def signup(req: SignupRequest, request: Request):
     """Yeni kullanıcı kaydı"""
+    client_ip = request.client.host if request.client else "unknown"
+    if not _check_auth_rate_limit(client_ip):
+        raise HTTPException(status_code=429, detail="Too many auth requests. Please wait a minute.")
+
     # Email kontrolü
     existing = db.get_user_by_email(req.email)
     if existing:
@@ -185,10 +217,7 @@ async def signup(req: SignupRequest):
         raise HTTPException(status_code=500, detail="Kullanıcı oluşturulamadı")
     
     # Yeni kullanıcıya 20 hoş geldin kredisi ver
-    try:
-        db.init_user_credits(user["id"], initial_balance=20.0)
-    except Exception:
-        pass  # Non-critical — don't block signup if credits fail
+    db.init_user_credits(user["id"], initial_balance=20.0)
 
     # Token oluştur
     token = create_access_token(user["id"], user["username"])
@@ -205,8 +234,11 @@ async def signup(req: SignupRequest):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(req: LoginRequest):
+async def login(req: LoginRequest, request: Request):
     """Kullanıcı girişi"""
+    client_ip = request.client.host if request.client else "unknown"
+    if not _check_auth_rate_limit(client_ip):
+        raise HTTPException(status_code=429, detail="Too many auth requests. Please wait a minute.")
     user = db.get_user_by_email(req.email)
     
     if not user:

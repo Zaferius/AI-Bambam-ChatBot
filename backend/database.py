@@ -57,10 +57,16 @@ class DatabaseManager:
                 content TEXT NOT NULL,
                 model_name TEXT,
                 images TEXT,
+                attachments TEXT,
                 created_at TEXT NOT NULL,
                 FOREIGN KEY (chat_id) REFERENCES chats (id) ON DELETE CASCADE
             )
         """)
+
+        cursor.execute("PRAGMA table_info(messages)")
+        message_columns = [row[1] for row in cursor.fetchall()]
+        if "attachments" not in message_columns:
+            cursor.execute("ALTER TABLE messages ADD COLUMN attachments TEXT")
 
         # Long-term memory tablosu
         cursor.execute("""
@@ -386,6 +392,17 @@ class DatabaseManager:
             return dict(row)
         return None
 
+    def get_chat_for_user(self, chat_id: str, user_id: str) -> Optional[Dict]:
+        """Belirli kullanıcıya ait chat'i getir"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM chats WHERE id = ? AND user_id = ?", (chat_id, user_id))
+        row = cursor.fetchone()
+        conn.close()
+        if row:
+            return dict(row)
+        return None
+
     def list_chats(self, user_id: str = "default", limit: int = 100) -> List[Dict]:
         """Kullanıcının chatlerini listele"""
         conn = self.get_connection()
@@ -409,32 +426,49 @@ class DatabaseManager:
 
         return [dict(row) for row in rows]
 
-    def update_chat_title(self, chat_id: str, title: str):
+    def update_chat_title(self, chat_id: str, title: str, user_id: Optional[str] = None) -> int:
         """Chat başlığını güncelle"""
         conn = self.get_connection()
         cursor = conn.cursor()
 
-        cursor.execute(
-            """
-            UPDATE chats 
-            SET title = ?, updated_at = ?
-            WHERE id = ?
-        """,
-            (title, datetime.now().isoformat(), chat_id),
-        )
+        if user_id:
+            cursor.execute(
+                """
+                UPDATE chats
+                SET title = ?, updated_at = ?
+                WHERE id = ? AND user_id = ?
+            """,
+                (title, datetime.now().isoformat(), chat_id, user_id),
+            )
+        else:
+            cursor.execute(
+                """
+                UPDATE chats
+                SET title = ?, updated_at = ?
+                WHERE id = ?
+            """,
+                (title, datetime.now().isoformat(), chat_id),
+            )
 
+        rowcount = cursor.rowcount
         conn.commit()
         conn.close()
+        return rowcount
 
-    def delete_chat(self, chat_id: str):
+    def delete_chat(self, chat_id: str, user_id: Optional[str] = None) -> int:
         """Chat'i sil (messages cascade ile silinir)"""
         conn = self.get_connection()
         cursor = conn.cursor()
 
-        cursor.execute("DELETE FROM chats WHERE id = ?", (chat_id,))
+        if user_id:
+            cursor.execute("DELETE FROM chats WHERE id = ? AND user_id = ?", (chat_id, user_id))
+        else:
+            cursor.execute("DELETE FROM chats WHERE id = ?", (chat_id,))
 
+        rowcount = cursor.rowcount
         conn.commit()
         conn.close()
+        return rowcount
 
     def touch_chat(self, chat_id: str):
         """Chat'in updated_at'ini güncelle"""
@@ -462,6 +496,7 @@ class DatabaseManager:
         content: str,
         model_name: Optional[str] = None,
         images: Optional[List[str]] = None,
+        attachments: Optional[List[Dict]] = None,
     ):
         """Mesaj ekle"""
         conn = self.get_connection()
@@ -472,11 +507,12 @@ class DatabaseManager:
             self.create_chat(chat_id)
 
         images_json = json.dumps(images) if images else None
+        attachments_json = json.dumps(attachments) if attachments else None
 
         cursor.execute(
             """
-            INSERT INTO messages (chat_id, role, content, model_name, images, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO messages (chat_id, role, content, model_name, images, attachments, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
             (
                 chat_id,
@@ -484,6 +520,7 @@ class DatabaseManager:
                 content,
                 model_name,
                 images_json,
+                attachments_json,
                 datetime.now().isoformat(),
             ),
         )
@@ -522,6 +559,8 @@ class DatabaseManager:
             msg = dict(row)
             if msg["images"]:
                 msg["images"] = json.loads(msg["images"])
+            if msg.get("attachments"):
+                msg["attachments"] = json.loads(msg["attachments"])
             messages.append(msg)
 
         return messages
@@ -768,14 +807,16 @@ class DatabaseManager:
             """,
             (user_id, initial_balance, now),
         )
-        # Record the welcome bonus transaction
-        cursor.execute(
-            """
-            INSERT INTO transactions (user_id, type, amount, description, created_at)
-            VALUES (?, 'bonus', ?, 'Welcome bonus credits', ?)
-            """,
-            (user_id, initial_balance, now),
-        )
+        created = cursor.rowcount > 0
+        if created and initial_balance > 0:
+            # Record welcome bonus only when credit row is first created.
+            cursor.execute(
+                """
+                INSERT INTO transactions (user_id, type, amount, description, created_at)
+                VALUES (?, 'bonus', ?, 'Welcome bonus credits', ?)
+                """,
+                (user_id, initial_balance, now),
+            )
         conn.commit()
         conn.close()
 
