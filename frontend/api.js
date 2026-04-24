@@ -1,5 +1,5 @@
 /**
- * api.js — MagAI backend API wrapper
+ * api.js — Raiko backend API wrapper
  * All fetch calls go through these helpers.
  */
 
@@ -185,6 +185,21 @@ const API = {
           prompt,
           image_url: imageUrl,
           strength,
+        }),
+      }),
+
+    /**
+     * Image to video generation
+     */
+    generateVideoFromImage: (model, prompt, imageUrl, duration = '5') =>
+      apiFetch('/ai/generate', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'image_to_video',
+          model: model || 'fal-ai/kling-video/v1/standard/image-to-video',
+          prompt,
+          image_url: imageUrl,
+          duration,
         }),
       }),
 

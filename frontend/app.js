@@ -1,6 +1,6 @@
 /**
- * app.js — MagAI SPA logic
- * Handles: navigation, chat, image gen, video gen, tools, credits
+ * app.js — Raiko SPA logic
+ * Handles: navigation, chat, image gen, video gen, tools, credits, media
  */
 
 /* ══════════════════════════════════════════════════════════
@@ -21,7 +21,11 @@ const State = {
   chatMode: 'chat',
   theme: localStorage.getItem('magai_theme') || 'doodle',
   currentImageTool: 'generate',
+  currentVideoTool: 'text',
   editSourceUrl: null,
+  i2vSourceUrl: null,
+  mediaFilter: 'all',
+  isGuest: true,
   // active input context: 'hero' | 'sticky'
   activeInput: 'hero',
 };
@@ -219,15 +223,30 @@ function switchPanel(panelId) {
 
   State.currentPanel = panelId;
   if (panelId === 'dashboard') loadDashboardChats();
+  if (panelId === 'media') loadMediaPanel();
 }
 
 function switchImageTool(toolId) {
   State.currentImageTool = toolId === 'edit' ? 'edit' : 'generate';
   document.querySelectorAll('.img-tool-card').forEach(card => {
-    card.classList.toggle('active', card.dataset.imageTool === State.currentImageTool);
+    if (card.dataset.imageTool !== undefined) {
+      card.classList.toggle('active', card.dataset.imageTool === State.currentImageTool);
+    }
   });
-  document.querySelectorAll('.img-sidebar-panel').forEach(panel => {
-    panel.classList.toggle('active', panel.id === `img-panel-${State.currentImageTool}`);
+  ['img-panel-generate', 'img-panel-edit'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active', id === `img-panel-${State.currentImageTool}`);
+  });
+}
+
+function switchVideoTool(toolId) {
+  State.currentVideoTool = toolId === 'image' ? 'image' : 'text';
+  document.querySelectorAll('#video-tool-picker .img-tool-card').forEach(card => {
+    card.classList.toggle('active', card.dataset.videoTool === State.currentVideoTool);
+  });
+  ['vid-panel-text', 'vid-panel-image'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active', id === `vid-panel-${State.currentVideoTool}`);
   });
 }
 
@@ -498,7 +517,7 @@ async function loadChatHistory() {
             loadChatHistory();
           } catch (err) {
             console.error('Silme hatası detaylı:', err);
-            toast('Sohbet silinemedi: ' + err.message, 'error');
+            toast('Could not delete chat: ' + err.message, 'error');
           }
         }
       };
@@ -687,6 +706,7 @@ function appendMediaAssistantMessage(type, prompt, output, creditsUsed, creditsR
 }
 
 async function sendChatMessage(textareaId = 'chat-textarea', sendBtnId = 'chat-send-btn') {
+  if (!requireAuth()) return;
   const textarea = document.getElementById(textareaId);
   const msg = textarea.value.trim();
   if (!msg && State.attachedFiles.length === 0) return;
@@ -864,8 +884,56 @@ function updateImageCostLabel() {
   document.getElementById('image-cost-label').textContent = `${cost}⚡`;
 }
 
+/* ── Generation placeholder helpers ── */
+const GEN_MESSAGES = [
+  ['Generating...', 'Raiko is working on it'],
+  ['Processing...', 'This takes 1–3 minutes'],
+  ['Almost there...', 'Applying final details'],
+];
+
+function showGenPlaceholder(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const panel = container.closest('.panel');
+  if (panel) panel.classList.add('has-result');
+  container.style.display = 'flex';
+
+  let idx = 0;
+  container.innerHTML = `
+    <div class="gen-placeholder-wrap">
+      <div class="gen-placeholder-inner">
+        <div class="gen-ring"></div>
+        <p class="gen-placeholder-headline" id="gen-ph-headline">${GEN_MESSAGES[0][0]}</p>
+        <p class="gen-placeholder-sub" id="gen-ph-sub">${GEN_MESSAGES[0][1]}</p>
+      </div>
+    </div>
+  `;
+
+  const timer = setInterval(() => {
+    idx = (idx + 1) % GEN_MESSAGES.length;
+    const h = document.getElementById('gen-ph-headline');
+    const s = document.getElementById('gen-ph-sub');
+    if (h) h.textContent = GEN_MESSAGES[idx][0];
+    if (s) s.textContent = GEN_MESSAGES[idx][1];
+  }, 2800);
+
+  container._genTimer = timer;
+}
+
+function clearGenPlaceholder(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  if (container._genTimer) { clearInterval(container._genTimer); container._genTimer = null; }
+}
+
+function resetPanelToEmpty(panelId) {
+  const panel = document.getElementById(panelId);
+  if (panel) panel.classList.remove('has-result');
+}
+
 function renderImageResults(urls) {
   const container = document.getElementById('image-results');
+  container.style.display = 'flex';
   container.innerHTML = '';
 
   const grid = document.createElement('div');
@@ -878,7 +946,7 @@ function renderImageResults(urls) {
       <img src="${url}" alt="Generated image" loading="lazy" />
       <div class="result-img-actions">
         <button class="result-action-btn" onclick="window.open('${url}', '_blank')">Open</button>
-        <a class="result-action-btn" href="${url}" download="magai_image.png">Download</a>
+        <a class="result-action-btn" href="${url}" download="raiko_image.png">Download</a>
       </div>
     `;
     grid.appendChild(wrap);
@@ -888,22 +956,19 @@ function renderImageResults(urls) {
 }
 
 async function generateImage() {
+  if (!requireAuth()) return;
   const prompt = document.getElementById('image-prompt').value.trim();
   if (!prompt) { toast('Please enter a prompt', 'error'); return; }
 
-  const model   = document.getElementById('image-model').value;
-  const count   = parseInt(document.getElementById('image-count').value) || 1;
-  const width   = parseInt(document.getElementById('image-width').value) || 1024;
-  const height  = parseInt(document.getElementById('image-height').value) || 1024;
+  const model     = document.getElementById('image-model').value;
+  const count     = parseInt(document.getElementById('image-count').value) || 1;
+  const width     = parseInt(document.getElementById('image-width').value) || 1024;
+  const height    = parseInt(document.getElementById('image-height').value) || 1024;
   const negPrompt = document.getElementById('image-neg-prompt').value.trim();
-
-  const btn = document.getElementById('btn-generate-image');
-  const status = document.getElementById('image-status');
-  const statusText = document.getElementById('image-status-text');
+  const btn       = document.getElementById('btn-generate-image');
 
   btn.disabled = true;
-  status.classList.remove('hidden');
-  statusText.textContent = `Generating ${count} image${count > 1 ? 's' : ''}…`;
+  showGenPlaceholder('image-results');
 
   const fullPrompt = State.stylePreset ? `${prompt}, ${State.stylePreset}` : prompt;
 
@@ -914,15 +979,18 @@ async function generateImage() {
       num_images: count,
     });
 
+    clearGenPlaceholder('image-results');
     const urls = Array.isArray(res.output) ? res.output : [res.output];
     renderImageResults(urls);
+    urls.forEach(url => saveMediaItem('image', url, fullPrompt, model));
     updateCreditsUI(res.credits_remaining);
     toast(`Generated ${urls.length} image${urls.length > 1 ? 's' : ''}! ⚡ ${res.credits_used} used`, 'success');
   } catch (err) {
+    clearGenPlaceholder('image-results');
+    resetPanelToEmpty('panel-image');
     toast(err.message || 'Generation failed', 'error');
   } finally {
     btn.disabled = false;
-    status.classList.add('hidden');
   }
 }
 
@@ -933,6 +1001,8 @@ const VIDEO_COSTS = {
   'fal-ai/kling-video/v1/standard/text-to-video': 12,
   'fal-ai/kling-video/v1/pro/text-to-video': 20,
   'fal-ai/stable-video': 10,
+  'fal-ai/kling-video/v1/standard/image-to-video': 15,
+  'fal-ai/kling-video/v1/pro/image-to-video': 22,
 };
 
 function updateVideoCostLabel() {
@@ -941,42 +1011,85 @@ function updateVideoCostLabel() {
   document.getElementById('video-cost-label').textContent = `${cost}⚡`;
 }
 
+function updateI2VCostLabel() {
+  const model = document.getElementById('i2v-model')?.value;
+  const cost = VIDEO_COSTS[model] || 15;
+  const lbl = document.getElementById('i2v-cost-label');
+  if (lbl) lbl.textContent = `${cost}⚡`;
+}
+
 async function generateVideo() {
+  if (!requireAuth()) return;
   const prompt = document.getElementById('video-prompt').value.trim();
   if (!prompt) { toast('Please enter a prompt', 'error'); return; }
 
   const model    = document.getElementById('video-model').value;
   const duration = document.getElementById('video-duration').value;
-
-  const btn = document.getElementById('btn-generate-video');
-  const status = document.getElementById('video-status');
-  const statusText = document.getElementById('video-status-text');
-  const resultArea = document.getElementById('video-result-area');
+  const btn      = document.getElementById('btn-generate-video');
 
   btn.disabled = true;
-  status.classList.remove('hidden');
-  statusText.textContent = 'Submitting to fal.ai queue…';
+  showGenPlaceholder('video-result-area');
 
   try {
-    statusText.textContent = 'Generating video (1–3 min)…';
     const res = await API.ai.generateVideo(model, prompt, duration);
     const url = res.output;
 
-    resultArea.innerHTML = `
+    clearGenPlaceholder('video-result-area');
+    document.getElementById('video-result-area').innerHTML = `
       <video class="result-video" src="${url}" controls autoplay loop></video>
       <div style="margin-top:12px; display:flex; gap:8px; justify-content:center;">
-        <a href="${url}" target="_blank" class="result-action-btn" style="background:var(--accent); color:white; padding:8px 18px; border-radius:var(--r-lg); text-decoration:none; font-weight:600;">Open</a>
-        <a href="${url}" download="magai_video.mp4" class="result-action-btn" style="background:var(--surface-2); color:var(--text-1); padding:8px 18px; border-radius:var(--r-lg); text-decoration:none; font-weight:600; border:1px solid var(--border);">Download</a>
+        <a href="${url}" target="_blank" class="result-action-btn">Open</a>
+        <a href="${url}" download="raiko_video.mp4" class="result-action-btn">Download</a>
       </div>
     `;
 
+    saveMediaItem('video', url, prompt, model);
     updateCreditsUI(res.credits_remaining);
     toast(`Video ready! ⚡ ${res.credits_used} used`, 'success');
   } catch (err) {
+    clearGenPlaceholder('video-result-area');
+    resetPanelToEmpty('panel-video');
     toast(err.message || 'Video generation failed', 'error');
   } finally {
     btn.disabled = false;
-    status.classList.add('hidden');
+  }
+}
+
+async function generateVideoFromImage() {
+  if (!requireAuth()) return;
+  const prompt = document.getElementById('i2v-prompt')?.value.trim();
+  if (!prompt) { toast('Please enter a prompt', 'error'); return; }
+  if (!State.i2vSourceUrl) { toast('Please upload a source image', 'error'); return; }
+
+  const model    = document.getElementById('i2v-model')?.value || 'fal-ai/kling-video/v1/standard/image-to-video';
+  const duration = document.getElementById('i2v-duration')?.value || '5';
+  const btn      = document.getElementById('btn-generate-i2v');
+
+  btn.disabled = true;
+  showGenPlaceholder('video-result-area');
+
+  try {
+    const res = await API.ai.generateVideoFromImage(model, prompt, State.i2vSourceUrl, duration);
+    const url = res.output;
+
+    clearGenPlaceholder('video-result-area');
+    document.getElementById('video-result-area').innerHTML = `
+      <video class="result-video" src="${url}" controls autoplay loop></video>
+      <div style="margin-top:12px; display:flex; gap:8px; justify-content:center;">
+        <a href="${url}" target="_blank" class="result-action-btn">Open</a>
+        <a href="${url}" download="raiko_video.mp4" class="result-action-btn">Download</a>
+      </div>
+    `;
+
+    saveMediaItem('video', url, prompt, model);
+    updateCreditsUI(res.credits_remaining);
+    toast(`Video ready! ⚡ ${res.credits_used} used`, 'success');
+  } catch (err) {
+    clearGenPlaceholder('video-result-area');
+    resetPanelToEmpty('panel-video');
+    toast(err.message || 'Video generation failed', 'error');
+  } finally {
+    btn.disabled = false;
   }
 }
 
@@ -996,6 +1109,7 @@ function setupImageUpload(inputId, previewId, stateKey) {
 }
 
 async function runEditImage() {
+  if (!requireAuth()) return;
   const prompt = document.getElementById('edit-prompt').value.trim();
   if (!prompt) { toast('Enter an edit prompt', 'error'); return; }
   if (!State.editSourceUrl) { toast('Upload an image to edit', 'error'); return; }
@@ -1018,6 +1132,106 @@ async function runEditImage() {
     btn.disabled = false;
     status.classList.add('hidden');
   }
+}
+
+/* ══════════════════════════════════════════════════════════
+   MY MEDIA — localStorage helpers
+══════════════════════════════════════════════════════════ */
+const MEDIA_KEY = 'raiko_media';
+
+function loadMedia() {
+  try { return JSON.parse(localStorage.getItem(MEDIA_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function saveMedia(items) {
+  localStorage.setItem(MEDIA_KEY, JSON.stringify(items));
+}
+
+function saveMediaItem(type, url, prompt, model) {
+  const items = loadMedia();
+  items.unshift({
+    id: 'media_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    type,
+    url,
+    prompt: prompt || '',
+    model: model || '',
+    createdAt: new Date().toISOString(),
+  });
+  saveMedia(items);
+}
+
+function deleteMediaItem(id) {
+  const items = loadMedia().filter(m => m.id !== id);
+  saveMedia(items);
+  loadMediaPanel();
+  toast('Deleted', 'info', 2000);
+}
+
+function loadMediaPanel() {
+  const filter   = State.mediaFilter || 'all';
+  const all      = loadMedia();
+  const filtered = filter === 'all' ? all : all.filter(m => m.type === filter);
+
+  const grid      = document.getElementById('media-grid');
+  const empty     = document.getElementById('media-empty-state');
+  const countBadge = document.getElementById('media-count-badge');
+
+  if (!grid) return;
+
+  const imgCount = all.filter(m => m.type === 'image').length;
+  const vidCount = all.filter(m => m.type === 'video').length;
+  if (countBadge) countBadge.textContent = `${imgCount} image${imgCount !== 1 ? 's' : ''}, ${vidCount} video${vidCount !== 1 ? 's' : ''}`;
+
+  if (filtered.length === 0) {
+    grid.innerHTML = '';
+    if (empty) empty.style.display = 'flex';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  grid.innerHTML = filtered.map(item => {
+    const date = new Date(item.createdAt).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const modelShort = (item.model || '').split('/').pop() || '';
+    const thumbHtml = item.type === 'video'
+      ? `<video src="${escapeHtml(item.url)}" muted preload="metadata"></video>`
+      : `<img src="${escapeHtml(item.url)}" alt="Generated image" loading="lazy" />`;
+
+    return `
+      <div class="media-card" data-id="${escapeHtml(item.id)}">
+        <div class="media-card-thumb" data-url="${escapeHtml(item.url)}" data-type="${item.type}">
+          ${thumbHtml}
+          <span class="media-card-type-badge">${item.type === 'video' ? '▶ Video' : '⬛ Image'}</span>
+        </div>
+        <div class="media-card-body">
+          <div class="media-card-prompt">${escapeHtml(item.prompt)}</div>
+          <div class="media-card-meta">${date}${modelShort ? ' · ' + escapeHtml(modelShort) : ''}</div>
+        </div>
+        <div class="media-card-actions">
+          <a href="${escapeHtml(item.url)}" target="_blank" class="media-card-action">Open</a>
+          <a href="${escapeHtml(item.url)}" download class="media-card-action">Save</a>
+          <button class="media-card-action delete" data-delete="${escapeHtml(item.id)}">Delete</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Bind thumb click for lightbox / video preview
+  grid.querySelectorAll('.media-card-thumb').forEach(thumb => {
+    thumb.addEventListener('click', () => {
+      if (thumb.dataset.type === 'image') {
+        openLightbox(thumb.dataset.url);
+      }
+    });
+  });
+
+  // Bind delete buttons
+  grid.querySelectorAll('[data-delete]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteMediaItem(btn.dataset.delete);
+    });
+  });
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1046,19 +1260,29 @@ async function purchasePack(pack) {
 ══════════════════════════════════════════════════════════ */
 async function checkAuth() {
   if (!Auth.isLoggedIn()) {
-    window.location.href = '/login.html';
+    State.isGuest = true;
     return false;
   }
   try {
     const user = await API.auth.me();
     Auth.setUser(user);
+    State.isGuest = false;
     return true;
   } catch {
     Auth.clearToken();
     Auth.clearUser();
-    window.location.href = '/login.html';
+    State.isGuest = true;
     return false;
   }
+}
+
+function requireAuth() {
+  if (State.isGuest) {
+    toast('Please sign in to continue.', 'info');
+    setTimeout(() => { window.location.href = '/login.html'; }, 1200);
+    return false;
+  }
+  return true;
 }
 
 function startNewChat() {
@@ -1115,13 +1339,25 @@ function startNewChat() {
 
 function setupUserUI() {
   const user = Auth.getUser();
-  if (!user) return;
+  const sidebarUser = document.getElementById('sidebar-user');
+
+  if (State.isGuest || !user) {
+    if (sidebarUser) {
+      sidebarUser.innerHTML = `<a href="/login.html" class="btn-signin-guest">Sign In</a>`;
+    }
+    const welcomeNameEl = document.getElementById('welcome-name');
+    if (welcomeNameEl) welcomeNameEl.textContent = 'there';
+    return;
+  }
+
   const initial = (user.username || user.email || 'U').charAt(0).toUpperCase();
+  const userAvatarEl = document.getElementById('user-avatar');
   const userNameEl = document.getElementById('user-name');
   const welcomeNameEl = document.getElementById('welcome-name');
-  
-  if(userNameEl) userNameEl.textContent = user.username || 'User';
-  if(welcomeNameEl) welcomeNameEl.textContent = user.username || 'User';
+
+  if (userAvatarEl) userAvatarEl.textContent = initial;
+  if (userNameEl) userNameEl.textContent = user.username || 'User';
+  if (welcomeNameEl) welcomeNameEl.textContent = user.username || 'User';
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1243,11 +1479,32 @@ function bindEvents() {
   // Video
   document.getElementById('btn-generate-video')?.addEventListener('click', generateVideo);
   document.getElementById('video-model')?.addEventListener('change', updateVideoCostLabel);
+  document.getElementById('btn-generate-i2v')?.addEventListener('click', generateVideoFromImage);
+  document.getElementById('i2v-model')?.addEventListener('change', updateI2VCostLabel);
+
+  // Video tool picker
+  document.getElementById('video-tool-picker')?.addEventListener('click', (e) => {
+    const card = e.target.closest('.img-tool-card');
+    if (card && card.dataset.videoTool) switchVideoTool(card.dataset.videoTool);
+  });
+
+  // I2V image upload
+  setupImageUpload('i2v-source-input', 'i2v-source-preview', 'i2vSourceUrl');
 
   // Image tools
   document.getElementById('img-tool-picker')?.addEventListener('click', (e) => {
     const card = e.target.closest('.img-tool-card');
-    if (card) switchImageTool(card.dataset.imageTool);
+    if (card && card.dataset.imageTool) switchImageTool(card.dataset.imageTool);
+  });
+
+  // Media filter tabs
+  document.getElementById('media-filter-tabs')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.media-filter-btn');
+    if (!btn) return;
+    document.querySelectorAll('.media-filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    State.mediaFilter = btn.dataset.filter;
+    loadMediaPanel();
   });
 
   // Tool buttons
@@ -1452,28 +1709,24 @@ async function init() {
   setChatMode('chat');
 
   const authed = await checkAuth();
-  if (!authed) return;
 
-  // Show app
+  // Always show app (guest or logged in)
   document.getElementById('app').classList.remove('hidden');
-
-  // Setup UI
   setupUserUI();
   bindEvents();
 
-  // Load data
-  await Promise.all([
-    loadModels(),
-    refreshCredits(),
-    loadChatHistory(),
-    loadDashboardChats(),
-  ]);
-
-  // Set default model label
-  selectModel(State.currentModel, State.currentModelName);
-
-  // Refresh credits every 60s
-  setInterval(refreshCredits, 60000);
+  if (authed) {
+    await Promise.all([
+      loadModels(),
+      refreshCredits(),
+      loadChatHistory(),
+      loadDashboardChats(),
+    ]);
+    selectModel(State.currentModel, State.currentModelName);
+    setInterval(refreshCredits, 60000);
+  } else {
+    loadModels().catch(() => {});
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);

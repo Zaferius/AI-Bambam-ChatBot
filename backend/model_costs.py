@@ -51,10 +51,13 @@ FAL_COSTS: dict[str, float] = {
     # Image editing / inpainting
     "fal-ai/flux/dev/image-to-image":           4.0,
     "fal-ai/sd-inpainting":                     3.0,
-    # Video generation
+    # Video generation (text-to-video)
     "fal-ai/kling-video/v1/standard/text-to-video": 12.0,
     "fal-ai/kling-video/v1/pro/text-to-video":      20.0,
     "fal-ai/stable-video":                          10.0,
+    # Video generation (image-to-video)
+    "fal-ai/kling-video/v1/standard/image-to-video": 15.0,
+    "fal-ai/kling-video/v1/pro/image-to-video":      22.0,
     # Fallback
     "default":                                   3.0,
 }

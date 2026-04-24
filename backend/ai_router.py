@@ -31,7 +31,7 @@ router = APIRouter(prefix="/ai", tags=["AI"])
 # Request / Response models
 # ─────────────────────────────────────────────────────────────────────────────
 class AIGenerateRequest(BaseModel):
-    type: Literal["chat", "image", "video", "edit"] = "chat"
+    type: Literal["chat", "image", "video", "edit", "image_to_video"] = "chat"
     model: str = "openai/gpt-4o-mini"
     prompt: str
     # Chat specific
@@ -182,6 +182,7 @@ async def ai_generate(
         "image": 1.0,
         "video": 5.0,
         "edit": 1.0,
+        "image_to_video": 5.0,
     }
     if balance < MIN_REQUIRED.get(req.type, 0.01):
         raise HTTPException(
@@ -260,6 +261,32 @@ async def ai_generate(
             credits_remaining=new_balance,
             model=req.model,
             type="edit",
+        )
+
+    elif req.type == "image_to_video":
+        if not req.image_url:
+            raise HTTPException(400, "image_url is required for image_to_video type.")
+        fal = get_fal_client()
+        default_model = "fal-ai/kling-video/v1/standard/image-to-video"
+        model_id = req.model or default_model
+        cost = get_fal_cost(model_id)
+        url = await fal.generate_video_from_image(
+            model=model_id,
+            prompt=req.prompt,
+            image_url=req.image_url,
+            duration=req.duration,
+            extra=req.options or None,
+        )
+        ok = _db.deduct_credits(user_id, cost, "Image to video", model_id)
+        if not ok:
+            raise HTTPException(402, "Could not deduct credits.")
+        new_balance = _db.get_credits(user_id)
+        return AIGenerateResponse(
+            output=url,
+            credits_used=cost,
+            credits_remaining=new_balance,
+            model=model_id,
+            type="image_to_video",
         )
 
     raise HTTPException(400, f"Unknown type: {req.type}")

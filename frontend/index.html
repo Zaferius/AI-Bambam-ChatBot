@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MagAI — Your AI Universe</title>
+  <title>Raiko — Your AI Universe</title>
   <meta name="description" content="Chat with any AI model, generate images & videos, use AI tools — all in one place." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20260424e" />
+  <link rel="stylesheet" href="styles.css?v=20260424g" />
 </head>
 <body>
 
@@ -19,9 +19,9 @@
   <div class="auth-gate-content">
     <div class="auth-logo">
       <div class="logo-orb">
-        <img src="b-icon-white.png" alt="Logo" class="logo-img-inner" />
+        <img src="raiko-logo.png" alt="Raiko" class="logo-img-inner" />
       </div>
-      <span>MagAI</span>
+      <span>Raiko</span>
     </div>
     <p class="auth-gate-sub">Please <a href="login.html">sign in</a> to continue.</p>
   </div>
@@ -37,9 +37,9 @@
     <!-- Logo -->
     <div class="sidebar-logo">
       <div class="logo-orb">
-        <img src="b-icon-white.png" alt="Logo" class="logo-img-inner" />
+        <img src="raiko-logo.png" alt="Raiko" class="logo-img-inner" />
       </div>
-      <span class="logo-text">MagAI</span>
+      <span class="logo-text">Raiko</span>
       <button class="sidebar-toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
     </div>
 
@@ -62,6 +62,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
           <span>Video</span>
         </button>
+        <button class="nav-item" data-panel="media" id="nav-media">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+          <span>My Media</span>
+        </button>
       </div>
 
       <div class="nav-group secondary">
@@ -81,7 +85,7 @@
 
     <!-- Chat History List -->
     <div class="chat-history-container" id="chat-history-container" style="flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column;">
-      <div style="padding: 4px 4px 8px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; flex-shrink:0;">Yakın Zamandakiler</div>
+      <div style="padding: 4px 4px 8px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; flex-shrink:0;">Recent</div>
       <div id="chat-list-items" style="display: flex; flex-direction: column; gap: 2px; overflow-y:auto;">
       </div>
     </div>
@@ -98,9 +102,7 @@
       </div>
 
       <div class="sidebar-user" id="sidebar-user">
-        <div class="user-avatar" id="user-avatar">
-          <img src="b-icon-white.png" style="width:14px; opacity:0.8" />
-        </div>
+        <div class="user-avatar" id="user-avatar"></div>
         <div class="user-name" id="user-name">Loading…</div>
         <button class="btn-icon logout-btn" id="logout-btn" title="Logout">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -167,7 +169,7 @@
           <div class="announce-card announce-featured">
             <div class="announce-body">
               <h4 class="announce-title">Free Perk: The AI Academy ($300 Value!)</h4>
-              <p class="announce-desc">As a MagAI user you get FREE ACCESS to The AI Academy—an ongoing learning hub filled with AI lessons and weekly live streams.</p>
+              <p class="announce-desc">As a Raiko user you get FREE ACCESS to The AI Academy—an ongoing learning hub filled with AI lessons and weekly live streams.</p>
             </div>
             <div class="announce-icon announce-icon-orange">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
@@ -177,7 +179,7 @@
           <div class="announce-card">
             <div class="announce-body">
               <h4 class="announce-title">Join the Facebook Group!</h4>
-              <p class="announce-desc">We created a private Facebook group where MagAI users can share their creations, share tips, and get advice on how to maximize their AI content creation.</p>
+              <p class="announce-desc">We created a private Facebook group where Raiko users can share their creations, share tips, and get advice on how to maximize their AI content creation.</p>
             </div>
             <div class="announce-icon announce-icon-blue">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
@@ -196,8 +198,7 @@
           <!-- Model selector -->
           <div class="model-selector-wrap" id="model-selector-wrap">
             <button class="model-selector-btn" id="model-selector-btn">
-              <img src="b-icon-white.png" class="model-icon-dark" style="filter: invert(1); width:18px;" />
-              <span id="model-selector-label">Claude 3.5 Sonnet</span>
+                  <span id="model-selector-label">Claude 3.5 Sonnet</span>
               <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
             <div class="model-dropdown hidden" id="model-dropdown">
@@ -332,7 +333,7 @@
         <div class="img-sidebar-panel active" id="img-panel-generate">
 
           <div class="img-prompt-area">
-            <textarea id="image-prompt" class="img-prompt-input" placeholder="Describe your image in detail…" rows="2"></textarea>
+            <textarea id="image-prompt" class="img-prompt-input" placeholder="Describe your image in detail…" rows="4"></textarea>
             <button class="img-prompt-plus-btn" title="Expand">+</button>
           </div>
 
@@ -435,45 +436,133 @@
       <!-- Controls — centered below canvas -->
       <div class="img-controls-sidebar">
 
-        <div class="img-prompt-area">
-          <textarea id="video-prompt" class="img-prompt-input" placeholder="Describe your cinematic scene…" rows="2"></textarea>
-          <button class="img-prompt-plus-btn" title="Expand">+</button>
+        <!-- Video Tool Picker -->
+        <div class="img-tool-picker" id="video-tool-picker">
+          <button class="img-tool-card active" data-video-tool="text">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>Text to Video</span>
+          </button>
+          <button class="img-tool-card" data-video-tool="image">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span>Image to Video</span>
+          </button>
         </div>
 
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <div class="img-control-row" style="flex:1; min-width:160px;">
-            <span class="img-ctrl-dot" style="background:#6366f1;"></span>
-            <div class="custom-select-wrap">
-              <select id="video-model" class="img-ctrl-select">
-                <option value="fal-ai/kling-video/v1/standard/text-to-video">Kling Standard</option>
-                <option value="fal-ai/stable-video">Stable Video</option>
-              </select>
+        <!-- TEXT TO VIDEO panel -->
+        <div class="img-sidebar-panel active" id="vid-panel-text">
+
+          <div class="img-prompt-area">
+            <textarea id="video-prompt" class="img-prompt-input" placeholder="Describe your cinematic scene…" rows="4"></textarea>
+            <button class="img-prompt-plus-btn" title="Expand">+</button>
+          </div>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <div class="img-control-row" style="flex:1; min-width:160px;">
+              <span class="img-ctrl-dot" style="background:#6366f1;"></span>
+              <div class="custom-select-wrap">
+                <select id="video-model" class="img-ctrl-select">
+                  <option value="fal-ai/kling-video/v1/standard/text-to-video">Kling Standard</option>
+                  <option value="fal-ai/stable-video">Stable Video</option>
+                </select>
+              </div>
+            </div>
+            <div class="img-control-row" style="flex:1; min-width:160px;">
+              <span class="img-ctrl-label-icon">⏱</span>
+              <div class="custom-select-wrap">
+                <select id="video-duration" class="img-ctrl-select">
+                  <option value="5">5 seconds</option>
+                  <option value="10">10 seconds</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          <div class="img-control-row" style="flex:1; min-width:160px;">
-            <span class="img-ctrl-label-icon">⏱</span>
-            <div class="custom-select-wrap">
-              <select id="video-duration" class="img-ctrl-select">
-                <option value="5">5 seconds</option>
-                <option value="10">10 seconds</option>
-              </select>
-            </div>
+          <button class="btn-generate-img btn-generate-vid" id="btn-generate-video">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+            Generate <span class="img-cost-badge" id="video-cost-label">12⚡</span>
+          </button>
+
+          <div class="gen-status hidden" id="video-status">
+            <div class="spinner"></div>
+            <span id="video-status-text">Generating…</span>
           </div>
+
         </div>
 
-        <button class="btn-generate-img btn-generate-vid" id="btn-generate-video">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-          Generate <span class="img-cost-badge" id="video-cost-label">12⚡</span>
-        </button>
+        <!-- IMAGE TO VIDEO panel -->
+        <div class="img-sidebar-panel" id="vid-panel-image">
 
-        <div class="gen-status hidden" id="video-status">
-          <div class="spinner"></div>
-          <span id="video-status-text">Generating…</span>
+          <div style="display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap;">
+            <div class="image-upload-zone" id="i2v-source-zone" style="padding:16px; flex:1; min-width:200px;">
+              <input type="file" id="i2v-source-input" accept="image/*" class="hidden" />
+              <label for="i2v-source-input" class="upload-label">Upload Source Image</label>
+              <img id="i2v-source-preview" class="upload-preview hidden" />
+            </div>
+            <div style="flex:2; min-width:200px; display:flex; flex-direction:column; gap:10px;">
+              <div class="img-prompt-area">
+                <textarea id="i2v-prompt" class="img-prompt-input" rows="4" placeholder="Describe how this image should come to life…"></textarea>
+              </div>
+              <div class="vid-enhance-hint">
+                ✦ Prompt will be automatically enhanced for video generation
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <div class="img-control-row" style="flex:1; min-width:160px;">
+              <span class="img-ctrl-dot" style="background:#6366f1;"></span>
+              <div class="custom-select-wrap">
+                <select id="i2v-model" class="img-ctrl-select">
+                  <option value="fal-ai/kling-video/v1/standard/image-to-video">Kling Standard</option>
+                  <option value="fal-ai/kling-video/v1/pro/image-to-video">Kling Pro</option>
+                </select>
+              </div>
+            </div>
+            <div class="img-control-row" style="flex:1; min-width:160px;">
+              <span class="img-ctrl-label-icon">⏱</span>
+              <div class="custom-select-wrap">
+                <select id="i2v-duration" class="img-ctrl-select">
+                  <option value="5">5 seconds</option>
+                  <option value="10">10 seconds</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn-generate-img btn-generate-vid" id="btn-generate-i2v">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+            Generate <span class="img-cost-badge" id="i2v-cost-label">15⚡</span>
+          </button>
+
+          <div class="gen-status hidden" id="i2v-status">
+            <div class="spinner"></div>
+            <span id="i2v-status-text">Generating…</span>
+          </div>
+
         </div>
 
       </div>
 
+    </section>
+
+    <!-- ══ PANEL: MY MEDIA ══════════════════════════════════════ -->
+    <section class="panel" id="panel-media">
+      <div class="media-panel-header">
+        <h2 class="media-panel-title">My Media</h2>
+        <div class="media-filter-tabs" id="media-filter-tabs">
+          <button class="media-filter-btn active" data-filter="all">All</button>
+          <button class="media-filter-btn" data-filter="image">Images</button>
+          <button class="media-filter-btn" data-filter="video">Videos</button>
+        </div>
+        <span class="media-count-badge" id="media-count-badge">0 items</span>
+      </div>
+      <div class="media-grid-wrap" id="media-grid-wrap">
+        <div class="media-empty-state" id="media-empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" width="64" height="64"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+          <p>No media yet. Generate images or videos and they'll appear here.</p>
+        </div>
+        <div class="media-grid" id="media-grid"></div>
+      </div>
     </section>
 
   </main>
@@ -501,7 +590,7 @@
 
 <div class="toast-container" id="toast-container"></div>
 
-<script src="api.js?v=20260424b"></script>
-<script src="app.js?v=20260424b"></script>
+<script src="api.js?v=20260424g"></script>
+<script src="app.js?v=20260424g"></script>
 </body>
 </html>

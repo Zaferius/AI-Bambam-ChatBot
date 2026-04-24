@@ -133,10 +133,33 @@ class FalAIClient:
         duration: str = "5",
         extra: Optional[dict] = None,
     ) -> str:
-        """Generate a video and return the URL."""
+        """Generate a video from text and return the URL."""
         model = model or "fal-ai/kling-video/v1/standard/text-to-video"
         payload = {
             "prompt": prompt,
+            "duration": duration,
+        }
+        if extra:
+            payload.update(extra)
+        result = await self._run(model, payload)
+        video = result.get("video", {})
+        if isinstance(video, dict):
+            return video.get("url", "")
+        return str(video)
+
+    async def generate_video_from_image(
+        self,
+        model: str,
+        prompt: str,
+        image_url: str,
+        duration: str = "5",
+        extra: Optional[dict] = None,
+    ) -> str:
+        """Generate a video from an image + prompt and return the URL."""
+        model = model or "fal-ai/kling-video/v1/standard/image-to-video"
+        payload = {
+            "prompt": prompt,
+            "image_url": image_url,
             "duration": duration,
         }
         if extra:
