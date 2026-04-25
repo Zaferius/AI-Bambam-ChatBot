@@ -12,6 +12,36 @@ from typing import Optional
 FAL_KEY = os.getenv("FAL_KEY", "")
 FAL_BASE = "https://queue.fal.run"
 
+# Models that expect `aspect_ratio` string instead of `image_size` object
+_ASPECT_RATIO_MODELS = frozenset({
+    "fal-ai/nano-banana",
+    "fal-ai/nano-banana-2",
+    "fal-ai/nano-banana-pro",
+})
+
+# Models that require image_size as an enum preset name (min resolution constraints)
+_IMAGE_SIZE_PRESET_MODELS = frozenset({
+    "fal-ai/bytedance/seedream/v4/text-to-image",
+    "fal-ai/bytedance/seedream/v4.5/text-to-image",
+    "fal-ai/bytedance/seedream/v5/lite/text-to-image",
+})
+
+def _dims_to_aspect_ratio(width: int, height: int) -> str:
+    ratio = width / height
+    if ratio >= 1.5:
+        return "16:9"
+    elif ratio <= 0.67:
+        return "9:16"
+    return "1:1"
+
+def _dims_to_size_preset(width: int, height: int) -> str:
+    ratio = width / height
+    if ratio >= 1.5:
+        return "landscape_16_9"
+    elif ratio <= 0.67:
+        return "portrait_16_9"
+    return "square_hd"
+
 
 class FalAIClient:
     def __init__(self):
@@ -91,11 +121,24 @@ class FalAIClient:
         Default model: fal-ai/flux/schnell
         """
         model = model or "fal-ai/flux/schnell"
-        payload = {
-            "prompt": prompt,
-            "image_size": {"width": width, "height": height},
-            "num_images": num_images,
-        }
+        if model in _ASPECT_RATIO_MODELS:
+            payload = {
+                "prompt": prompt,
+                "aspect_ratio": _dims_to_aspect_ratio(width, height),
+                "num_images": num_images,
+            }
+        elif model in _IMAGE_SIZE_PRESET_MODELS:
+            payload = {
+                "prompt": prompt,
+                "image_size": _dims_to_size_preset(width, height),
+                "num_images": num_images,
+            }
+        else:
+            payload = {
+                "prompt": prompt,
+                "image_size": {"width": width, "height": height},
+                "num_images": num_images,
+            }
         if negative_prompt:
             payload["negative_prompt"] = negative_prompt
         if extra:

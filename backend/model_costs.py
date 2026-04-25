@@ -42,12 +42,23 @@ LLM_COSTS: dict[str, float] = {
 
 # ── fal.ai tools ────────────────────────────────────────────
 FAL_COSTS: dict[str, float] = {
-    # Image generation
+    # Image generation — Flux family
     "fal-ai/flux/schnell":                      2.0,
     "fal-ai/flux/dev":                          5.0,
     "fal-ai/flux-pro":                          8.0,
+    "fal-ai/flux-2-pro":                       10.0,
     "fal-ai/stable-diffusion-v3-medium":        3.0,
     "fal-ai/aura-flow":                         4.0,
+    # Image generation — Gemini (nano-banana) family
+    "fal-ai/nano-banana":                       3.0,
+    "fal-ai/nano-banana-2":                     4.0,
+    "fal-ai/nano-banana-pro":                   6.0,
+    # Image generation — OpenAI
+    "openai/gpt-image-2":                      10.0,
+    # Image generation — Bytedance Seedream family
+    "fal-ai/bytedance/seedream/v4/text-to-image":       5.0,
+    "fal-ai/bytedance/seedream/v4.5/text-to-image":     6.0,
+    "fal-ai/bytedance/seedream/v5/lite/text-to-image":  5.0,
     # Image editing / inpainting
     "fal-ai/flux/dev/image-to-image":           4.0,
     "fal-ai/sd-inpainting":                     3.0,

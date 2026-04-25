@@ -2,7 +2,7 @@
 
 This README is the **source of truth for the current product behavior** so the next AI agent can continue work safely.
 
-Last updated: **2026-04-24 (Guest mode, new Raiko logo, bigger controls, chat dot-grid, Sign In button)**
+Last updated: **2026-04-25 (Image model dropdown picker, Nano Banana naming, Seedream + new model additions)**
 
 ---
 
@@ -17,7 +17,7 @@ Raiko is a FastAPI + Vanilla JS single-page app for:
 - My Media library (all generated images & videos, localStorage-backed)
 - Credit-based usage tracking
 
-Core UX principle: one app shell, collapsible sidebar navigation, quick actions, and persistent user-isolated chat history.
+Core UX principle: one app shell, **top horizontal navbar** navigation, persistent user-isolated chat history.
 
 ---
 
@@ -25,31 +25,31 @@ Core UX principle: one app shell, collapsible sidebar navigation, quick actions,
 
 These were intentionally changed and should stay as-is unless explicitly requested:
 
-1. **New Chat button** in sidebar — clicking it switches to Chat panel AND starts a new chat.
-2. **Quick Actions** button opens menu with exactly:
-   - Chat
-   - Image Generation
-   - Video Generation
-3. **Doodle / Thunder toggle buttons removed from UI**.
-4. **Image Edit moved into Images panel** (Generate/Edit switch inside Images tab).
-5. **FaceSwap removed completely** (frontend + backend contracts).
-6. **Sidebar toggle (3-line hamburger)** collapses sidebar to 62px icon-only mode. Clicking again expands.
-7. **Image & Video panels — centered workspace layout**:
-   - Default (no result): controls float as a card in the vertical center of the dotted workspace background.
-   - After generation: canvas appears at top, controls move to bottom strip. Panel gets `.has-result` class.
-   - On generation error: `.has-result` is removed, controls return to center.
-8. **Generation placeholder**: pressing Generate immediately shows the canvas area with a dual-ring spinner and cycling text ("Generating…" → "Processing…" → "Almost there…"). The spinner uses `showGenPlaceholder(containerId)` / `clearGenPlaceholder(containerId)`.
-9. **Dot-grid workspace background** on Image and Video panels — SVG data-URL pattern, no CSS gradients.
-10. **My Media panel** (sidebar nav item `data-panel="media"`, panel id `panel-media`):
+1. **Top navbar** replaces the old left sidebar. Navigation is now a horizontal bar at the top of every page.
+2. **Chat history sidebar** lives *inside* the Chat panel as a 220px left sub-panel (not in the top navbar).
+3. **+ New Chat button** is only inside the chat panel's left sub-panel — it is NOT in the top navbar.
+4. **Quick Actions** (`+ More` button in navbar) opens a dropdown with: Chat, Image Generation, Video Generation.
+5. **Doodle / Thunder toggle buttons removed from UI**.
+6. **My Media moved to user avatar dropdown** — removed from top navbar nav links; accessible only via the user avatar dropdown menu.
+7. **User avatar dropdown** — clicking the avatar/name in the top navbar opens a dropdown with: user name + "Free Plan" label, credits bar (green fill, live balance), Go Premium/Upgrade button, View profile, Manage account, Join our community, My Media, Sign out.
+8. **Logo yellow border removed** — `.navbar-orb` has `border: none`, only the "R" initial is shown in the navbar logo area.
+6. **Image Edit moved into Images panel** (Generate/Edit switch inside Images tab).
+7. **FaceSwap removed completely** (frontend + backend contracts).
+8. **Image & Video panels — new layout**:
+   - **Images panel**: Left sidebar layout with controls always visible (not centered floating card). After generation canvas appears; on error canvas is hidden.
+   - **Video panel**: Two-column layout — left sidebar (290px) with all controls + right main area with explainer before generation and canvas after generation.
+9. **Generation placeholder**: pressing Generate shows the canvas area with a dual-ring spinner and cycling text. Uses `showGenPlaceholder(containerId)` / `clearGenPlaceholder(containerId)`. Video panel uses `.has-result` class on `#panel-video` to toggle between explainer and canvas.
+10. **Dot-grid workspace background** on Image panel — SVG data-URL pattern, no CSS gradients.
+11. **My Media panel** (sidebar nav item `data-panel="media"`, panel id `panel-media`):
     - Shows all generated images and videos from localStorage (`raiko_media` key).
     - Filter tabs: All / Images / Videos.
     - Each card: thumbnail/video preview, type badge, prompt, date, model, Open / Save / Delete actions.
     - `saveMediaItem(type, url, prompt, model)` is called automatically after every successful image or video generation.
-11. **Video panel has two tabs** (tool picker `#video-tool-picker`):
-    - **Text to Video** (`vid-panel-text`): prompt → model → duration → Generate.
-    - **Image to Video** (`vid-panel-image`): upload image + prompt → model → duration → Generate. Prompt is noted as "auto-enhanced for video generation" (enhancement currently a hint; backend receives prompt as-is).
-12. **Black & Yellow Brutalist Design**:
-    - Black sidebar (`#0A0A0A`) with yellow (`#FFE400`) active nav and white muted text
+12. **Video panel has two tabs** (tool picker `#video-tool-picker`):
+    - **Text to Video** (`vid-panel-text`): prompt → motion preset → model → duration → Generate.
+    - **Image to Video** (`vid-panel-image`): upload image + prompt → model → duration → Generate. Prompt noted as "auto-enhanced for video generation".
+13. **Black & Yellow Brutalist Design**:
+    - Black navbar (`#0A0A0A`) with yellow (`#FFE400`) active nav text and 2px yellow bottom border
     - Off-white (`#FAFAF8`) main panel background
     - Hard offset shadows (`4px 4px 0 #0A0A0A`) — no blur
     - `2px solid #0A0A0A` borders everywhere — sharp, clean lines
@@ -60,7 +60,6 @@ These were intentionally changed and should stay as-is unless explicitly request
     - AI message bubbles: white card with 4px yellow left border
     - Hard shadow hover effect: button shifts `translate(-1px, -1px)` on hover
     - Login page: black background with yellow grid overlay, yellow hard-shadow card
-13. **Sidebar nav item size**: font-size 15px, padding 11px 12px, SVG icons 19px — deliberately larger for readability. Do not revert to 13px.
 14. **All UI text is English** — no Turkish strings in user-facing output.
 
 If you reintroduce gradients, soft shadows, pill-shaped buttons, lavender/purple colors, or standalone info "ⓘ" icons, you are regressing the product.
@@ -71,56 +70,62 @@ If you reintroduce gradients, soft shadows, pill-shaped buttons, lavender/purple
 
 Main UI file: `frontend/index.html`
 
-### Sidebar
+### Top Navbar
 
-- Black background, yellow accents
-- Panels: `Dashboard`, `Chats`, `Images`, `Video`, `My Media`
-- Credits mini badge
-- `+ New Chat` button (switches to Chat panel + starts new chat, with `Ctrl+N` shortcut hint)
-- Chat history list (recent chats — labeled "Recent")
-- `+ Quick Actions` menu:
-  - Chat
-  - Image Generation
-  - Video Generation
-- User block + logout
-- **3-line toggle button** collapses/expands sidebar (62px collapsed, 256px expanded)
+- Black background (`#0A0A0A`), 2px yellow bottom border
+- **Left section**: Raiko logo (no border, just "R" initial) → vertical divider → nav links (Dashboard | Chats | Images | Video)
+- **Right section**: Credits badge (⚡ N) → `+ More` dropdown → User avatar + name (click opens user dropdown)
+- Active nav link: yellow text (`#FFE400`), bold — no background fill
+- Font: 13px, padding `6px 11px` per nav item
+- `+ More` dropdown opens: Chat / Image Generation / Video Generation
+- User avatar click opens **user dropdown** (`#user-dropdown`, class `.user-dropdown`) anchored below the avatar trigger (`#navbar-user-trigger`, `#navbar-user-wrap`):
+  - Header: avatar initial + name (`#udrop-avatar`, `#udrop-name`) + "Free Plan"
+  - Credits bar: `#udrop-credits-val` + `#udrop-credits-fill` (green fill, width = balance/maxCredits %)
+  - Go Premium button (`#udrop-premium-btn`) → opens credits modal
+  - View profile (`#udrop-profile`), Manage account (`#udrop-account`), Join our community (`#udrop-community`)
+  - My Media (`#udrop-my-media`) → `switchPanel('media')`
+  - Sign out (`#logout-btn`, `.udrop-signout`) → clears auth + redirects to login
 
 ### Dashboard Panel
 
-- Quick Create cards:
-  - Start a New Chat
-  - Generate an Image
-  - Generate a Video
+- Quick Create cards: Start a New Chat / Generate an Image / Generate a Video
 - Recent chats list
 - Announcement cards
 - Two-column layout (left: quick create + recent chats, right: announcements), separated by 2px border
 
 ### Chat Panel
 
+Two-column layout inside the panel:
+
+**Left sub-sidebar (220px, `chat-hsidebar`):**
+- `+ New Chat` button (ID: `btn-new-chat-inner`)
+- "Recent" label
+- Scrollable chat history list (`#chat-list-items`)
+
+**Right chat area (`chat-main-wrap`):**
 - Model selector dropdown (provider-grouped)
 - Hero input + sticky input
 - Attachments (images/docs)
 - Voice input button (speech-to-text)
-- Prompt mode buttons:
-  - Chat
-  - Generate Image
-  - Generate Video
+- Prompt mode buttons: Chat / Generate Image / Generate Video
 - Welcome chips for quick prompt starts
 - Welcome title has yellow highlight span on username
 
 ### Images Panel
 
-**Default state (no result):** Controls centered in dotted workspace as floating card.
-
-**After generation:** Canvas at top, controls strip at bottom (max-width 680px).
+**Always-visible controls sidebar** (`img-controls-sidebar`), canvas area above.
 
 Tool picker: `Generate` | `Edit`
 
 Generate tab:
+- **Model picker dropdown** (`#img-model-picker-wrap`): single trigger button (`#img-model-trigger`) shows selected model icon + name + cost. Clicking opens `#img-model-dropdown` with 11 models grouped by provider. Selecting updates hidden `#image-model` select + trigger label + cost badge. Closes on outside click.
+  - **Flux group**: Flux Schnell ⚡ 2⚡ / Flux Dev ✦ 5⚡ / Flux Pro ★ 8⚡ / Flux 2 Pro ★★ 10⚡
+  - **Nano Banana (Google) group**: Nano Banana Flash 🍌 3⚡ (`fal-ai/nano-banana`, Gemini 2.5 Flash) / Nano Banana 2 🍌 4⚡ (`fal-ai/nano-banana-2`, Gemini 3.1 Flash) / Nano Banana Pro 🍌 6⚡ (`fal-ai/nano-banana-pro`, Gemini 3 Pro)
+  - **Seedream (Bytedance) group**: Seedream 4 🌱 5⚡ / Seedream 4.5 🌱 6⚡ / Seedream 5 Lite 🌱 5⚡
+  - **OpenAI group**: GPT Image 2 ◈ 10⚡
 - Prompt textarea
-- Model select (`fal-ai/flux/schnell`, `fal-ai/flux/dev`, `fal-ai/flux-pro`) — inline row, flex wrap
-- Size select — inline row
-- Style select — inline row
+- **Aspect Ratio picker** (visual buttons): 1:1 / 9:16 / 16:9 — clicking updates hidden `#image-width` / `#image-height` inputs
+- **Style chips** (visual tag buttons): None / Photo / Anime / Digital Art / Oil Paint / Watercolor — clicking updates hidden `#image-style-select`
 - Generate button (yellow) + credit label
 
 Edit tab:
@@ -130,35 +135,36 @@ Edit tab:
 
 ### Video Panel
 
-**Default state (no result):** Controls centered in dotted workspace as floating card.
+**Two-column layout** (`video-layout`):
 
-**After generation:** Canvas at top, controls strip at bottom (max-width 680px).
-
-Tool picker: `Text to Video` | `Image to Video`
+**Left sidebar (290px, `video-sidebar`, always visible, scrollable):**
+- Tool picker: `Text to Video` | `Image to Video`
 
 Text to Video tab:
 - Prompt textarea
-- Model select (`Kling Standard`, `Stable Video`) — inline row
-- Duration select — inline row
-- Generate button (black/yellow) + credit label
+- Motion Presets grid (4×2): Cinematic 🎬 / Action ⚡ / Drone 🚁 / Nature 🌿 / Time Lapse ⏱ / Slow Mo 🎞 / Portrait 👤 / Abstract 🔮 — clicking fills the prompt
+- Model select (`Kling Standard`, `Stable Video`)
+- Duration select (5s / 10s)
+- Generate button
 
 Image to Video tab:
-- Upload source image (left)
-- Prompt textarea + auto-enhance hint (right)
-- Model select (`Kling Standard`, `Kling Pro`) — inline row
-- Duration select — inline row
-- Generate button (black/yellow) + credit label (15⚡ / 22⚡)
+- Upload source image
+- Prompt textarea + auto-enhance hint
+- Model select (`Kling Standard`, `Kling Pro`)
+- Duration select (5s / 10s)
+- Generate button
+
+**Right main area (`video-main`):**
+- **Before generation** (`video-explainer`): "MAKE VIDEOS IN ONE CLICK" hero → 3-step cards (Write Prompt / Choose Preset / Get Video) → 4 example output placeholders
+- **After generation** (`.has-result` on `#panel-video`): `#video-result-area` canvas fills the right area; explainer is hidden
 
 ### My Media Panel
 
+> **Accessed via user avatar dropdown only** — not in the top navbar nav links.
+
 - Header: title + filter tabs (All / Images / Videos) + count badge
-- Grid of media cards:
-  - Thumbnail (image) or video preview (muted, preload)
-  - Type badge (IMAGE / VIDEO)
-  - Prompt text (2-line clamp)
-  - Date + model name
-  - Open / Save / Delete actions
-- Empty state with instructions when no media exists
+- Grid of media cards: thumbnail, type badge, prompt, date, model, Open/Save/Delete
+- Empty state with instructions
 - Clicking an image thumbnail opens the lightbox
 
 ### Login Page
@@ -170,9 +176,10 @@ Image to Video tab:
 
 ### Removed UI
 
+- No left sidebar (replaced by top navbar)
 - No `Tools` panel
 - No FaceSwap cards/forms/buttons
-- No theme switch buttons in sidebar
+- No theme switch buttons
 - No gradients anywhere
 - No soft/blur shadows
 - No standalone info "ⓘ" icons
@@ -183,7 +190,7 @@ Image to Video tab:
 
 **Color Palette** (CSS variables in `frontend/styles.css`):
 - Background: `#FAFAF8` (off-white)
-- Sidebar: `#0A0A0A` (black)
+- Navbar/Sidebar: `#0A0A0A` (black)
 - Surface: `#FFFFFF` (white cards)
 - Surface alt: `#F0EFEC`
 - Border: `#0A0A0A` (black — all borders)
@@ -208,7 +215,7 @@ Image to Video tab:
 
 **Interaction pattern**: Hover → `translate(-1px, -1px)` + larger shadow (lifts toward top-left). No scale transforms.
 
-**Dot-grid pattern** (Image/Video panels): SVG data-URL, 24×24px spacing, `#C0BEB8` at 55% opacity. No CSS gradients.
+**Dot-grid pattern** (Image panel): SVG data-URL, 24×24px spacing, `#C0BEB8` at 55% opacity. No CSS gradients.
 
 **All color changes must go through CSS `:root` variables** (centralized in `styles.css`).
 
@@ -232,12 +239,13 @@ Styles: `frontend/styles.css`
 - `editSourceUrl` — source image URL for image-edit tool
 - `i2vSourceUrl` — source image URL for image-to-video tool
 - `mediaFilter` (`all` | `image` | `video`) — active My Media filter
+- `stylePreset` — selected style string, prepended to image prompt
 - credits and streaming/listening flags
 
 ### Key Flows
 
-- `startNewChat()` — resets active chat UI, creates new `chatId`; called after `switchPanel('chat')`
-- `switchPanel(panelId)` — switches active nav item and panel; calls `loadMediaPanel()` when switching to `media`
+- `startNewChat()` — resets active chat UI, creates new `chatId`; called by `btn-new-chat-inner` (chat panel) and navbar `+ More → Chat`
+- `switchPanel(panelId)` — switches active nav-link and panel; calls `loadMediaPanel()` when switching to `media`
 - `switchImageTool(toolId)` — toggles Generate/Edit inside Images panel
 - `switchVideoTool(toolId)` — toggles Text-to-Video/Image-to-Video inside Video panel
 - `generateImage()` → `showGenPlaceholder('image-results')` → `API.ai.generateImage(...)` → `renderImageResults()` + `saveMediaItem()`
@@ -246,12 +254,24 @@ Styles: `frontend/styles.css`
 - `generateVideoFromImage()` → `showGenPlaceholder('video-result-area')` → `API.ai.generateVideoFromImage(...)` → `saveMediaItem()`
 - `showGenPlaceholder(containerId)` — adds `.has-result` to panel, injects dual-ring spinner + cycling text into container
 - `clearGenPlaceholder(containerId)` — clears the interval timer
-- `resetPanelToEmpty(panelId)` — removes `.has-result` on error, returns controls to centered state
+- `resetPanelToEmpty(panelId)` — removes `.has-result` on error; for video panel this shows explainer again, for image panel returns controls to center
 - `saveMediaItem(type, url, prompt, model)` — appends to `raiko_media` in localStorage
 - `loadMediaPanel()` — reads localStorage, renders media grid with active filter
 - `deleteMediaItem(id)` — removes from localStorage and re-renders
 - `sendChatMessage()` — handles chat stream and inline mode switching
-- Sidebar toggle: `.sidebar-toggle` click → toggles `sidebar.collapsed` class
+- Navbar nav: `#sidebar-nav` div with `.nav-item` buttons, click delegated to `switchPanel()` — My Media is NOT a `.nav-item` anymore
+- User dropdown toggle: `#navbar-user-trigger` click toggles `.hidden` on `#user-dropdown`; closes on outside click
+
+### Visual Control Sync (Image Panel)
+
+The image panel uses visual pickers that update hidden `<select>` / `<input>` elements for backward-compat with existing JS:
+
+| Visual Element | Updates Hidden Element | Event Dispatched |
+|---|---|---|
+| `#img-model-dropdown .imd-item` (dropdown picker) | `#image-model` select | `change` |
+| `#ratio-picker .ratio-btn` | `#image-width`, `#image-height` inputs + `#image-size-select` | — |
+| `#style-chips .style-chip` | `#image-style-select` select | `change` |
+| `#motion-presets-grid .motion-preset-card` | fills `#video-prompt` textarea | — |
 
 ### Quick Actions Behavior
 
@@ -277,6 +297,8 @@ Styles: `frontend/styles.css`
 - `backend/fal_client.py`
   - fal.ai queue wrapper
   - `generate_image()`, `image_to_image()`, `generate_video()`, **`generate_video_from_image()`**
+  - `_ASPECT_RATIO_MODELS` — nano-banana models use `aspect_ratio` string instead of `image_size` object
+  - `_IMAGE_SIZE_PRESET_MODELS` — Seedream models use `image_size` enum preset (e.g. `square_hd`) due to min-resolution constraints
 - `backend/model_costs.py`
   - per-model credit costs (LLM + fal)
 - `backend/credits_router.py`
@@ -336,15 +358,36 @@ Styles: `frontend/styles.css`
 
 ## 7) Credits + Cost Model Snapshot
 
-Current notable fal costs in `backend/model_costs.py`:
+Current fal costs in `backend/model_costs.py`:
 
+**Image — Flux:**
 - `fal-ai/flux/schnell`: 2⚡
 - `fal-ai/flux/dev`: 5⚡
 - `fal-ai/flux-pro`: 8⚡
+- `fal-ai/flux-2-pro`: 10⚡
+
+**Image — Nano Banana (Google Gemini, `aspect_ratio` param):**
+- `fal-ai/nano-banana`: 3⚡ (Gemini 2.5 Flash)
+- `fal-ai/nano-banana-2`: 4⚡ (Gemini 3.1 Flash)
+- `fal-ai/nano-banana-pro`: 6⚡ (Gemini 3 Pro)
+
+**Image — Seedream (Bytedance, `image_size` enum preset param):**
+- `fal-ai/bytedance/seedream/v4/text-to-image`: 5⚡
+- `fal-ai/bytedance/seedream/v4.5/text-to-image`: 6⚡
+- `fal-ai/bytedance/seedream/v5/lite/text-to-image`: 5⚡
+
+**Image — OpenAI:**
+- `openai/gpt-image-2`: 10⚡
+
+**Image edit:**
 - `fal-ai/flux/dev/image-to-image`: 4⚡
+
+**Video (text-to-video):**
 - `fal-ai/kling-video/v1/standard/text-to-video`: 12⚡
 - `fal-ai/kling-video/v1/pro/text-to-video`: 20⚡
 - `fal-ai/stable-video`: 10⚡
+
+**Video (image-to-video):**
 - `fal-ai/kling-video/v1/standard/image-to-video`: 15⚡
 - `fal-ai/kling-video/v1/pro/image-to-video`: 22⚡
 
@@ -399,6 +442,9 @@ Open: `http://localhost:8000`
 5. `frontend/teams.html` exists but is not linked from the main app.
 6. My Media is localStorage-only — no backend persistence. A future `generated_media` DB table + `/api/media` endpoint would enable cross-device sync.
 7. Image-to-Video prompt enhancement is client-side hint only — backend passes prompt as-is to fal.ai. A real LLM enhancement step could be added in `ai_router.py` under `image_to_video` type.
+8. Old sidebar CSS (`.sidebar`, `.sidebar-nav`, `.sidebar-toggle`, `.sidebar-collapsed` etc.) is still in `styles.css` as dead code — safe to remove in a cleanup pass.
+9. `btn-new-chat-sidebar` ID still exists in `app.js` event binding but the element was removed from the navbar. The `?.addEventListener` call fails silently — safe to remove that binding.
+10. `#udrop-profile` and `#udrop-account` dropdown items have no action wired yet — they are rendered but do nothing on click. Wire to profile/account pages when those features are built.
 
 ---
 
@@ -407,14 +453,22 @@ Open: `http://localhost:8000`
 - Keep `/ai/generate` as the primary generation contract.
 - Keep FaceSwap removed unless explicitly requested.
 - Keep Image Edit inside Images panel.
-- Keep New Chat button wired to `switchPanel('chat') + startNewChat()`.
-- Keep sidebar toggle functional (`.sidebar-toggle` → `.sidebar.collapsed`).
+- Keep `btn-new-chat-inner` wired to `startNewChat()` (chat panel left sub-sidebar).
 - Preserve user-isolated chat history and credit deduction semantics.
-- **Image/Video panels use `.has-result` class** to switch between centered-controls and top-canvas layout — do not remove this pattern.
+- **Video panel uses `.has-result` class on `#panel-video`** to switch between explainer (right area) and video canvas — do not remove this pattern.
+- **`#video-result-area`** is inside `.video-main` (the right column). `showGenPlaceholder` and `clearGenPlaceholder` still target this ID directly.
 - **My Media `raiko_media` localStorage key** — do not rename; changing it loses all stored media for existing users.
+- **Visual control pickers** (model dropdown, ratio buttons, style chips, motion presets) must keep their data attributes and update the corresponding hidden `<select>` / `<input>` elements — app.js reads those hidden elements directly.
+- **Image model picker IDs**: `#img-model-picker-wrap`, `#img-model-trigger`, `#img-model-dropdown`, `#imt-icon`, `#imt-name`, `#imt-cost` — all referenced in `app.js`; do not rename.
+- **Nano Banana display names**: `nano-banana` → "Nano Banana Flash", `nano-banana-2` → "Nano Banana 2", `nano-banana-pro` → "Nano Banana Pro" — keep this branding in UI labels.
+- **Seedream models use `image_size` preset enum** (not `{width,height}` object) — handled by `_IMAGE_SIZE_PRESET_MODELS` in `fal_client.py`. Do not change this to object format; minimum resolution constraints on these models reject small dimensions like 1024x1024.
+- **Nano Banana models use `aspect_ratio` string** (not `image_size`) — handled by `_ASPECT_RATIO_MODELS` in `fal_client.py`. Do not remove this routing.
+- **My Media is dropdown-only** — do not add it back to the top navbar `.nav-item` list; it must stay inside the user avatar dropdown (`#udrop-my-media`).
+- **User dropdown IDs** — `#navbar-user-wrap`, `#navbar-user-trigger`, `#user-dropdown`, `#udrop-avatar`, `#udrop-name`, `#udrop-credits-val`, `#udrop-credits-fill`, `#udrop-premium-btn`, `#udrop-my-media` — these are all referenced in `app.js`; do not rename.
+- **Logo has no yellow border** — `.navbar-orb` has `border: none !important`; do not reintroduce a border on the navbar logo.
 
 **UI/UX Design Guardrails** (Black & Yellow Brutalist):
-- Maintain black sidebar (`#0A0A0A`) and yellow accent (`#FFE400`)
+- Maintain black navbar (`#0A0A0A`) with yellow accent (`#FFE400`) bottom border and active nav text
 - Keep hard offset shadows — no blur, no soft box-shadows
 - Keep `2px solid #0A0A0A` borders — do NOT soften to lighter colors
 - Keep border-radius at max `2px` — no rounded corners, no pill shapes
@@ -424,7 +478,6 @@ Open: `http://localhost:8000`
 - Do NOT add standalone "ⓘ" info icons — use text hints or `✦` symbol instead
 - All color changes must go through CSS `:root` variables in `styles.css`
 - Typography must stay `Space Grotesk` (UI) + `JetBrains Mono` (mono contexts)
-- Sidebar nav items are intentionally large (15px, 19px icons) — do not reduce
 
 ---
 
@@ -448,4 +501,4 @@ Open: `http://localhost:8000`
 
 ---
 
-Raiko is a focused chat + image + video (text & image-to-video) + image-edit + media library platform with credits, collapsible sidebar, centered workspace layout for generation panels, and a strict Black & Yellow Brutalist design system.
+Raiko is a focused chat + image + video (text & image-to-video) + image-edit + media library platform with credits, **top horizontal navbar**, chat panel with inline history sidebar, visual model/ratio/style pickers for image generation, a video panel with left controls sidebar and right explainer/canvas area, and a strict Black & Yellow Brutalist design system.

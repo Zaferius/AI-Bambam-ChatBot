@@ -195,6 +195,15 @@ function updateCreditsUI(balance) {
   State.credits = balance;
   const miniBal = document.getElementById('credits-balance-mini');
   if (miniBal) miniBal.textContent = balance.toFixed(0);
+
+  const dropVal = document.getElementById('udrop-credits-val');
+  if (dropVal) dropVal.textContent = balance.toFixed(0);
+
+  const fill = document.getElementById('udrop-credits-fill');
+  if (fill) {
+    const max = Math.max(State.maxCredits || 20, balance, 20);
+    fill.style.width = Math.min(100, (balance / max) * 100).toFixed(1) + '%';
+  }
 }
 
 async function refreshCredits() {
@@ -871,10 +880,18 @@ function updateSendButtonsState() {
    IMAGE GENERATION
 ══════════════════════════════════════════════════════════ */
 const IMAGE_COSTS = {
-  'fal-ai/flux/schnell': 2,
-  'fal-ai/flux/dev': 5,
-  'fal-ai/flux-pro': 8,
-  'fal-ai/stable-diffusion-v3-medium': 3,
+  'fal-ai/flux/schnell':                                  2,
+  'fal-ai/flux/dev':                                      5,
+  'fal-ai/flux-pro':                                      8,
+  'fal-ai/flux-2-pro':                                   10,
+  'fal-ai/stable-diffusion-v3-medium':                    3,
+  'fal-ai/nano-banana':                                   3,
+  'fal-ai/nano-banana-2':                                 4,
+  'fal-ai/nano-banana-pro':                               6,
+  'fal-ai/bytedance/seedream/v4/text-to-image':           5,
+  'fal-ai/bytedance/seedream/v4.5/text-to-image':         6,
+  'fal-ai/bytedance/seedream/v5/lite/text-to-image':      5,
+  'openai/gpt-image-2':                                  10,
 };
 
 function updateImageCostLabel() {
@@ -1358,6 +1375,11 @@ function setupUserUI() {
   if (userAvatarEl) userAvatarEl.textContent = initial;
   if (userNameEl) userNameEl.textContent = user.username || 'User';
   if (welcomeNameEl) welcomeNameEl.textContent = user.username || 'User';
+
+  const udropAvatar = document.getElementById('udrop-avatar');
+  const udropName = document.getElementById('udrop-name');
+  if (udropAvatar) udropAvatar.textContent = initial;
+  if (udropName) udropName.textContent = user.username || 'User';
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1370,16 +1392,47 @@ function bindEvents() {
     if (btn) switchPanel(btn.dataset.panel);
   });
 
-  // New chat
+  // User dropdown toggle
+  const userTrigger = document.getElementById('navbar-user-trigger');
+  const userDropdown = document.getElementById('user-dropdown');
+  if (userTrigger && userDropdown) {
+    userTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = !userDropdown.classList.contains('hidden');
+      userDropdown.classList.toggle('hidden', isOpen);
+      userTrigger.setAttribute('aria-expanded', String(!isOpen));
+    });
+    document.addEventListener('click', (e) => {
+      if (!document.getElementById('navbar-user-wrap')?.contains(e.target)) {
+        userDropdown.classList.add('hidden');
+        userTrigger.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  // Dropdown — My Media
+  document.getElementById('udrop-my-media')?.addEventListener('click', () => {
+    userDropdown?.classList.add('hidden');
+    userTrigger?.setAttribute('aria-expanded', 'false');
+    switchPanel('media');
+  });
+
+  // Dropdown — premium (opens credits modal)
+  document.getElementById('udrop-premium-btn')?.addEventListener('click', () => {
+    userDropdown?.classList.add('hidden');
+    userTrigger?.setAttribute('aria-expanded', 'false');
+    document.getElementById('credits-modal')?.classList.remove('hidden');
+  });
+
+  // New chat (navbar button)
   document.getElementById('btn-new-chat-sidebar')?.addEventListener('click', () => {
     switchPanel('chat');
     startNewChat();
   });
 
-  // Sidebar toggle (collapse/expand)
-  document.querySelector('.sidebar-toggle')?.addEventListener('click', () => {
-    const sidebar = document.getElementById('sidebar');
-    sidebar.classList.toggle('collapsed');
+  // New chat (chat panel inner button)
+  document.getElementById('btn-new-chat-inner')?.addEventListener('click', () => {
+    startNewChat();
   });
 
   // Model selector
@@ -1474,6 +1527,76 @@ function bindEvents() {
   // Image style select → update State.stylePreset
   document.getElementById('image-style-select')?.addEventListener('change', (e) => {
     State.stylePreset = e.target.value;
+  });
+
+  // Image model picker dropdown
+  const imgModelTrigger = document.getElementById('img-model-trigger');
+  const imgModelDropdown = document.getElementById('img-model-dropdown');
+  if (imgModelTrigger && imgModelDropdown) {
+    imgModelTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = !imgModelDropdown.classList.contains('hidden');
+      imgModelDropdown.classList.toggle('hidden', open);
+      imgModelTrigger.setAttribute('aria-expanded', String(!open));
+    });
+    imgModelDropdown.addEventListener('click', (e) => {
+      const item = e.target.closest('.imd-item');
+      if (!item) return;
+      // Update active state
+      imgModelDropdown.querySelectorAll('.imd-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      // Update trigger label
+      document.getElementById('imt-icon').textContent = item.dataset.icon || '';
+      document.getElementById('imt-name').textContent = item.querySelector('.imd-name').textContent;
+      document.getElementById('imt-cost').textContent = item.dataset.cost + '⚡';
+      // Sync hidden select
+      const sel = document.getElementById('image-model');
+      if (sel) { sel.value = item.dataset.model; sel.dispatchEvent(new Event('change')); }
+      // Close dropdown
+      imgModelDropdown.classList.add('hidden');
+      imgModelTrigger.setAttribute('aria-expanded', 'false');
+    });
+    document.addEventListener('click', (e) => {
+      if (!document.getElementById('img-model-picker-wrap')?.contains(e.target)) {
+        imgModelDropdown.classList.add('hidden');
+        imgModelTrigger.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  // Aspect ratio picker → sync hidden width/height inputs
+  document.getElementById('ratio-picker')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.ratio-btn');
+    if (!btn) return;
+    document.querySelectorAll('#ratio-picker .ratio-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const [w, h] = btn.dataset.size.split('x').map(Number);
+    const wEl = document.getElementById('image-width');
+    const hEl = document.getElementById('image-height');
+    const sizeEl = document.getElementById('image-size-select');
+    if (wEl) wEl.value = w;
+    if (hEl) hEl.value = h;
+    if (sizeEl) sizeEl.value = btn.dataset.size;
+  });
+
+  // Style chips → sync hidden select + State.stylePreset
+  document.getElementById('style-chips')?.addEventListener('click', (e) => {
+    const chip = e.target.closest('.style-chip');
+    if (!chip) return;
+    document.querySelectorAll('#style-chips .style-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    const sel = document.getElementById('image-style-select');
+    if (sel) { sel.value = chip.dataset.style; sel.dispatchEvent(new Event('change')); }
+  });
+
+  // Motion preset cards → fill video prompt
+  document.getElementById('motion-presets-grid')?.addEventListener('click', (e) => {
+    const card = e.target.closest('.motion-preset-card');
+    if (!card) return;
+    document.querySelectorAll('#motion-presets-grid .motion-preset-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+    const promptEl = document.getElementById('video-prompt');
+    if (promptEl && card.dataset.preset) promptEl.value = card.dataset.preset;
   });
 
   // Video
