@@ -190,6 +190,25 @@ class FalAIClient:
             return video.get("url", "")
         return str(video)
 
+    async def remove_background(
+        self,
+        model: str,
+        image_url: str,
+        extra: Optional[dict] = None,
+    ) -> list[str]:
+        """Remove background from an image and return list of URLs."""
+        model = model or "fal-ai/bria/background/remove"
+        payload = {"image_url": image_url}
+        if extra:
+            payload.update(extra)
+        result = await self._run(model, payload)
+        images = result.get("images") or []
+        if not images:
+            img = result.get("image")
+            if img:
+                images = [img]
+        return [img["url"] if isinstance(img, dict) else img for img in images]
+
     async def generate_video_from_image(
         self,
         model: str,

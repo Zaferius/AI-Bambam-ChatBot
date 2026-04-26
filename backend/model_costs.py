@@ -59,16 +59,31 @@ FAL_COSTS: dict[str, float] = {
     "fal-ai/bytedance/seedream/v4/text-to-image":       5.0,
     "fal-ai/bytedance/seedream/v4.5/text-to-image":     6.0,
     "fal-ai/bytedance/seedream/v5/lite/text-to-image":  5.0,
-    # Image editing / inpainting
+    # Image editing / inpainting (legacy)
     "fal-ai/flux/dev/image-to-image":           4.0,
     "fal-ai/sd-inpainting":                     3.0,
+    # Edit panel — dedicated edit models
+    "fal-ai/nano-banana/edit":                  4.0,
+    "fal-ai/nano-banana-2/edit":                5.0,
+    "fal-ai/nano-banana-pro/edit":              7.0,
+    "openai/gpt-image-2/edit":                 12.0,
+    "fal-ai/bytedance/seedream/v4.5/edit":      7.0,
+    "xai/grok-imagine-image/edit":              8.0,
+    "fal-ai/bria/background/remove":            3.0,
     # Video generation (text-to-video)
-    "fal-ai/kling-video/v1/standard/text-to-video": 12.0,
-    "fal-ai/kling-video/v1/pro/text-to-video":      20.0,
-    "fal-ai/stable-video":                          10.0,
+    "fal-ai/kling-video/v1/standard/text-to-video":              12.0,
+    "fal-ai/kling-video/v1/pro/text-to-video":                   20.0,
+    "fal-ai/kling-video/v3/pro/text-to-video":                   28.0,
+    "fal-ai/stable-video":                                        10.0,
+    "fal-ai/wan/v2.7/text-to-video":                             15.0,
+    "fal-ai/bytedance/seedance/v1.5/pro/text-to-video":          20.0,
+    "fal-ai/bytedance/seedance-2.0/text-to-video":               25.0,
+    "fal-ai/sora-2/text-to-video":                               35.0,
+    "fal-ai/veo3.1":                                             30.0,
+    "xai/grok-imagine-video/text-to-video":                      22.0,
     # Video generation (image-to-video)
-    "fal-ai/kling-video/v1/standard/image-to-video": 15.0,
-    "fal-ai/kling-video/v1/pro/image-to-video":      22.0,
+    "fal-ai/kling-video/v1/standard/image-to-video":             15.0,
+    "fal-ai/kling-video/v1/pro/image-to-video":                  22.0,
     # Fallback
     "default":                                   3.0,
 }

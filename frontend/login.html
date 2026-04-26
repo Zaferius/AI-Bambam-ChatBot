@@ -23,32 +23,42 @@
       -webkit-font-smoothing: antialiased; overflow: hidden;
     }
 
-    /* Grid background */
-    body::before {
-      content: ''; position: fixed; inset: 0;
+    /* ── Two-column split layout ── */
+    .page {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: 100vh;
+    }
+
+    /* ── Left panel — form side ── */
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 40px;
+      position: relative;
+      z-index: 1;
+      overflow-y: auto;
+    }
+
+    /* Subtle yellow grid on left panel only */
+    .left-panel::before {
+      content: ''; position: absolute; inset: 0;
       background-image:
-        linear-gradient(rgba(255,228,0,0.06) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,228,0,0.06) 1px, transparent 1px);
+        linear-gradient(rgba(255,228,0,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,228,0,0.05) 1px, transparent 1px);
       background-size: 44px 44px;
       pointer-events: none;
     }
 
-    .page {
-      display: flex; align-items: center; justify-content: center;
-      height: 100vh; position: relative; z-index: 1;
-    }
-
     .card {
       width: 100%; max-width: 400px;
-      background: var(--black);
-      border: 3px solid var(--yellow);
-      border-radius: 2px;
-      padding: 36px 32px;
-      box-shadow: 8px 8px 0 var(--yellow);
-      animation: card-in 0.25s ease;
+      position: relative; z-index: 1;
+      animation: card-in 0.3s ease;
     }
     @keyframes card-in {
-      from { opacity: 0; transform: translateY(16px); }
+      from { opacity: 0; transform: translateY(12px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
@@ -110,12 +120,12 @@
       background: var(--yellow); color: var(--black);
       font-size: 13px; font-weight: 800;
       cursor: pointer; transition: box-shadow 0.12s, transform 0.12s;
-      box-shadow: 4px 4px 0 rgba(255,228,0,0.4);
+      box-shadow: 4px 4px 0 var(--yellow);
       margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em;
       font-family: 'Space Grotesk', sans-serif;
     }
-    .btn-submit:hover { box-shadow: 6px 6px 0 rgba(255,228,0,0.5); transform: translate(-1px,-1px); }
-    .btn-submit:active { transform: translate(0,0); box-shadow: 2px 2px 0 rgba(255,228,0,0.4); }
+    .btn-submit:hover { box-shadow: 6px 6px 0 var(--yellow); transform: translate(-1px,-1px); }
+    .btn-submit:active { transform: translate(0,0); box-shadow: 2px 2px 0 var(--yellow); }
     .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
     .alert {
@@ -135,64 +145,133 @@
     }
 
     .footer-note { text-align: center; margin-top: 20px; font-size: 11px; color: var(--gray-lt); }
+
+    /* ── Right panel — image side ── */
+    .right-panel {
+      position: relative;
+      overflow: hidden;
+      border-left: 3px solid var(--yellow);
+    }
+
+    .right-panel img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+    }
+
+    /* Yellow overlay strip at bottom */
+    .right-panel::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(10,10,10,0.55) 0%, transparent 45%);
+      pointer-events: none;
+    }
+
+    .right-panel-label {
+      position: absolute;
+      bottom: 28px;
+      left: 28px;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .right-panel-label span:first-child {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--yellow);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .right-panel-label span:last-child {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--white);
+      line-height: 1.2;
+    }
+
+    /* ── Responsive: stack on small screens ── */
+    @media (max-width: 820px) {
+      .page { grid-template-columns: 1fr; }
+      .right-panel { display: none; }
+      .left-panel { padding: 40px 24px; }
+    }
   </style>
 </head>
 <body>
 
 <div class="page">
-  <div class="card">
-    <div class="logo">
-      <div class="logo-orb"><img src="b-icon-white.png" /></div>
-      <div class="logo-name">Raiko</div>
+
+  <!-- LEFT: Form -->
+  <div class="left-panel">
+    <div class="card">
+      <div class="logo">
+        <div class="logo-orb"><img src="b-icon-white.png" /></div>
+        <div class="logo-name">Raiko</div>
+      </div>
+      <p class="tagline">Chat · Generate · Create — all in one place</p>
+
+      <div class="tabs">
+        <button class="tab-btn active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+        <button class="tab-btn" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+      </div>
+
+      <!-- Alert -->
+      <div class="alert" id="alert"></div>
+
+      <!-- Login Form -->
+      <form class="form active" id="form-login" onsubmit="handleLogin(event)">
+        <div class="field">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" placeholder="you@example.com" required autocomplete="email" />
+        </div>
+        <div class="field">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password" />
+        </div>
+        <button type="submit" class="btn-submit" id="login-btn">Sign In →</button>
+      </form>
+
+      <!-- Signup Form -->
+      <form class="form" id="form-signup" onsubmit="handleSignup(event)">
+        <div class="field">
+          <label for="signup-username">Username</label>
+          <input type="text" id="signup-username" placeholder="yourname" required minlength="3" autocomplete="username" />
+        </div>
+        <div class="field">
+          <label for="signup-email">Email</label>
+          <input type="email" id="signup-email" placeholder="you@example.com" required autocomplete="email" />
+        </div>
+        <div class="field">
+          <label for="signup-password">Password <span style="font-weight:400;color:var(--gray-lt)">(min 6 chars)</span></label>
+          <input type="password" id="signup-password" placeholder="••••••••" required minlength="6" autocomplete="new-password" />
+        </div>
+
+        <div class="bonus-badge">
+          <span>⚡</span>
+          Get <strong>20 free credits</strong> when you sign up — no card needed!
+        </div>
+
+        <button type="submit" class="btn-submit" id="signup-btn">Create Account →</button>
+      </form>
+
+      <p class="footer-note">By continuing you agree to our Terms of Service.</p>
     </div>
-    <p class="tagline">Chat · Generate · Create — all in one place</p>
-
-    <div class="tabs">
-      <button class="tab-btn active" id="tab-login" onclick="switchTab('login')">Sign In</button>
-      <button class="tab-btn" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
-    </div>
-
-    <!-- Alert -->
-    <div class="alert" id="alert"></div>
-
-    <!-- Login Form -->
-    <form class="form active" id="form-login" onsubmit="handleLogin(event)">
-      <div class="field">
-        <label for="login-email">Email</label>
-        <input type="email" id="login-email" placeholder="you@example.com" required autocomplete="email" />
-      </div>
-      <div class="field">
-        <label for="login-password">Password</label>
-        <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password" />
-      </div>
-      <button type="submit" class="btn-submit" id="login-btn">Sign In →</button>
-    </form>
-
-    <!-- Signup Form -->
-    <form class="form" id="form-signup" onsubmit="handleSignup(event)">
-      <div class="field">
-        <label for="signup-username">Username</label>
-        <input type="text" id="signup-username" placeholder="yourname" required minlength="3" autocomplete="username" />
-      </div>
-      <div class="field">
-        <label for="signup-email">Email</label>
-        <input type="email" id="signup-email" placeholder="you@example.com" required autocomplete="email" />
-      </div>
-      <div class="field">
-        <label for="signup-password">Password <span style="font-weight:400;color:var(--t3)">(min 6 chars)</span></label>
-        <input type="password" id="signup-password" placeholder="••••••••" required minlength="6" autocomplete="new-password" />
-      </div>
-
-      <div class="bonus-badge">
-        <span>⚡</span>
-        Get <strong>20 free credits</strong> when you sign up — no card needed!
-      </div>
-
-      <button type="submit" class="btn-submit" id="signup-btn">Create Account →</button>
-    </form>
-
-    <p class="footer-note">By continuing you agree to our Terms of Service.</p>
   </div>
+
+  <!-- RIGHT: Image -->
+  <div class="right-panel">
+    <img src="beer-cat.jpg" alt="Raiko" />
+    <div class="right-panel-label">
+      <span>Powered by Raiko</span>
+      <span>Generate anything.<br>No limits.</span>
+    </div>
+  </div>
+
 </div>
 
 <script>

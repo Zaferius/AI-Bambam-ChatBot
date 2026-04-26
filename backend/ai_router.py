@@ -243,15 +243,23 @@ async def ai_generate(
         if not req.image_url:
             raise HTTPException(400, "image_url is required for edit type.")
         fal = get_fal_client()
-        cost = get_fal_cost(req.model or "fal-ai/flux/dev/image-to-image")
-        urls = await fal.image_to_image(
-            model=req.model or "fal-ai/flux/dev/image-to-image",
-            prompt=req.prompt,
-            image_url=req.image_url,
-            strength=req.strength,
-            extra=req.options or None,
-        )
-        ok = _db.deduct_credits(user_id, cost, "Image edit", req.model)
+        model_id = req.model or "fal-ai/flux/dev/image-to-image"
+        cost = get_fal_cost(model_id)
+        if model_id == "fal-ai/bria/background/remove":
+            urls = await fal.remove_background(
+                model=model_id,
+                image_url=req.image_url,
+                extra=req.options or None,
+            )
+        else:
+            urls = await fal.image_to_image(
+                model=model_id,
+                prompt=req.prompt,
+                image_url=req.image_url,
+                strength=req.strength,
+                extra=req.options or None,
+            )
+        ok = _db.deduct_credits(user_id, cost, "Image edit", model_id)
         if not ok:
             raise HTTPException(402, "Could not deduct credits.")
         new_balance = _db.get_credits(user_id)
@@ -259,7 +267,7 @@ async def ai_generate(
             output=urls,
             credits_used=cost,
             credits_remaining=new_balance,
-            model=req.model,
+            model=model_id,
             type="edit",
         )
 

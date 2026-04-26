@@ -24,6 +24,8 @@ const State = {
   currentVideoTool: 'text',
   editSourceUrl: null,
   i2vSourceUrl: null,
+  currentEditModel: 'fal-ai/nano-banana-2/edit',
+  editPanelSourceUrl: null,
   mediaFilter: 'all',
   isGuest: true,
   // active input context: 'hero' | 'sticky'
@@ -119,6 +121,43 @@ function markdownToHtml(md) {
   return md;
 }
 
+function renderGp2Showcase() {
+  const grid = document.getElementById('gp2-grid');
+  const rows = window.EXPLORE_SHOWCASE_GP2;
+  if (!grid || !Array.isArray(rows)) return;
+
+  grid.innerHTML = '';
+
+  rows.forEach((row) => {
+    const rowEl = document.createElement('div');
+    rowEl.className = row.rowClass || 'gp2-row';
+
+    (row.items || []).forEach((item) => {
+      const card = document.createElement('div');
+      card.className = `${item.cellClass || 'gp2-cell'} gallery-item`;
+      card.dataset.src = item.src || '';
+      card.dataset.prompt = item.prompt || '';
+      card.dataset.res = item.res || '';
+      card.dataset.model = item.model || 'GPT Image 2';
+      card.addEventListener('click', () => openGalleryPreview(card));
+
+      const img = document.createElement('img');
+      img.src = item.src || '';
+      img.alt = '';
+
+      const badge = document.createElement('div');
+      badge.className = 'gi-hover-badge';
+      badge.textContent = 'View';
+
+      card.appendChild(img);
+      card.appendChild(badge);
+      rowEl.appendChild(card);
+    });
+
+    grid.appendChild(rowEl);
+  });
+}
+
 /* Lightbox Utils */
 window.openLightbox = function(url) {
   const modal = document.getElementById('lightbox-modal');
@@ -193,8 +232,6 @@ function toggleVoiceInput() {
 ══════════════════════════════════════════════════════════ */
 function updateCreditsUI(balance) {
   State.credits = balance;
-  const miniBal = document.getElementById('credits-balance-mini');
-  if (miniBal) miniBal.textContent = balance.toFixed(0);
 
   const dropVal = document.getElementById('udrop-credits-val');
   if (dropVal) dropVal.textContent = balance.toFixed(0);
@@ -242,6 +279,28 @@ function selectVideoModel(modelId, tool = 'text') {
   const selId = tool === 'image' ? 'i2v-model' : 'video-model';
   const sel = document.getElementById(selId);
   if (sel) { sel.value = modelId; sel.dispatchEvent(new Event('change')); }
+}
+
+function selectEditModel(modelId) {
+  const dropdown = document.getElementById('edit-model-dropdown');
+  if (!dropdown) return;
+  const item = dropdown.querySelector(`.imd-item[data-model="${modelId}"]`);
+  if (!item) return;
+  dropdown.querySelectorAll('.imd-item').forEach(i => i.classList.remove('active'));
+  item.classList.add('active');
+  const icon = document.getElementById('edit-imt-icon');
+  const name = document.getElementById('edit-imt-name');
+  const cost = document.getElementById('edit-imt-cost');
+  if (icon) icon.textContent = item.dataset.icon || '';
+  if (name) name.textContent = item.querySelector('.imd-name').textContent;
+  if (cost) cost.textContent = item.dataset.cost + '⚡';
+  State.currentEditModel = modelId;
+  const isBgRemove = modelId === 'fal-ai/bria/background/remove';
+  const promptSection = document.getElementById('edit-panel-prompt-section');
+  if (promptSection) promptSection.style.display = isBgRemove ? 'none' : '';
+  const costBadge = document.getElementById('edit-panel-cost-badge');
+  if (costBadge) costBadge.textContent = (item.dataset.cost || '5') + '⚡';
+  dropdown.classList.add('hidden');
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1043,11 +1102,18 @@ async function generateImage() {
    VIDEO GENERATION
 ══════════════════════════════════════════════════════════ */
 const VIDEO_COSTS = {
-  'fal-ai/kling-video/v1/standard/text-to-video': 12,
-  'fal-ai/kling-video/v1/pro/text-to-video': 20,
-  'fal-ai/stable-video': 10,
-  'fal-ai/kling-video/v1/standard/image-to-video': 15,
-  'fal-ai/kling-video/v1/pro/image-to-video': 22,
+  'fal-ai/kling-video/v1/standard/text-to-video':         12,
+  'fal-ai/kling-video/v1/pro/text-to-video':              20,
+  'fal-ai/kling-video/v3/pro/text-to-video':              28,
+  'fal-ai/wan/v2.7/text-to-video':                        15,
+  'fal-ai/bytedance/seedance/v1.5/pro/text-to-video':     20,
+  'fal-ai/bytedance/seedance-2.0/text-to-video':          25,
+  'fal-ai/sora-2/text-to-video':                          35,
+  'fal-ai/veo3.1':                                        30,
+  'xai/grok-imagine-video/text-to-video':                 22,
+  'fal-ai/stable-video':                                  10,
+  'fal-ai/kling-video/v1/standard/image-to-video':        15,
+  'fal-ai/kling-video/v1/pro/image-to-video':             22,
 };
 
 function updateVideoCostLabel() {
@@ -1180,6 +1246,60 @@ async function runEditImage() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   EDIT PANEL
+══════════════════════════════════════════════════════════ */
+async function runEditPanel() {
+  if (!requireAuth()) return;
+  if (!State.editPanelSourceUrl) { toast('Upload an image first', 'error'); return; }
+
+  const isBgRemove = State.currentEditModel === 'fal-ai/bria/background/remove';
+  const prompt = isBgRemove ? '' : (document.getElementById('edit-panel-prompt')?.value.trim() || '');
+  if (!isBgRemove && !prompt) { toast('Enter an edit prompt', 'error'); return; }
+
+  const strength = 0.75;
+  const btn = document.getElementById('btn-run-edit-panel');
+  const status = document.getElementById('edit-panel-status');
+  btn.disabled = true;
+  status.classList.remove('hidden');
+
+  try {
+    const res = await API.ai.editImage(State.currentEditModel, prompt, State.editPanelSourceUrl, strength);
+    const urls = Array.isArray(res.output) ? res.output : [res.output];
+    renderEditPanelResults(urls);
+    updateCreditsUI(res.credits_remaining);
+    const label = isBgRemove ? 'Background removed' : prompt;
+    urls.forEach(url => saveMediaItem('image', url, label, State.currentEditModel));
+    toast(`Done! ⚡ ${res.credits_used} used`, 'success');
+  } catch (err) {
+    toast(err.message || 'Edit failed', 'error');
+  } finally {
+    btn.disabled = false;
+    status.classList.add('hidden');
+  }
+}
+
+function renderEditPanelResults(urls) {
+  const zone = document.getElementById('edit-result-zone');
+  const container = document.getElementById('edit-result-area');
+  if (!container) return;
+  container.innerHTML = '';
+  if (zone) zone.classList.remove('hidden');
+
+  for (const url of urls) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;';
+    wrap.innerHTML = `
+      <img src="${url}" alt="Edited image" style="max-width:100%;max-height:100%;object-fit:contain;border:2px solid var(--black);" loading="lazy" />
+      <div style="display:flex;gap:6px;">
+        <button class="result-action-btn" onclick="window.open('${url}', '_blank')">Open</button>
+        <a class="result-action-btn" href="${url}" download="raiko_edit.png">Download</a>
+      </div>
+    `;
+    container.appendChild(wrap);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
    MY MEDIA — localStorage helpers
 ══════════════════════════════════════════════════════════ */
 const MEDIA_KEY = 'raiko_media';
@@ -1192,6 +1312,67 @@ function loadMedia() {
 function saveMedia(items) {
   localStorage.setItem(MEDIA_KEY, JSON.stringify(items));
 }
+
+/* ══════════════════════════════════════════════════════════
+   GALLERY PREVIEW MODAL
+══════════════════════════════════════════════════════════ */
+let _galleryCurrentPrompt = '';
+
+function openGalleryPreview(el) {
+  const src    = el.dataset.src;
+  const prompt = el.dataset.prompt || '';
+  const res    = el.dataset.res    || '';
+  const model  = el.dataset.model  || 'GPT Image 2';
+
+  _galleryCurrentPrompt = prompt;
+
+  document.getElementById('gp-img').src         = src;
+  document.getElementById('gp-prompt').textContent = prompt || '(no prompt)';
+  document.getElementById('gp-res').textContent  = res;
+  document.getElementById('gp-model').textContent = model;
+
+  const dl = document.getElementById('gp-download-link');
+  dl.href = src;
+  dl.download = src.split('/').pop();
+
+  const overlay = document.getElementById('gallery-preview-overlay');
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeGalleryPreview() {
+  const overlay = document.getElementById('gallery-preview-overlay');
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+  setTimeout(() => { document.getElementById('gp-img').src = ''; }, 250);
+}
+
+function useGalleryPrompt() {
+  if (!_galleryCurrentPrompt) return;
+  // Close modal
+  document.getElementById('gallery-preview-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  // Switch to image panel with the prompt pre-filled
+  selectImageModel('openai/gpt-image-2');
+  switchPanel('image');
+  switchImageTool('generate');
+  const ta = document.getElementById('image-prompt');
+  if (ta) {
+    ta.value = _galleryCurrentPrompt;
+    ta.dispatchEvent(new Event('input'));
+  }
+}
+
+// Close on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const overlay = document.getElementById('gallery-preview-overlay');
+    if (overlay && overlay.classList.contains('open')) {
+      overlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+  }
+});
 
 function saveMediaItem(type, url, prompt, model) {
   const items = loadMedia();
@@ -1487,33 +1668,6 @@ function bindEvents() {
   bindModeButtons();
   updateSendButtonsState();
 
-  const quickActionsBtn = document.getElementById('btn-quick-actions');
-  const quickActionsMenu = document.getElementById('quick-actions-menu');
-  quickActionsBtn?.addEventListener('click', () => {
-    quickActionsMenu?.classList.toggle('hidden');
-  });
-  quickActionsMenu?.addEventListener('click', (e) => {
-    const action = e.target.closest('.quick-action-item')?.dataset.action;
-    if (!action) return;
-    quickActionsMenu.classList.add('hidden');
-    if (action === 'chat') {
-      switchPanel('chat');
-      startNewChat();
-      return;
-    }
-    if (action === 'image') {
-      switchPanel('image');
-      switchImageTool('generate');
-      return;
-    }
-    if (action === 'video') switchPanel('video');
-  });
-  document.addEventListener('click', (e) => {
-    if (!quickActionsBtn?.contains(e.target) && !quickActionsMenu?.contains(e.target)) {
-      quickActionsMenu?.classList.add('hidden');
-    }
-  });
-
   // Welcome chips (delegated)
   bindChipEvents();
 
@@ -1560,6 +1714,9 @@ function bindEvents() {
       } else if (panelId === 'video') {
         switchPanel('video');
         setTimeout(() => selectVideoModel(modelId, videoTool), 50);
+      } else if (panelId === 'edit') {
+        switchPanel('edit');
+        setTimeout(() => selectEditModel(modelId), 50);
       }
     });
   });
@@ -1670,6 +1827,70 @@ function bindEvents() {
     const promptEl = document.getElementById('video-prompt');
     if (promptEl && card.dataset.preset) promptEl.value = card.dataset.preset;
   });
+
+  // Edit panel model picker dropdown
+  const editModelTrigger = document.getElementById('edit-model-trigger');
+  const editModelDropdown = document.getElementById('edit-model-dropdown');
+  if (editModelTrigger && editModelDropdown) {
+    editModelTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = !editModelDropdown.classList.contains('hidden');
+      editModelDropdown.classList.toggle('hidden', open);
+      editModelTrigger.setAttribute('aria-expanded', String(!open));
+    });
+    editModelDropdown.addEventListener('click', (e) => {
+      const item = e.target.closest('.imd-item');
+      if (!item) return;
+      selectEditModel(item.dataset.model);
+      editModelTrigger.setAttribute('aria-expanded', 'false');
+    });
+    document.addEventListener('click', (e) => {
+      if (!document.getElementById('edit-model-picker-wrap')?.contains(e.target)) {
+        editModelDropdown.classList.add('hidden');
+        editModelTrigger.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  // Edit panel image upload — hide dotted placeholder when image is loaded
+  setupImageUpload('edit-panel-source-input', 'edit-panel-source-preview', 'editPanelSourceUrl');
+  document.getElementById('edit-panel-source-input')?.addEventListener('change', () => {
+    const inner = document.getElementById('edit-upload-inner');
+    const removeBtn = document.getElementById('edit-panel-remove-btn');
+    const uploadCard = document.querySelector('.edit-upload-card');
+    if (inner) inner.style.display = 'none';
+    if (removeBtn) removeBtn.classList.remove('hidden');
+    if (uploadCard) uploadCard.classList.add('has-image');
+  });
+
+  // Edit panel remove uploaded image (top-right X)
+  document.getElementById('edit-panel-remove-btn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    State.editPanelSourceUrl = null;
+
+    const input = document.getElementById('edit-panel-source-input');
+    const preview = document.getElementById('edit-panel-source-preview');
+    const inner = document.getElementById('edit-upload-inner');
+    const removeBtn = document.getElementById('edit-panel-remove-btn');
+    const uploadCard = document.querySelector('.edit-upload-card');
+    const resultZone = document.getElementById('edit-result-zone');
+    const resultArea = document.getElementById('edit-result-area');
+
+    if (input) input.value = '';
+    if (preview) {
+      preview.src = '';
+      preview.classList.add('hidden');
+    }
+    if (inner) inner.style.display = '';
+    if (removeBtn) removeBtn.classList.add('hidden');
+    if (uploadCard) uploadCard.classList.remove('has-image');
+    if (resultZone) resultZone.classList.add('hidden');
+    if (resultArea) resultArea.innerHTML = '';
+  });
+
+  // Edit panel generate button
+  document.getElementById('btn-run-edit-panel')?.addEventListener('click', runEditPanel);
 
   // Video
   document.getElementById('btn-generate-video')?.addEventListener('click', generateVideo);
@@ -1902,6 +2123,7 @@ async function init() {
   speechRecognition = initSpeechRecognition();
   applyTheme('thunder');
   setChatMode('chat');
+  renderGp2Showcase();
 
   const authed = await checkAuth();
 
