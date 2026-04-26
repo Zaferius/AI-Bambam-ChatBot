@@ -217,6 +217,34 @@ async function refreshCredits() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   MODEL SELECTION HELPERS
+══════════════════════════════════════════════════════════ */
+function selectImageModel(modelId) {
+  const dropdown = document.getElementById('img-model-dropdown');
+  const sel = document.getElementById('image-model');
+  if (!dropdown || !sel) return;
+  const item = dropdown.querySelector(`.imd-item[data-model="${modelId}"]`);
+  if (!item) return;
+  dropdown.querySelectorAll('.imd-item').forEach(i => i.classList.remove('active'));
+  item.classList.add('active');
+  const icon = document.getElementById('imt-icon');
+  const name = document.getElementById('imt-name');
+  const cost = document.getElementById('imt-cost');
+  if (icon) icon.textContent = item.dataset.icon || '';
+  if (name) name.textContent = item.querySelector('.imd-name').textContent;
+  if (cost) cost.textContent = item.dataset.cost + '⚡';
+  sel.value = modelId;
+  sel.dispatchEvent(new Event('change'));
+}
+
+function selectVideoModel(modelId, tool = 'text') {
+  switchVideoTool(tool);
+  const selId = tool === 'image' ? 'i2v-model' : 'video-model';
+  const sel = document.getElementById(selId);
+  if (sel) { sel.value = modelId; sel.dispatchEvent(new Event('change')); }
+}
+
+/* ══════════════════════════════════════════════════════════
    NAVIGATION
 ══════════════════════════════════════════════════════════ */
 function switchPanel(panelId) {
@@ -1496,8 +1524,52 @@ function bindEvents() {
     window.location.href = '/login.html';
   });
 
+  // Navbar mega-dropdown hover (position: fixed, JS-positioned)
+  document.querySelectorAll('.nav-mega-wrap').forEach(wrap => {
+    const drop = wrap.querySelector('.nav-mega-drop');
+    if (!drop) return;
+    let closeTimer;
+
+    function openDrop() {
+      clearTimeout(closeTimer);
+      const rect = wrap.getBoundingClientRect();
+      drop.style.top  = rect.bottom + 'px';
+      drop.style.left = rect.left + 'px';
+      drop.classList.add('open');
+    }
+    function scheduleDrop() {
+      closeTimer = setTimeout(() => drop.classList.remove('open'), 120);
+    }
+
+    wrap.addEventListener('mouseenter', openDrop);
+    wrap.addEventListener('mouseleave', scheduleDrop);
+    drop.addEventListener('mouseenter', () => clearTimeout(closeTimer));
+    drop.addEventListener('mouseleave', scheduleDrop);
+  });
+
+  // Navbar mega-dropdown model items
+  document.querySelectorAll('.nmd-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const modelId = item.dataset.model;
+      const panelId = item.dataset.panel;
+      const videoTool = item.dataset.videoTool || 'text';
+      if (panelId === 'image') {
+        selectImageModel(modelId);
+        switchPanel('image');
+      } else if (panelId === 'video') {
+        switchPanel('video');
+        setTimeout(() => selectVideoModel(modelId, videoTool), 50);
+      }
+    });
+  });
+
   // Dashboard Quick Create
   document.getElementById('qc-new-chat')?.addEventListener('click', () => {
+    switchPanel('chat');
+    startNewChat();
+  });
+  document.getElementById('qc-new-chat-2')?.addEventListener('click', () => {
     switchPanel('chat');
     startNewChat();
   });

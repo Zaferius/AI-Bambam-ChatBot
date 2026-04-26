@@ -2,7 +2,7 @@
 
 This README is the **source of truth for the current product behavior** so the next AI agent can continue work safely.
 
-Last updated: **2026-04-25 (Image model dropdown picker, Nano Banana naming, Seedream + new model additions)**
+Last updated: **2026-04-26 (Dashboard showcase layout, navbar mega-dropdowns, model-aware navigation)**
 
 ---
 
@@ -73,11 +73,21 @@ Main UI file: `frontend/index.html`
 ### Top Navbar
 
 - Black background (`#0A0A0A`), 2px yellow bottom border
-- **Left section**: Raiko logo (no border, just "R" initial) → vertical divider → nav links (Dashboard | Chats | Images | Video)
+- **Left section**: Raiko logo (no border, just "R" initial) → vertical divider → nav links (Dashboard | Chats | Image | Video)
 - **Right section**: Credits badge (⚡ N) → `+ More` dropdown → User avatar + name (click opens user dropdown)
 - Active nav link: yellow text (`#FFE400`), bold — no background fill
 - Font: 13px, padding `6px 11px` per nav item
 - `+ More` dropdown opens: Chat / Image Generation / Video Generation
+- **Image nav button** — hovering opens a **mega-dropdown** (`.nav-mega-drop`) with all 11 image models in 2 columns:
+  - Left col: Flux group (Schnell/Dev/Pro/2 Pro) + OpenAI (GPT Image 2)
+  - Right col: Nano Banana group (Flash/2/Pro) + Seedream group (4/4.5/5 Lite)
+  - Each row: icon + model name + short description + cost
+  - Clicking a model calls `selectImageModel(modelId)` then `switchPanel('image')`
+- **Video nav button** — hovering opens a mega-dropdown with 5 video models in 2 columns:
+  - Left col: Text to Video (Kling Standard / Kling Pro / Stable Video)
+  - Right col: Image to Video (Kling Standard / Kling Pro)
+  - Clicking a model calls `selectVideoModel(modelId, tool)` then `switchPanel('video')`
+- **Mega-dropdown implementation**: `position: fixed`, JS-positioned via `getBoundingClientRect()` on mouseenter; `.open` class toggles `display: flex`; 120ms close delay on mouseleave so mouse can move into dropdown without it closing
 - User avatar click opens **user dropdown** (`#user-dropdown`, class `.user-dropdown`) anchored below the avatar trigger (`#navbar-user-trigger`, `#navbar-user-wrap`):
   - Header: avatar initial + name (`#udrop-avatar`, `#udrop-name`) + "Free Plan"
   - Credits bar: `#udrop-credits-val` + `#udrop-credits-fill` (green fill, width = balance/maxCredits %)
@@ -88,10 +98,33 @@ Main UI file: `frontend/index.html`
 
 ### Dashboard Panel
 
-- Quick Create cards: Start a New Chat / Generate an Image / Generate a Video
-- Recent chats list
-- Announcement cards
-- Two-column layout (left: quick create + recent chats, right: announcements), separated by 2px border
+Full-width showcase/discovery page — scrollable, no fixed columns. Four sections stacked vertically:
+
+**1. Featured Showcase Strip** (`.dash-featured-strip`):
+- Horizontal row of 4 large cards (280px each, horizontal scroll, `dash-featured-track`)
+- Each card: 180px dark placeholder thumbnail + provider label + large bold headline + title + subtitle below
+- Card 1 (GPT Image 2) → `selectImageModel('openai/gpt-image-2')` + `switchPanel('image')`
+- Card 2 (Kling 3.0 / Video) → `selectVideoModel('fal-ai/kling-video/v1/pro/text-to-video','text')` + `switchPanel('video')`
+- Card 3 (Nano Banana Pro) → `selectImageModel('fal-ai/nano-banana-pro')` + `switchPanel('image')`
+- Card 4 (Seedream 5) → `selectImageModel('fal-ai/bytedance/seedream/v5/lite/text-to-image')` + `switchPanel('image')`
+
+**2. Mid Row** (`.dash-mid-row`): two-column layout:
+- **Left: Feature Tiles Grid** (`.dash-tiles-grid`, 3×2 CSS grid):
+  - Generate Image → `switchPanel('image')`
+  - Seedream 5 (NEW badge) → selects Seedream 5 Lite model + image panel
+  - Nano Banana Pro (UNLIMITED badge) → selects Nano Banana Pro + image panel
+  - Generate Video (NEW badge) → `switchPanel('video')`
+  - Image Edit → `switchPanel('image')` + `switchImageTool('edit')`
+  - AI Chat (id `qc-new-chat`) → `switchPanel('chat')` + `startNewChat()`
+- **Right: Recent Chats sidebar** (`.dash-recent-wrap`, 260px):
+  - Header: "RECENT CHATS" label + "+ New" button (`id="qc-new-chat-2"`)
+  - Scrollable `#dash-chat-list` (same as before, populated by `loadDashboardChats()`)
+
+**3 & 4. Showcase Sections** (`.dash-showcase`):
+- Full-width, 2-column: left dark panel (300px) + right placeholder image grid
+- Showcase 1: "Meet GPT Image 2" — "Try Model" → selects GPT Image 2 + image panel
+- Showcase 2: "Flux Pro Image Generator" — "Try Model" → selects Flux Pro + image panel
+- Right side: 7 dark placeholder thumbnails in flex layout (tall + 3 columns)
 
 ### Chat Panel
 
@@ -248,6 +281,8 @@ Styles: `frontend/styles.css`
 - `switchPanel(panelId)` — switches active nav-link and panel; calls `loadMediaPanel()` when switching to `media`
 - `switchImageTool(toolId)` — toggles Generate/Edit inside Images panel
 - `switchVideoTool(toolId)` — toggles Text-to-Video/Image-to-Video inside Video panel
+- `selectImageModel(modelId)` — programmatically selects an image model: updates `#img-model-dropdown` active item, syncs `#imt-icon` / `#imt-name` / `#imt-cost` trigger labels, sets `#image-model` hidden select value and fires `change` event. Called from dashboard cards, showcase buttons, and navbar mega-dropdown items.
+- `selectVideoModel(modelId, tool)` — calls `switchVideoTool(tool)` then sets `#video-model` or `#i2v-model` select value. Called from dashboard video card and navbar video mega-dropdown items.
 - `generateImage()` → `showGenPlaceholder('image-results')` → `API.ai.generateImage(...)` → `renderImageResults()` + `saveMediaItem()`
 - `runEditImage()` → `API.ai.editImage(...)`
 - `generateVideo()` → `showGenPlaceholder('video-result-area')` → `API.ai.generateVideo(...)` → `saveMediaItem()`
@@ -435,6 +470,8 @@ Open: `http://localhost:8000`
 
 ## 10) Known Legacy / Technical Debt (For Next Agent)
 
+> Dashboard showcase sections (`.dash-showcase`) use static dark placeholder thumbnails — no real images. Replace these with actual generated/curated example images when available.
+
 1. Theme code (`applyTheme`, theme classes) still exists in JS although theme buttons are removed from UI — safe to remove.
 2. Some legacy routes and structures remain for backward compatibility.
 3. `main.py` includes older/extended logic; unified flow should continue to prioritize `/ai/generate`.
@@ -464,6 +501,10 @@ Open: `http://localhost:8000`
 - **Seedream models use `image_size` preset enum** (not `{width,height}` object) — handled by `_IMAGE_SIZE_PRESET_MODELS` in `fal_client.py`. Do not change this to object format; minimum resolution constraints on these models reject small dimensions like 1024x1024.
 - **Nano Banana models use `aspect_ratio` string** (not `image_size`) — handled by `_ASPECT_RATIO_MODELS` in `fal_client.py`. Do not remove this routing.
 - **My Media is dropdown-only** — do not add it back to the top navbar `.nav-item` list; it must stay inside the user avatar dropdown (`#udrop-my-media`).
+- **Nav button label is "Image" (not "Images")** — was renamed; do not revert to "Images".
+- **Navbar mega-dropdowns are JS-positioned `position: fixed`** — do NOT switch back to CSS `position: absolute` or CSS-only `:hover` display toggling; `.navbar-nav` has `overflow: visible` specifically to support this. The `.open` class on `.nav-mega-drop` controls visibility; the JS hover logic in `initApp()` sets `top`/`left` via `getBoundingClientRect()`.
+- **`selectImageModel` / `selectVideoModel` must stay globally scoped** — they are called from inline `onclick` attributes on dashboard cards; do not convert them to module-private functions.
+- **Dashboard cards are model-aware** — each featured card and showcase "Try Model" button calls `selectImageModel`/`selectVideoModel` with a specific model ID before switching panels. Do not simplify these to plain `switchPanel()` calls.
 - **User dropdown IDs** — `#navbar-user-wrap`, `#navbar-user-trigger`, `#user-dropdown`, `#udrop-avatar`, `#udrop-name`, `#udrop-credits-val`, `#udrop-credits-fill`, `#udrop-premium-btn`, `#udrop-my-media` — these are all referenced in `app.js`; do not rename.
 - **Logo has no yellow border** — `.navbar-orb` has `border: none !important`; do not reintroduce a border on the navbar logo.
 

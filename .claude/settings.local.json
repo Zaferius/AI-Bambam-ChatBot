@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(python -c \"import main; print\\('Backend OK'\\)\")",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(python -m uvicorn main:app --reload --port 8000)",
+      "Bash(curl -s http://localhost:8000)"
     ]
   }
 }
