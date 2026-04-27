@@ -1292,7 +1292,7 @@ body { background: var(--bg); }
   object-position: center center;
 }
 
-/* Keep old dsc-grid/col/thumb for Flux Pro showcase */
+/* Keep old dsc-grid/col/thumb for legacy showcase layouts */
 .dsc-grid {
   display: flex; gap: 8px; width: 100%; height: 380px;
 }

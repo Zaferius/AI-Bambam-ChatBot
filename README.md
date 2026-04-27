@@ -2,7 +2,7 @@
 
 This README is the **source of truth for the current product behavior** so the next AI agent can continue work safely.
 
-Last updated: **2026-04-26 (Explore navbar + PRO CTA update · Edit panel upload UX refresh · GPT showcase data externalized)**
+Last updated: **2026-04-27 (Explore lower showcase switched to Nano Banana Pro)**
 
 ---
 
@@ -110,7 +110,7 @@ Full-width showcase/discovery page — scrollable, no fixed columns. Four sectio
 
 **3 & 4. Showcase Sections** (`.dash-showcase`):
 - Showcase 1: "Meet GPT Image 2" → real images from `dashboard-showcase/gpt-image-2-explore/`, custom `.gp2-grid` two-row layout rendered from external data (`frontend/explore-data.js`) into `#gp2-grid`; all images are `.gallery-item` (open Gallery Preview Modal on click)
-- Showcase 2: "Flux Pro Image Generator" → static dark placeholder thumbnails
+- Showcase 2: "Nano Banana Pro Image Generator" → real images from `dashboard-showcase/nano-banana-pro-explore/`, custom `.gp2-grid` two-row layout rendered from external data (`frontend/explore-data.js`) into `#nbp-grid`; every gallery item includes its prompt and uses Nano Banana Pro when "Use This Prompt" is clicked
 
 **Gallery Preview Modal** (`#gallery-preview-overlay`, `.gp-overlay`):
 - Opened by `openGalleryPreview(el)` — reads `data-src`, `data-prompt`, `data-res`, `data-model`
@@ -433,4 +433,4 @@ Open: `http://localhost:8000`
 7. Old sidebar CSS (`.sidebar`, `.sidebar-nav`, `.sidebar-toggle`) — dead code.
 8. My Media is localStorage-only — no backend sync (future: `/api/media` endpoints).
 9. Edit panel: `fal-ai/bria/background/remove` result field may vary by API version (`image` vs `images`). `fal_client.remove_background()` handles both.
-10. Explore GPT showcase now uses frontend data file + runtime render (`frontend/explore-data.js` + `renderGp2Showcase()` in `frontend/app.js`); keep data/schema aligned when adding cards.
+10. Explore GPT and Nano Banana Pro showcases now use frontend data file + runtime render (`frontend/explore-data.js` + `renderGp2Showcase()` / `renderNanoBananaProShowcase()` in `frontend/app.js`); keep data/schema aligned when adding cards.

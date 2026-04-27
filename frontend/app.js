@@ -124,6 +124,16 @@ function markdownToHtml(md) {
 function renderGp2Showcase() {
   const grid = document.getElementById('gp2-grid');
   const rows = window.EXPLORE_SHOWCASE_GP2;
+  renderExploreShowcaseGrid(grid, rows, 'GPT Image 2');
+}
+
+function renderNanoBananaProShowcase() {
+  const grid = document.getElementById('nbp-grid');
+  const rows = window.EXPLORE_SHOWCASE_NANO_BANANA_PRO;
+  renderExploreShowcaseGrid(grid, rows, 'Nano Banana Pro');
+}
+
+function renderExploreShowcaseGrid(grid, rows, fallbackModel) {
   if (!grid || !Array.isArray(rows)) return;
 
   grid.innerHTML = '';
@@ -138,7 +148,8 @@ function renderGp2Showcase() {
       card.dataset.src = item.src || '';
       card.dataset.prompt = item.prompt || '';
       card.dataset.res = item.res || '';
-      card.dataset.model = item.model || 'GPT Image 2';
+      card.dataset.model = item.model || fallbackModel || 'GPT Image 2';
+      card.dataset.modelId = item.modelId || '';
       card.addEventListener('click', () => openGalleryPreview(card));
 
       const img = document.createElement('img');
@@ -1317,14 +1328,17 @@ function saveMedia(items) {
    GALLERY PREVIEW MODAL
 ══════════════════════════════════════════════════════════ */
 let _galleryCurrentPrompt = '';
+let _galleryCurrentModelId = '';
 
 function openGalleryPreview(el) {
   const src    = el.dataset.src;
   const prompt = el.dataset.prompt || '';
   const res    = el.dataset.res    || '';
   const model  = el.dataset.model  || 'GPT Image 2';
+  const modelId = el.dataset.modelId || '';
 
   _galleryCurrentPrompt = prompt;
+  _galleryCurrentModelId = modelId;
 
   document.getElementById('gp-img').src         = src;
   document.getElementById('gp-prompt').textContent = prompt || '(no prompt)';
@@ -1353,7 +1367,7 @@ function useGalleryPrompt() {
   document.getElementById('gallery-preview-overlay').classList.remove('open');
   document.body.style.overflow = '';
   // Switch to image panel with the prompt pre-filled
-  selectImageModel('openai/gpt-image-2');
+  selectImageModel(_galleryCurrentModelId || 'openai/gpt-image-2');
   switchPanel('image');
   switchImageTool('generate');
   const ta = document.getElementById('image-prompt');
@@ -2124,6 +2138,7 @@ async function init() {
   applyTheme('thunder');
   setChatMode('chat');
   renderGp2Showcase();
+  renderNanoBananaProShowcase();
 
   const authed = await checkAuth();
 

@@ -1,0 +1,1 @@
+{"subject":{"description":"A male boxer sitting in the corner of a ring between rounds, heavy breathing","face":{"makeup":"swollen eye, cut on eyebrow, vaseline smeared"}},"photography":{"camera_style":"Sports documentary style, 85mm portrait lens","texture":"sharp pores, gritty noise, dramatic shadows"}}
