@@ -130,3 +130,72 @@ window.EXPLORE_SHOWCASE_NANO_BANANA_PRO = [
   }
 ];
 
+window.EXPLORE_SHOWCASE_SEEDREAM_45 = [
+  {
+    rowClass: 'gp2-row gp2-row--portraits',
+    items: [
+      {
+        cellClass: 'gp2-cell',
+        src: 'dashboard-showcase/seedream-explore/item-01/image.jpg',
+        prompt: 'A lifelike selfie captured from the perspective of a phone held in the cosplayer’s outstretched hand, featuring a striking woman cosplaying as Ayame Uchiha — an original or fan-inspired kunoichi from the Naruto universe. She looks confidently into the camera with a calm, focused gaze, her crimson Sharingan eyes glowing softly. Her long black hair is styled in sleek layers or a high ponytail, with a few loose strands framing her face. She wears a high-quality Uchiha-style ninja outfit: a fitted black or deep navy combat top with a high collar, mesh undershirt, and the iconic red-and-white Uchiha clan crest visible on her back or shoulder. Fingerless gloves, utility pouches, and a Konoha forehead protector tied around her neck or headband-style complete the look. The background is softly blurred — suggesting a rooftop at dusk, a forest clearing, or the Hidden Leaf Village skyline. The lighting is moody and cinematic, with cool shadows and soft highlights across her skin and outfit. Rendered in stylized realism with crisp textures and fine detail, the image blends shinobi mystique, clan pride, and modern selfie energy.',
+        res: 'Seedream 4.5 output',
+        model: 'Seedream 4.5',
+        modelId: 'fal-ai/bytedance/seedream/v4.5/text-to-image'
+      },
+      {
+        cellClass: 'gp2-cell',
+        src: 'dashboard-showcase/seedream-explore/item-02/image.jpg',
+        prompt: 'ultra realistic portrait of a young woman standing under neon lights in a rainy cyberpunk street at night, wet skin reflecting colorful lights, cinematic lighting, soft glow, shallow depth of field, 85mm lens, high detail skin texture, natural expression, masterpiece, best quality, film still, volumetric lighting, bokeh negative: blurry, low quality, deformed face, extra fingers, bad anatomy, watermark',
+        res: 'Seedream 4.5 output',
+        model: 'Seedream 4.5',
+        modelId: 'fal-ai/bytedance/seedream/v4.5/text-to-image'
+      },
+      {
+        cellClass: 'gp2-cell',
+        src: 'dashboard-showcase/seedream-explore/item-03/image.jpg',
+        prompt: 'A beautiful brunette pilot girl, calm expression, soft wind in her hair, pastel sky tones, dreamy lighting, pink and lavender dominant palette, 90s anime style, soft shading, minimal composition, glowing highlights, ethereal atmosphere, masterpiece, lummi.ai quality',
+        res: 'Seedream 4.5 output',
+        model: 'Seedream 4.5',
+        modelId: 'fal-ai/bytedance/seedream/v4.5/text-to-image'
+      },
+      {
+        cellClass: 'gp2-cell',
+        src: 'dashboard-showcase/seedream-explore/item-04/image.jpg',
+        prompt: 'A low-angle, cinematic portrait of a porcelain-skinned young woman perched on a sun-warmed concrete ledge, her jet-black bob with choppy bangs framing a defiant gaze. She wears a rib-knit black turtleneck under a daisy-embroidered pinafore, bold yellow cable-knit knee-highs slouched over chunky Mary Jane boots. Translucent soap bubbles drift around her, catching prismatic flares of a hyper-saturated cerulean sky. Render in 8K ultra-realism with film-grain texture and soft pastel lens flares, color-graded like vintage Ektachrome—teal highlights, buttery gold midtones. Shallow depth of field keeps her face and floral details razor-sharp, while bubble reflections shimmer with rainbow spectral glints and subtle motion blur. Mood is retro-futuristic grindhouse meets dreamy pop art: dreamy yet razor-edged, whimsical yet fearless.',
+        res: 'Seedream 4.5 output',
+        model: 'Seedream 4.5',
+        modelId: 'fal-ai/bytedance/seedream/v4.5/text-to-image'
+      }
+    ]
+  },
+  {
+    rowClass: 'gp2-row gp2-row--wide',
+    items: [
+      {
+        cellClass: 'gp2-cell gp2-cell--land',
+        src: 'dashboard-showcase/seedream-explore/item-05/image.jpg',
+        prompt: 'Vintage 90s anime, Scratchy pen strokes, blind contour, perspective closeup, beautiful girl, face in darkness, stark hatch shaded sketchy scribbly, ink, strong angular shapes, woodcut shading, pen strokes, pouty lips, hungry eyes, minimalist realistic, proportions',
+        res: 'Seedream 4.5 output',
+        model: 'Seedream 4.5',
+        modelId: 'fal-ai/bytedance/seedream/v4.5/text-to-image'
+      },
+      {
+        cellClass: 'gp2-cell gp2-cell--sq',
+        src: 'dashboard-showcase/seedream-explore/item-06/image.jpg',
+        prompt: 'Realistic portrait of Yor Forger from Spy Family as a high-fashion model on the cover of VOGUE magazine. Elegant black assassin outfit that she wears, confident and mysterious expression, sleek hairstyle, cinematic lighting. Vogue logo at the top, fashion magazine layout, minimalist background, professional photography style',
+        res: 'Seedream 4.5 output',
+        model: 'Seedream 4.5',
+        modelId: 'fal-ai/bytedance/seedream/v4.5/text-to-image'
+      },
+      {
+        cellClass: 'gp2-cell gp2-cell--land',
+        src: 'dashboard-showcase/seedream-explore/item-07/image.jpg',
+        prompt: 'vintage 90s anime style image of a stunning woman with violet hair in a pastel raincoat, looking at the camera, at a bustling crosswalk at night, wet reflections. bold lines. blow my mind.',
+        res: 'Seedream 4.5 output',
+        model: 'Seedream 4.5',
+        modelId: 'fal-ai/bytedance/seedream/v4.5/text-to-image'
+      }
+    ]
+  }
+];
+

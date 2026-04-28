@@ -17,6 +17,8 @@ const State = {
   isStreaming: false,
   isListening: false,
   attachedFiles: [],     // Array of File objects
+  imageReferenceFiles: [],
+  imageReferenceUrls: [],
   stylePreset: '',
   chatMode: 'chat',
   theme: localStorage.getItem('magai_theme') || 'doodle',
@@ -131,6 +133,30 @@ function renderNanoBananaProShowcase() {
   const grid = document.getElementById('nbp-grid');
   const rows = window.EXPLORE_SHOWCASE_NANO_BANANA_PRO;
   renderExploreShowcaseGrid(grid, rows, 'Nano Banana Pro');
+}
+
+function renderSeedream45Showcase() {
+  const grid = document.getElementById('sd45-grid');
+  const rows = window.EXPLORE_SHOWCASE_SEEDREAM_45;
+  renderExploreShowcaseGrid(grid, rows, 'Seedream 4.5');
+}
+
+function syncFeaturedStripNav() {
+  const track = document.getElementById('dash-featured-track');
+  const prevBtn = document.getElementById('dash-featured-prev');
+  const nextBtn = document.getElementById('dash-featured-next');
+  const leftFade = document.getElementById('dash-featured-fade-left');
+  const rightFade = document.getElementById('dash-featured-fade-right');
+  if (!track || !prevBtn || !nextBtn || !leftFade || !rightFade) return;
+
+  const maxScrollLeft = Math.max(0, track.scrollWidth - track.clientWidth);
+  const atStart = track.scrollLeft <= 2;
+  const atEnd = track.scrollLeft >= (maxScrollLeft - 2);
+
+  prevBtn.classList.toggle('is-hidden', atStart);
+  leftFade.classList.toggle('is-hidden', atStart);
+  nextBtn.classList.toggle('is-hidden', atEnd);
+  rightFade.classList.toggle('is-hidden', atEnd);
 }
 
 function renderExploreShowcaseGrid(grid, rows, fallbackModel) {
@@ -331,6 +357,7 @@ function switchPanel(panelId) {
   State.currentPanel = panelId;
   if (panelId === 'dashboard') loadDashboardChats();
   if (panelId === 'media') loadMediaPanel();
+  panel?.scrollTo?.({ top: 0, behavior: 'instant' });
 }
 
 function switchImageTool(toolId) {
@@ -584,8 +611,8 @@ async function loadChatHistory() {
     }
     container.innerHTML = '';
 
-    if (list.length === 0) {
-      container.innerHTML = '<div style="padding:8px 12px;font-size:12px;color:var(--text-muted);">Henüz sohbet yok</div>';
+  if (list.length === 0) {
+      container.innerHTML = '<div style="padding:8px 12px;font-size:12px;color:var(--text-muted);">No chats yet</div>';
       return;
     }
 
@@ -611,7 +638,7 @@ async function loadChatHistory() {
       delBtn.onmouseout = () => { delBtn.style.color = 'var(--text-muted)'; delBtn.style.background = 'transparent'; };
       delBtn.onclick = async (e) => {
         e.stopPropagation();
-        if (confirm('Bu sohbeti silmek istediğinize emin misiniz?')) {
+        if (confirm('Are you sure you want to delete this chat?')) {
           try {
             console.log('Sending DELETE request for chat:', chat.id);
             const res = await API.chat.deleteChat(chat.id);
@@ -623,7 +650,7 @@ async function loadChatHistory() {
             }
             loadChatHistory();
           } catch (err) {
-            console.error('Silme hatası detaylı:', err);
+            console.error('Delete error details:', err);
             toast('Could not delete chat: ' + err.message, 'error');
           }
         }
@@ -999,12 +1026,240 @@ function updateImageCostLabel() {
   document.getElementById('image-cost-label').textContent = `${cost}⚡`;
 }
 
+const IMAGE_SIZE_PRESETS = {
+  '1k': {
+    '1:1': [1024, 1024],
+    '4:5': [896, 1120],
+    '3:4': [896, 1195],
+    '2:3': [832, 1248],
+    '9:16': [768, 1344],
+    '5:4': [1120, 896],
+    '4:3': [1195, 896],
+    '3:2': [1248, 832],
+    '16:9': [1344, 768],
+    '21:9': [1344, 576],
+  },
+  '2k': {
+    '1:1': [2048, 2048],
+    '4:5': [1638, 2048],
+    '3:4': [1536, 2048],
+    '2:3': [1365, 2048],
+    '9:16': [1152, 2048],
+    '5:4': [2048, 1638],
+    '4:3': [2048, 1536],
+    '3:2': [2048, 1365],
+    '16:9': [2048, 1152],
+    '21:9': [2048, 878],
+  },
+};
+
+const IMAGE_SETTING_LABELS = {
+  quality: { standard: 'Standard', high: 'High', ultra: 'Ultra' },
+  resolution: { '1k': '1K', '2k': '2K' },
+  batch: { '1': '1', '2': '2', '3': '3', '4': '4' },
+};
+
+function closeImageSettingMenus(exceptSetting = null) {
+  document.querySelectorAll('.image-setting-menu').forEach(menu => {
+    if (!exceptSetting || menu.dataset.settingMenu !== exceptSetting) menu.classList.add('hidden');
+  });
+}
+
+function updateImageSettingLabels() {
+  const quality = document.getElementById('image-quality-select')?.value || 'standard';
+  const resolution = document.getElementById('image-resolution-select')?.value || '1k';
+  const aspect = document.getElementById('image-aspect-select')?.value || '1:1';
+  const batch = document.getElementById('image-batch-select')?.value || '1';
+  const qLabel = document.getElementById('image-quality-label');
+  const rLabel = document.getElementById('image-resolution-label');
+  const aLabel = document.getElementById('image-aspect-label');
+  const bLabel = document.getElementById('image-batch-label');
+  if (qLabel) qLabel.textContent = IMAGE_SETTING_LABELS.quality[quality] || quality;
+  if (rLabel) rLabel.textContent = IMAGE_SETTING_LABELS.resolution[resolution] || resolution.toUpperCase();
+  if (aLabel) aLabel.textContent = aspect;
+  if (bLabel) bLabel.textContent = IMAGE_SETTING_LABELS.batch[batch] || batch;
+}
+
+function findClosestImageAspect(width, height) {
+  const ratio = width / height;
+  const aspects = Object.keys(IMAGE_SIZE_PRESETS['1k']);
+  let best = '1:1';
+  let bestDiff = Infinity;
+  aspects.forEach(aspect => {
+    const [aw, ah] = aspect.split(':').map(Number);
+    const diff = Math.abs((aw / ah) - ratio);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      best = aspect;
+    }
+  });
+  return best;
+}
+
+function syncImageQuickControls() {
+  const qualityEl = document.getElementById('image-quality-select');
+  const resolutionEl = document.getElementById('image-resolution-select');
+  const aspectEl = document.getElementById('image-aspect-select');
+  const batchEl = document.getElementById('image-batch-select');
+
+  const quality = qualityEl?.value || 'standard';
+  const resolution = resolutionEl?.value || '1k';
+  const aspect = aspectEl?.value || '1:1';
+  const batch = Math.max(1, Math.min(4, parseInt(batchEl?.value || '1', 10) || 1));
+  const [width, height] = IMAGE_SIZE_PRESETS[resolution]?.[aspect] || IMAGE_SIZE_PRESETS['1k']['1:1'];
+  const size = `${width}x${height}`;
+
+  const countEl = document.getElementById('image-count');
+  const widthEl = document.getElementById('image-width');
+  const heightEl = document.getElementById('image-height');
+  const sizeEl = document.getElementById('image-size-select');
+  const negEl = document.getElementById('image-neg-prompt');
+
+  if (batchEl) batchEl.value = String(batch);
+  if (countEl) countEl.value = String(batch);
+  if (widthEl) widthEl.value = String(width);
+  if (heightEl) heightEl.value = String(height);
+  if (sizeEl) sizeEl.value = size;
+  if (negEl) negEl.dataset.quality = quality;
+
+  updateImageSettingLabels();
+
+  document.querySelectorAll('#ratio-picker .ratio-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.size === size || btn.querySelector('span')?.textContent === aspect);
+  });
+
+  updateImageCostLabel();
+}
+
+function getImageQualityPrompt(quality) {
+  if (quality === 'high') return 'high quality, detailed, sharp focus';
+  if (quality === 'ultra') return 'ultra high quality, highly detailed, crisp details, professional lighting';
+  return '';
+}
+
+function renderImageReferencePreviews() {
+  const wrap = document.getElementById('image-reference-preview');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  State.imageReferenceUrls.forEach((url, index) => {
+    const item = document.createElement('div');
+    item.className = 'image-reference-thumb';
+    item.innerHTML = `
+      <img src="${url}" alt="Reference image ${index + 1}" />
+      <button type="button" aria-label="Remove reference image">×</button>
+    `;
+    item.querySelector('button').addEventListener('click', () => {
+      State.imageReferenceFiles.splice(index, 1);
+      State.imageReferenceUrls.splice(index, 1);
+      renderImageReferencePreviews();
+    });
+    wrap.appendChild(item);
+  });
+}
+
+let uploadProgressTimer = null;
+
+function showUploadProgress(label = 'Preparing your media') {
+  const overlay = document.getElementById('upload-progress-overlay');
+  const fill = document.getElementById('upload-progress-fill');
+  const sub = document.getElementById('upload-progress-sub');
+  if (!overlay || !fill) return;
+  if (sub) sub.textContent = label;
+  fill.style.width = '8%';
+  overlay.classList.remove('hidden');
+  let progress = 8;
+  if (uploadProgressTimer) clearInterval(uploadProgressTimer);
+  uploadProgressTimer = setInterval(() => {
+    progress = Math.min(92, progress + Math.max(2, (92 - progress) * 0.12));
+    fill.style.width = `${progress.toFixed(0)}%`;
+  }, 120);
+}
+
+function hideUploadProgress() {
+  const overlay = document.getElementById('upload-progress-overlay');
+  const fill = document.getElementById('upload-progress-fill');
+  if (uploadProgressTimer) { clearInterval(uploadProgressTimer); uploadProgressTimer = null; }
+  if (fill) fill.style.width = '100%';
+  setTimeout(() => {
+    if (overlay) overlay.classList.add('hidden');
+    if (fill) fill.style.width = '0%';
+  }, 180);
+}
+
+async function addImageReferenceFiles(files) {
+  const imageFiles = Array.from(files || []).filter(file => file.type.startsWith('image/'));
+  const remaining = Math.max(0, 10 - State.imageReferenceFiles.length);
+  const accepted = imageFiles.slice(0, remaining);
+  if (imageFiles.length > remaining) toast('You can upload up to 10 reference images.', 'info');
+  if (!accepted.length) return;
+
+  showUploadProgress(`Uploading ${accepted.length} reference image${accepted.length > 1 ? 's' : ''}`);
+  try {
+    const urls = await Promise.all(accepted.map(file => fileToDataURL(file)));
+    State.imageReferenceFiles.push(...accepted);
+    State.imageReferenceUrls.push(...urls);
+    renderImageReferencePreviews();
+  } finally {
+    hideUploadProgress();
+  }
+}
+
 /* ── Generation placeholder helpers ── */
 const GEN_MESSAGES = [
   ['Generating...', 'Raiko is working on it'],
   ['Processing...', 'This takes 1–3 minutes'],
   ['Almost there...', 'Applying final details'],
 ];
+
+function renderMediaDrawer(activePlaceholder = false, forceOpen = false) {
+  const drawer = document.getElementById('media-drawer');
+  const grid = document.getElementById('media-drawer-grid');
+  const filter = State.mediaFilter || 'all';
+  if (!grid || !drawer) return;
+  const shouldOpen = !!activePlaceholder || !!forceOpen || drawer.classList.contains('open');
+  drawer.classList.toggle('open', shouldOpen);
+  drawer.setAttribute('aria-hidden', String(!shouldOpen));
+  const all = loadMedia();
+  const filtered = filter === 'all' ? all : all.filter(m => m.type === filter);
+  const cards = [];
+
+  if (activePlaceholder) {
+    cards.push(`
+      <div class="media-drawer-card media-drawer-card--placeholder">
+        <div class="media-drawer-thumb media-drawer-thumb--placeholder">
+          <div class="media-drawer-glow"></div>
+          <div class="media-drawer-shine"></div>
+          <span>Generating</span>
+        </div>
+      </div>
+    `);
+  }
+
+  filtered.forEach(item => {
+    const thumb = item.type === 'video'
+      ? `<video src="${escapeHtml(item.url)}" muted preload="metadata"></video>`
+      : `<img src="${escapeHtml(item.url)}" alt="Media" loading="lazy" />`;
+    cards.push(`
+      <div class="media-drawer-card" data-id="${escapeHtml(item.id)}">
+        <div class="media-drawer-thumb">${thumb}</div>
+      </div>
+    `);
+  });
+
+  grid.innerHTML = cards.length ? cards.join('') : '<div class="media-drawer-empty">No media yet</div>';
+}
+
+function closeMediaDrawer() {
+  const drawer = document.getElementById('media-drawer');
+  if (drawer) {
+    drawer.classList.remove('open');
+    drawer.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function openMediaDrawer(activePlaceholder = false) {
+  renderMediaDrawer(activePlaceholder, true);
+}
 
 function showGenPlaceholder(containerId) {
   const container = document.getElementById(containerId);
@@ -1015,7 +1270,13 @@ function showGenPlaceholder(containerId) {
 
   let idx = 0;
   container.innerHTML = `
-    <div class="gen-placeholder-wrap">
+    <div class="gen-placeholder-wrap gen-placeholder-wrap--image">
+      <div class="gen-frame-shell">
+        <div class="gen-frame-dark">
+          <div class="gen-frame-glow"></div>
+          <div class="gen-frame-shine"></div>
+        </div>
+      </div>
       <div class="gen-placeholder-inner">
         <div class="gen-ring"></div>
         <p class="gen-placeholder-headline" id="gen-ph-headline">${GEN_MESSAGES[0][0]}</p>
@@ -1023,6 +1284,8 @@ function showGenPlaceholder(containerId) {
       </div>
     </div>
   `;
+
+  if (containerId === 'image-results') renderMediaDrawer(true);
 
   const timer = setInterval(() => {
     idx = (idx + 1) % GEN_MESSAGES.length;
@@ -1039,6 +1302,7 @@ function clearGenPlaceholder(containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
   if (container._genTimer) { clearInterval(container._genTimer); container._genTimer = null; }
+  if (containerId === 'image-results') closeMediaDrawer();
 }
 
 function resetPanelToEmpty(panelId) {
@@ -1052,7 +1316,7 @@ function renderImageResults(urls) {
   container.innerHTML = '';
 
   const grid = document.createElement('div');
-  grid.className = 'result-grid';
+  grid.className = 'result-grid result-grid--single';
 
   for (const url of urls) {
     const wrap = document.createElement('div');
@@ -1060,14 +1324,15 @@ function renderImageResults(urls) {
     wrap.innerHTML = `
       <img src="${url}" alt="Generated image" loading="lazy" />
       <div class="result-img-actions">
-        <button class="result-action-btn" onclick="window.open('${url}', '_blank')">Open</button>
-        <a class="result-action-btn" href="${url}" download="raiko_image.png">Download</a>
+        <a class="result-action-btn" href="${url}" download="raiko_image.png">Save</a>
+        <button class="result-action-btn" onclick="navigator.share ? navigator.share({ url: '${url}' }) : navigator.clipboard.writeText('${url}')">Share</button>
       </div>
     `;
     grid.appendChild(wrap);
   }
 
   container.appendChild(grid);
+  closeMediaDrawer();
 }
 
 async function generateImage() {
@@ -1080,18 +1345,24 @@ async function generateImage() {
   const width     = parseInt(document.getElementById('image-width').value) || 1024;
   const height    = parseInt(document.getElementById('image-height').value) || 1024;
   const negPrompt = document.getElementById('image-neg-prompt').value.trim();
+  const quality   = document.getElementById('image-quality-select')?.value || 'standard';
   const btn       = document.getElementById('btn-generate-image');
 
   btn.disabled = true;
   showGenPlaceholder('image-results');
 
-  const fullPrompt = State.stylePreset ? `${prompt}, ${State.stylePreset}` : prompt;
+  const promptParts = [prompt, State.stylePreset, getImageQualityPrompt(quality)].filter(Boolean);
+  const fullPrompt = promptParts.join(', ');
 
   try {
     const res = await API.ai.generateImage(model, fullPrompt, {
       negative_prompt: negPrompt,
       width, height,
       num_images: count,
+      extra: State.imageReferenceUrls.length ? {
+        image_urls: State.imageReferenceUrls,
+        reference_image_urls: State.imageReferenceUrls,
+      } : {},
     });
 
     clearGenPlaceholder('image-results');
@@ -1223,10 +1494,15 @@ function setupImageUpload(inputId, previewId, stateKey) {
   input.addEventListener('change', async () => {
     const file = input.files[0];
     if (!file) return;
-    const dataUrl = await fileToDataURL(file);
-    State[stateKey] = dataUrl;
-    preview.src = dataUrl;
-    preview.classList.remove('hidden');
+    showUploadProgress(`Uploading ${file.type.startsWith('video/') ? 'video' : 'image'}`);
+    try {
+      const dataUrl = await fileToDataURL(file);
+      State[stateKey] = dataUrl;
+      preview.src = dataUrl;
+      preview.classList.remove('hidden');
+    } finally {
+      hideUploadProgress();
+    }
   });
 }
 
@@ -1292,9 +1568,11 @@ async function runEditPanel() {
 function renderEditPanelResults(urls) {
   const zone = document.getElementById('edit-result-zone');
   const container = document.getElementById('edit-result-area');
+  const panel = document.getElementById('panel-edit');
   if (!container) return;
   container.innerHTML = '';
   if (zone) zone.classList.remove('hidden');
+  if (panel) panel.classList.add('has-result');
 
   for (const url of urls) {
     const wrap = document.createElement('div');
@@ -1472,6 +1750,8 @@ function loadMediaPanel() {
       deleteMediaItem(btn.dataset.delete);
     });
   });
+
+  renderMediaDrawer(document.getElementById('media-drawer')?.classList.contains('open'));
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1637,7 +1917,7 @@ function bindEvents() {
   document.getElementById('udrop-my-media')?.addEventListener('click', () => {
     userDropdown?.classList.add('hidden');
     userTrigger?.setAttribute('aria-expanded', 'false');
-    switchPanel('media');
+    openMediaDrawer(false);
   });
 
   // Dropdown — premium (opens credits modal)
@@ -1755,6 +2035,63 @@ function bindEvents() {
   document.getElementById('btn-generate-image')?.addEventListener('click', generateImage);
   document.getElementById('image-model')?.addEventListener('change', updateImageCostLabel);
   document.getElementById('image-count')?.addEventListener('change', updateImageCostLabel);
+  ['image-quality-select', 'image-resolution-select', 'image-aspect-select', 'image-batch-select'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', syncImageQuickControls);
+  });
+  document.querySelectorAll('.image-setting-trigger').forEach(trigger => {
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const setting = trigger.dataset.settingTrigger;
+      const menu = document.querySelector(`.image-setting-menu[data-setting-menu="${setting}"]`);
+      if (!menu) return;
+      const willOpen = menu.classList.contains('hidden');
+      closeImageSettingMenus(setting);
+      menu.classList.toggle('hidden', !willOpen);
+    });
+  });
+  document.querySelectorAll('.image-setting-menu').forEach(menu => {
+    menu.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-value]');
+      if (!btn) return;
+      const setting = menu.dataset.settingMenu;
+      const selectIdMap = {
+        quality: 'image-quality-select',
+        resolution: 'image-resolution-select',
+        aspect: 'image-aspect-select',
+        batch: 'image-batch-select',
+      };
+      const selectEl = document.getElementById(selectIdMap[setting]);
+      if (!selectEl) return;
+      selectEl.value = btn.dataset.value;
+      selectEl.dispatchEvent(new Event('change'));
+      closeImageSettingMenus();
+    });
+  });
+  document.addEventListener('click', () => closeImageSettingMenus());
+  syncImageQuickControls();
+  document.getElementById('media-drawer-filters')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-filter]');
+    if (!btn) return;
+    document.querySelectorAll('#media-drawer-filters button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    State.mediaFilter = btn.dataset.filter;
+    renderMediaDrawer(document.getElementById('media-drawer')?.classList.contains('open'));
+  });
+  document.getElementById('media-drawer-close')?.addEventListener('click', closeMediaDrawer);
+  document.getElementById('media-drawer-fullview')?.addEventListener('click', () => {
+    closeMediaDrawer();
+    switchPanel('media');
+  });
+  document.querySelectorAll('.footer-pricing-trigger').forEach(btn => {
+    btn.addEventListener('click', () => document.getElementById('btn-buy-credits')?.click());
+  });
+
+  const imageRefInput = document.getElementById('image-reference-input');
+  document.getElementById('img-reference-plus-btn')?.addEventListener('click', () => imageRefInput?.click());
+  imageRefInput?.addEventListener('change', async (e) => {
+    await addImageReferenceFiles(e.target.files);
+    e.target.value = '';
+  });
 
   // Image size select → update hidden width/height inputs
   document.getElementById('image-size-select')?.addEventListener('change', (e) => {
@@ -1765,6 +2102,10 @@ function bindEvents() {
     const hEl = document.getElementById('image-height');
     if (wEl) wEl.value = w;
     if (hEl) hEl.value = h;
+    const aspectEl = document.getElementById('image-aspect-select');
+    const resolutionEl = document.getElementById('image-resolution-select');
+    if (aspectEl) aspectEl.value = findClosestImageAspect(w, h);
+    if (resolutionEl) resolutionEl.value = Math.max(w, h) > 1536 ? '2k' : '1k';
   });
 
   // Image style select → update State.stylePreset
@@ -1820,6 +2161,11 @@ function bindEvents() {
     if (wEl) wEl.value = w;
     if (hEl) hEl.value = h;
     if (sizeEl) sizeEl.value = btn.dataset.size;
+    const aspectEl = document.getElementById('image-aspect-select');
+    const resolutionEl = document.getElementById('image-resolution-select');
+    const aspect = findClosestImageAspect(w, h);
+    if (aspectEl) aspectEl.value = aspect;
+    if (resolutionEl) resolutionEl.value = Math.max(w, h) > 1536 ? '2k' : '1k';
   });
 
   // Style chips → sync hidden select + State.stylePreset
@@ -1872,9 +2218,13 @@ function bindEvents() {
     const inner = document.getElementById('edit-upload-inner');
     const removeBtn = document.getElementById('edit-panel-remove-btn');
     const uploadCard = document.querySelector('.edit-upload-card');
+    const editBar = document.getElementById('edit-bar');
+    const panel = document.getElementById('panel-edit');
     if (inner) inner.style.display = 'none';
     if (removeBtn) removeBtn.classList.remove('hidden');
     if (uploadCard) uploadCard.classList.add('has-image');
+    if (editBar) editBar.classList.remove('hidden');
+    if (panel) panel.classList.add('has-source');
   });
 
   // Edit panel remove uploaded image (top-right X)
@@ -1890,6 +2240,8 @@ function bindEvents() {
     const uploadCard = document.querySelector('.edit-upload-card');
     const resultZone = document.getElementById('edit-result-zone');
     const resultArea = document.getElementById('edit-result-area');
+    const editBar = document.getElementById('edit-bar');
+    const panel = document.getElementById('panel-edit');
 
     if (input) input.value = '';
     if (preview) {
@@ -1901,6 +2253,8 @@ function bindEvents() {
     if (uploadCard) uploadCard.classList.remove('has-image');
     if (resultZone) resultZone.classList.add('hidden');
     if (resultArea) resultArea.innerHTML = '';
+    if (editBar) editBar.classList.add('hidden');
+    if (panel) panel.classList.remove('has-source', 'has-result');
   });
 
   // Edit panel generate button
@@ -2123,9 +2477,11 @@ function bindFileInput(inputId) {
   if (!input) return;
   input.addEventListener('change', (e) => {
     const newFiles = Array.from(e.target.files);
+    if (newFiles.length) showUploadProgress(`Uploading ${newFiles.length} file${newFiles.length > 1 ? 's' : ''}`);
     State.attachedFiles = [...State.attachedFiles, ...newFiles];
     renderAllFilePreviews();
     updateSendButtonsState();
+    if (newFiles.length) hideUploadProgress();
     e.target.value = ''; // reset so same file triggers change again
   });
 }
@@ -2139,6 +2495,14 @@ async function init() {
   setChatMode('chat');
   renderGp2Showcase();
   renderNanoBananaProShowcase();
+  renderSeedream45Showcase();
+
+  const featuredTrack = document.getElementById('dash-featured-track');
+  if (featuredTrack) {
+    featuredTrack.addEventListener('scroll', syncFeaturedStripNav, { passive: true });
+  }
+  window.addEventListener('resize', syncFeaturedStripNav);
+  setTimeout(syncFeaturedStripNav, 0);
 
   const authed = await checkAuth();
 

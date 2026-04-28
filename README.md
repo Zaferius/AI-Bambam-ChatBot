@@ -2,7 +2,7 @@
 
 This README is the **source of truth for the current product behavior** so the next AI agent can continue work safely.
 
-Last updated: **2026-04-27 (Explore lower showcase switched to Nano Banana Pro)**
+Last updated: **2026-04-28 (My Media avatar drawer + footer update)**
 
 ---
 
@@ -37,26 +37,34 @@ These were intentionally changed and should stay as-is unless explicitly request
 9. **Image Edit moved into Images panel** (Generate/Edit switch inside Images tab) — AND has a separate dedicated Edit panel in the navbar.
 10. **FaceSwap removed completely** (frontend + backend contracts).
 11. **Image & Video panels — new layout**:
-    - **Images panel**: Left sidebar layout with controls always visible. After generation canvas appears; on error canvas is hidden.
+    - **Images panel**: Dark hero-style landing state with centered mosaic preview art + compact bottom composer. Prompt field sits above a quick control row. Quick controls include Model, Quality, Resolution, Aspect Ratio, Batch Size, and Generate. After generation, a dark framed placeholder appears first, then the generated image is shown centered with **Save** and **Share** actions.
     - **Video panel**: Two-column layout — left sidebar (290px) with all controls + right main area with explainer before generation and canvas after.
-    - **Edit panel**: Canvas-top / controls-bottom layout — bounded upload card in source area, hover-reveal remove `✕` for uploaded image, compact bottom composer-style control box (not full-width), and no visible strength control.
-12. **Generation placeholder**: pressing Generate shows the canvas area with a dual-ring spinner and cycling text. Uses `showGenPlaceholder(containerId)` / `clearGenPlaceholder(containerId)`. Video panel uses `.has-result` class on `#panel-video` to toggle between explainer and canvas.
+    - **Edit panel**: Dark centered upload card in initial state. Only upload card is visible before source selection. After upload, a compact Image-style composer appears at the bottom. Uploaded preview is larger and centered; result zone still appears on generation.
+12. **Generation placeholder**: pressing Generate shows the canvas area with a dark framed placeholder, glow/shimmer loading effect, and cycling text. Uses `showGenPlaceholder(containerId)` / `clearGenPlaceholder(containerId)`. Video panel uses `.has-result` class on `#panel-video` to toggle between explainer and canvas.
 13. **My Media panel** (sidebar nav item `data-panel="media"`, panel id `panel-media`):
     - Shows all generated images and videos from localStorage (`raiko_media` key).
     - Filter tabs: All / Images / Videos.
     - Each card: thumbnail/video preview, type badge, prompt, date, model, Open / Save / Delete actions.
     - `saveMediaItem(type, url, prompt, model)` is called automatically after every successful image or video generation.
-14. **Video panel has two tabs** (tool picker `#video-tool-picker`):
+14. **My Media drawer**:
+    - `#media-drawer` is a right-side drawer, not a bottom drawer.
+    - Clicking **My Media** in the user avatar dropdown opens the drawer directly.
+    - Image generation still opens it automatically with a generation-in-progress placeholder.
+    - Drawer includes **All / Image / Video** filters, a placeholder card during active generation, a **Full View** button that opens the full My Media panel, and a close `✕` button.
+15. **Video panel has two tabs** (tool picker `#video-tool-picker`):
     - **Text to Video** (`vid-panel-text`): prompt → motion preset → model → duration → Generate.
     - **Image to Video** (`vid-panel-image`): upload image + prompt → model → duration → Generate.
-15. **Black & Yellow Brutalist Design** — see Section 3A. Do not regress.
-16. **All UI text is English** — no Turkish strings in user-facing output.
-17. **Navbar labels/actions update**:
+16. **Black & Yellow Brutalist Design** — see Section 3A. Do not regress.
+17. **All UI text is English** — no Turkish strings in user-facing output.
+18. **Navbar labels/actions update**:
     - `Dashboard` label renamed to `Explore`.
     - Right-side credit mini badge replaced with `PRO` CTA (same visual slot), opens pricing/credits modal.
-18. **Explore showcase data moved out of hardcoded HTML**:
+19. **Explore showcase data moved out of hardcoded HTML**:
     - GPT Image 2 showcase grid now renders from `frontend/explore-data.js` via runtime renderer in `frontend/app.js`.
     - Image paths now use `frontend/dashboard-showcase/gpt-image-2-explore/...`.
+20. **Footer added**:
+    - The app shell now ends with a black footer inspired by the provided reference image.
+    - Footer uses the Raiko logo large on the left and grouped Products / Legal Links / Company links on the right.
 
 If you reintroduce gradients, soft shadows, pill-shaped buttons, lavender/purple colors, or standalone info "ⓘ" icons, you are regressing the product.
 
@@ -69,7 +77,7 @@ Main UI file: `frontend/index.html`
 ### Top Navbar
 
 - Black background (`#0A0A0A`), 2px yellow bottom border
-- **Left section**: Raiko logo → vertical divider → nav links: **Explore | Chats | Edit | Image | Video**
+- **Left section**: Raiko logo → vertical divider → nav links: **Explore | Image | Video | Edit | Chats**
 - **Right section**: **PRO** CTA button (opens pricing/credits modal) → User avatar + name
 - Active nav link: yellow text (`#FFE400`), bold
 - **Edit nav button** — hovering opens a mega-dropdown with 7 edit models in 2 columns:
@@ -92,11 +100,12 @@ Main UI file: `frontend/index.html`
 Full-width showcase/discovery page — scrollable, no fixed columns. Four sections stacked vertically:
 
 **1. Featured Showcase Strip** (`.dash-featured-strip`):
-- Horizontal row of 4 large cards, horizontal scroll
+- Horizontal row of 4 oversized cards, horizontal scroll, left/right fade masks, and explicit `<` / `>` scroll buttons.
 - Card 1 (GPT Image 2) → `selectImageModel('openai/gpt-image-2')` + `switchPanel('image')`
-- Card 2 (Kling 3.0 / Video) → `selectVideoModel('fal-ai/kling-video/v1/pro/text-to-video','text')` + `switchPanel('video')`
+- Card 2 (Seedance 2.0 / Video) → `selectVideoModel('fal-ai/bytedance/seedance-2.0/text-to-video','text')` + `switchPanel('video')`
 - Card 3 (Nano Banana Pro) → `selectImageModel('fal-ai/nano-banana-pro')` + `switchPanel('image')`
-- Card 4 (Seedream 5) → `selectImageModel('fal-ai/bytedance/seedream/v5/lite/text-to-image')` + `switchPanel('image')`
+- Card 4 (Seedream 4.5) → `selectImageModel('fal-ai/bytedance/seedream/v4.5/text-to-image')` + `switchPanel('image')`
+- Card visuals now use top-showcase assets under `frontend/dashboard-showcase/top-showcase/...`
 
 **2. Mid Row** (`.dash-mid-row`): two-column layout:
 - **Left: Feature Tiles Grid** (3×2 CSS grid):
@@ -108,9 +117,10 @@ Full-width showcase/discovery page — scrollable, no fixed columns. Four sectio
   - AI Chat (`id="qc-new-chat"`) → `switchPanel('chat')` + `startNewChat()`
 - **Right: Recent Chats sidebar** (`.dash-recent-wrap`, 260px) — `#dash-chat-list`
 
-**3 & 4. Showcase Sections** (`.dash-showcase`):
+**3, 4 & 5. Showcase Sections** (`.dash-showcase`):
 - Showcase 1: "Meet GPT Image 2" → real images from `dashboard-showcase/gpt-image-2-explore/`, custom `.gp2-grid` two-row layout rendered from external data (`frontend/explore-data.js`) into `#gp2-grid`; all images are `.gallery-item` (open Gallery Preview Modal on click)
 - Showcase 2: "Nano Banana Pro Image Generator" → real images from `dashboard-showcase/nano-banana-pro-explore/`, custom `.gp2-grid` two-row layout rendered from external data (`frontend/explore-data.js`) into `#nbp-grid`; every gallery item includes its prompt and uses Nano Banana Pro when "Use This Prompt" is clicked
+- Showcase 3: "Seedream 4.5" → real images from `dashboard-showcase/seedream-explore/`, rendered into `#sd45-grid`
 
 **Gallery Preview Modal** (`#gallery-preview-overlay`, `.gp-overlay`):
 - Opened by `openGalleryPreview(el)` — reads `data-src`, `data-prompt`, `data-res`, `data-model`
@@ -123,14 +133,23 @@ Two-column layout: left sub-sidebar (220px) + right chat area.
 
 ### Images Panel
 
-**Always-visible controls sidebar** (`img-controls-sidebar`), canvas area above.
-
-Tool picker: `Generate` | `Edit`
+**Dark hero landing layout**:
+- Center hero art + headline before results
+- Compact bottom composer (`img-controls-sidebar`) on dark surface
+- Tool picker is hidden in landing generate state and still supports `Generate` / `Edit`
 
 **Generate tab:**
-- Model picker dropdown (`#img-model-picker-wrap`) — 11 models in 4 groups: Flux / Nano Banana / Seedream / OpenAI
-- Prompt textarea, Aspect Ratio picker (1:1 / 9:16 / 16:9), Style chips (None / Photo / Anime / Digital Art / Oil Paint / Watercolor)
-- Generate button (yellow) + credit cost label
+- Default model: `fal-ai/nano-banana-pro`
+- Prompt field supports up to **10 reference images** via left `+` upload button
+- Uploads show a global upload progress overlay with spinner + progress bar
+- Quick control row includes:
+  - **Model** custom dropdown
+  - **Quality**: Standard / High / Ultra
+  - **Resolution**: 1K / 2K
+  - **Aspect Ratio**: 1:1 / 4:5 / 3:4 / 2:3 / 9:16 / 5:4 / 4:3 / 3:2 / 16:9 / 21:9
+  - **Batch Size**: 1 / 2 / 3 / 4
+- Batch size is fully wired: request uses `num_images`, frontend cost label multiplies by batch count, backend credit deduction multiplies by `num_images`
+- Result actions are **Save** and **Share**
 
 **Edit tab (inside Images panel — legacy):**
 - Upload source image, edit prompt + strength slider, Edit button
@@ -140,12 +159,12 @@ Tool picker: `Generate` | `Edit`
 
 **Dedicated panel accessed via "Edit" navbar item.**
 
-**Layout**: Canvas fills available height; bounded upload card in source area; compact composer-style control box pinned at bottom.
+**Layout**: Dark centered upload card initially; after upload, compact composer-style control box pinned at bottom.
 
 **Canvas area** (`.edit-canvas`, flex row):
-- **Left: Source/Upload zone** (`.edit-source-zone`, `flex: 1`): bounded upload card (`.edit-upload-card`) inside the zone (not full-canvas), dotted upload placeholder (`.edit-source-placeholder`), uploaded preview fills the card, and hover-reveal remove button (`#edit-panel-remove-btn`) clears source + preview/result state.
-- **Right: Result zone** (`.edit-result-zone`, `flex: 1`): hidden until generation completes. Shows "RESULT" tag at top + generated image. Border separating source and result: `2px solid var(--black)`.
-- When result is visible, both zones are 50/50 side by side.
+- **Initial state**: only the centered upload card is shown.
+- **Upload state**: uploaded preview becomes larger and centered; outer card keeps black outline + yellow offset shadow.
+- **Result state**: right result zone appears and panel enters `.has-result`.
 
 **Bottom controls** (`.edit-bar` + `.edit-bar-inner`):
 - **Model picker** (`.edit-bar-model`, 210px) — dropdown opens **upward** (`.edit-model-drop-up`, `bottom: calc(100% + 4px)`) to avoid clipping. 7 models in groups:
@@ -156,6 +175,7 @@ Tool picker: `Generate` | `Edit`
   - Tools: BG Remove (BRIA) 3⚡
 - **Middle** (`.edit-bar-middle`, `flex: 1`): prompt textarea only. Hidden entirely when BG Remove model is selected.
 - **Right** (`.edit-bar-right`): Edit button + status spinner
+- Hidden by default; revealed only after source upload.
 
 **State:**
 - `State.currentEditModel` — default `'fal-ai/nano-banana-2/edit'`
@@ -229,6 +249,8 @@ Main logic: `frontend/app.js` | Explore showcase data: `frontend/explore-data.js
 | `currentImageTool` | `'generate'` | `'generate'` \| `'edit'` |
 | `currentVideoTool` | `'text'` | `'text'` \| `'image'` |
 | `currentEditModel` | `'fal-ai/nano-banana-2/edit'` | Edit panel model |
+| `imageReferenceFiles` | `[]` | Image panel reference upload file list |
+| `imageReferenceUrls` | `[]` | Base64 data URLs for image reference uploads |
 | `editSourceUrl` | `null` | Image panel Edit tab source |
 | `editPanelSourceUrl` | `null` | Dedicated Edit panel source |
 | `i2vSourceUrl` | `null` | Image-to-video source |
@@ -246,6 +268,7 @@ Main logic: `frontend/app.js` | Explore showcase data: `frontend/explore-data.js
 - `runEditPanel()` → `API.ai.editImage(model, prompt, imageUrl, strength)` → `renderEditPanelResults()`
 - `renderEditPanelResults(urls)` — unhides `#edit-result-zone`, fills `#edit-result-area`
 - `generateImage()` → `API.ai.generateImage()` → `renderImageResults()` + `saveMediaItem()`
+- `renderMediaDrawer(activePlaceholder, forceOpen)` / `openMediaDrawer(activePlaceholder)` — controls the right-side My Media drawer opened from the avatar dropdown or during image generation
 - `runEditImage()` → `API.ai.editImage()` (image panel Edit tab, legacy)
 - `generateVideo()` → `API.ai.generateVideo()` → `saveMediaItem()`
 - `generateVideoFromImage()` → `API.ai.generateVideoFromImage()` → `saveMediaItem()`
