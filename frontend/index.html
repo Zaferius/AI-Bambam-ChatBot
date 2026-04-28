@@ -47,6 +47,7 @@
     <!-- Nav Links -->
     <div class="navbar-nav" id="sidebar-nav">
       <button class="nav-item active" data-panel="dashboard" id="nav-dashboard">Explore</button>
+      <button class="nav-item" data-panel="content" id="nav-content">Content Machine</button>
 
       <!-- Image mega-nav -->
       <div class="nav-mega-wrap">
@@ -351,7 +352,6 @@
           class="dash-featured-prev"
           id="dash-featured-prev"
           aria-label="Scroll featured showcase left"
-          onclick="this.closest('.dash-featured-strip').querySelector('.dash-featured-track').scrollBy({ left: -700, behavior: 'smooth' });"
         >&lt;</button>
         <div class="dash-featured-fade-right" id="dash-featured-fade-right" aria-hidden="true"></div>
         <button
@@ -359,7 +359,6 @@
           class="dash-featured-next"
           id="dash-featured-next"
           aria-label="Scroll featured showcase right"
-          onclick="this.closest('.dash-featured-strip').querySelector('.dash-featured-track').scrollBy({ left: 700, behavior: 'smooth' });"
         >&gt;</button>
       </div>
 
@@ -493,6 +492,131 @@
         </nav>
       </footer>
 
+    </section>
+
+    <!-- ══ PANEL: CONTENT MACHINE ══════════════════════════════════════ -->
+    <section class="panel" id="panel-content">
+      <div class="ocm-shell">
+        <div class="ocm-layout">
+          <aside class="ocm-controls">
+            <div class="ocm-tabs" id="ocm-tabs" role="tablist" aria-label="Content Machine workflow">
+              <button class="active" type="button" data-ocm-tab="compose">Compose</button>
+              <button type="button" data-ocm-tab="outputs">Outputs</button>
+              <button type="button" data-ocm-tab="memory">Memory</button>
+            </div>
+
+            <div class="ocm-tab-panel active" data-ocm-panel="compose">
+              <div class="ocm-control-card open" data-ocm-accordion>
+                <button class="ocm-accordion-head" type="button"><span>01</span><strong>Creative Brief</strong><em>Platform + topic</em></button>
+                <div class="ocm-accordion-body">
+                  <label class="ocm-field"><span>Topic</span><textarea id="ocm-topic" rows="5" placeholder="Example: launch campaign for a premium AI productivity app"></textarea></label>
+                </div>
+              </div>
+
+              <div class="ocm-control-card open" data-ocm-accordion>
+                <button class="ocm-accordion-head" type="button"><span>02</span><strong>Brand Style</strong><em>Style + tone</em></button>
+                <div class="ocm-accordion-body">
+                  <label class="ocm-field"><span>Style</span><select id="ocm-style"><option>Cinematic</option><option>Minimal</option><option>Anime</option><option>Dark</option><option>Product Showcase</option><option>Photorealistic</option></select></label>
+                  <label class="ocm-field"><span>Tone</span><select id="ocm-tone"><option>Viral</option><option>Funny</option><option>Emotional</option><option>Motivational</option><option>Educational</option></select></label>
+                </div>
+              </div>
+            </div>
+
+            <div class="ocm-tab-panel" data-ocm-panel="outputs">
+              <div class="ocm-control-card open" data-ocm-accordion>
+                <button class="ocm-accordion-head" type="button"><span>03</span><strong>Platforms</strong><em>Where to publish</em></button>
+                <div class="ocm-accordion-body">
+                  <div class="ocm-field"><span>Platforms</span>
+                    <div class="ocm-platform-grid" id="ocm-platform-grid">
+                      <label><input type="checkbox" name="ocm-platform" value="Instagram" checked /><strong>Instagram</strong><small>Feed + Reels</small></label>
+                      <label><input type="checkbox" name="ocm-platform" value="TikTok" /><strong>TikTok</strong><small>For You velocity</small></label>
+                      <label><input type="checkbox" name="ocm-platform" value="YouTube Shorts" /><strong>YouTube Shorts</strong><small>Retention-first</small></label>
+                      <label><input type="checkbox" name="ocm-platform" value="Twitter" /><strong>Twitter</strong><small>Conversation post</small></label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="ocm-control-card open" data-ocm-accordion>
+                <button class="ocm-accordion-head" type="button"><span>04</span><strong>Output Mix</strong><em>Assets to create</em></button>
+                <div class="ocm-accordion-body">
+                  <div class="ocm-check-grid">
+                    <label><input type="checkbox" id="ocm-output-image" checked /><span>Image</span><small>AI generated visual</small></label>
+                    <label><input type="checkbox" id="ocm-output-video" checked /><span>Video</span><small>AI generated motion</small></label>
+                    <label><input type="checkbox" id="ocm-output-caption" checked /><span>Caption</span><small>Hook + body + CTA</small></label>
+                    <label><input type="checkbox" id="ocm-output-hashtags" checked /><span>Hashtags</span><small>SEO + platform</small></label>
+                  </div>
+                  <label class="ocm-field"><span>Variations per platform</span><select id="ocm-variations"><option value="1" selected>1 content pack</option><option value="2">2 content packs</option><option value="3">3 content packs</option><option value="4">4 content packs</option><option value="5">5 content packs</option></select></label>
+                </div>
+              </div>
+            </div>
+
+            <div class="ocm-tab-panel" data-ocm-panel="memory">
+              <div class="ocm-memory-card">
+                <span class="ocm-kicker">MEMORY ENABLED</span>
+                <h3>Raiko remembers this setup.</h3>
+                <p>Your platform, style, tone, outputs, and variation count are saved locally and also sent to the backend preference memory for future generations.</p>
+                <div class="ocm-memory-list">
+                  <span>Auto reuse preferences</span>
+                  <span>Remix from any pack</span>
+                  <span>Consistent creator style</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ocm-generate-dock">
+              <div class="ocm-cost-preview"><span>Estimated total</span><strong id="ocm-cost-estimate">0⚡</strong></div>
+              <button class="ocm-generate-btn" id="btn-generate-content-pack" type="button"><span>Generate Content Pack</span><strong>↵</strong></button>
+              <div class="gen-status hidden" id="ocm-status"><div class="spinner"></div><span>Building cohesive packs…</span></div>
+            </div>
+          </aside>
+
+          <section class="ocm-results">
+            <div class="ocm-video-explainer" id="ocm-video-explainer">
+              <div class="ocm-video-hero">
+                <div>
+                  <h2 class="ocm-video-title">MAKE CONTENT IN ONE CLICK</h2>
+                  <p class="ocm-video-sub">AI image · AI video · Captions · Hashtags · Multi-platform packs</p>
+                </div>
+                <button class="ocm-secondary-btn" id="btn-copy-content-json" type="button">Copy JSON</button>
+              </div>
+
+              <div class="ocm-video-steps">
+                <div class="ocm-video-step">
+                  <div class="ocm-video-step-thumb"><span>✍</span><em>Write topic<br>and style</em></div>
+                  <div class="ocm-video-step-num">01</div>
+                  <h3>WRITE YOUR BRIEF</h3>
+                  <p>Describe the content idea and choose a style plus tone.</p>
+                </div>
+                <div class="ocm-video-step">
+                  <div class="ocm-video-step-thumb"><span>▦</span><em>Select platforms<br>and outputs</em></div>
+                  <div class="ocm-video-step-num">02</div>
+                  <h3>CHOOSE OUTPUTS</h3>
+                  <p>Pick platforms, asset types, and how many packs to create.</p>
+                </div>
+                <div class="ocm-video-step">
+                  <div class="ocm-video-step-thumb"><span>⚡</span><em>Your packs will<br>appear here</em></div>
+                  <div class="ocm-video-step-num">03</div>
+                  <h3>GET CONTENT PACKS</h3>
+                  <p>Generate complete ready-to-post packs in a single click.</p>
+                </div>
+              </div>
+
+              <div class="ocm-video-examples-section">
+                <div class="ocm-video-examples-label">Example Pack Types</div>
+                <div class="ocm-video-examples-grid">
+                  <div class="ocm-video-example-card"><div class="ocm-vec-thumb"><span>📸</span></div><div><strong>Image</strong><small>Prompt + asset</small></div></div>
+                  <div class="ocm-video-example-card"><div class="ocm-vec-thumb"><span>🎬</span></div><div><strong>Video</strong><small>Motion prompt</small></div></div>
+                  <div class="ocm-video-example-card"><div class="ocm-vec-thumb"><span>✎</span></div><div><strong>Caption</strong><small>Hook + CTA</small></div></div>
+                  <div class="ocm-video-example-card"><div class="ocm-vec-thumb"><span>#</span></div><div><strong>Hashtags</strong><small>SEO + trend</small></div></div>
+                </div>
+              </div>
+            </div>
+            <div class="ocm-empty hidden" id="ocm-empty"></div>
+            <div class="ocm-pack-grid" id="ocm-pack-grid"></div>
+          </section>
+        </div>
+      </div>
     </section>
 
     <section class="media-drawer" id="media-drawer" aria-label="My Media drawer" aria-hidden="true">

@@ -29,6 +29,8 @@ const State = {
   currentEditModel: 'fal-ai/nano-banana-2/edit',
   editPanelSourceUrl: null,
   mediaFilter: 'all',
+  contentPacks: [],
+  lastContentPayload: null,
   isGuest: true,
   // active input context: 'hero' | 'sticky'
   activeInput: 'hero',
@@ -99,6 +101,7 @@ function setChatMode(mode) {
 }
 
 function escapeHtml(str) {
+  str = String(str ?? '');
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -150,13 +153,45 @@ function syncFeaturedStripNav() {
   if (!track || !prevBtn || !nextBtn || !leftFade || !rightFade) return;
 
   const maxScrollLeft = Math.max(0, track.scrollWidth - track.clientWidth);
-  const atStart = track.scrollLeft <= 2;
-  const atEnd = track.scrollLeft >= (maxScrollLeft - 2);
+  const canScroll = maxScrollLeft > 2;
+  const atStart = !canScroll || track.scrollLeft <= 2;
+  const atEnd = !canScroll || track.scrollLeft >= (maxScrollLeft - 2);
 
   prevBtn.classList.toggle('is-hidden', atStart);
   leftFade.classList.toggle('is-hidden', atStart);
   nextBtn.classList.toggle('is-hidden', atEnd);
   rightFade.classList.toggle('is-hidden', atEnd);
+}
+
+function scrollFeaturedStrip(direction) {
+  const track = document.getElementById('dash-featured-track');
+  if (!track) return;
+
+  const firstCard = track.querySelector('.dash-feat-card');
+  const gap = parseFloat(getComputedStyle(track).gap) || 12;
+  const cardStep = firstCard ? firstCard.getBoundingClientRect().width + gap : 700;
+
+  track.scrollBy({
+    left: direction * cardStep,
+    behavior: 'smooth',
+  });
+
+  setTimeout(syncFeaturedStripNav, 260);
+}
+
+function initFeaturedStripNav() {
+  const featuredTrack = document.getElementById('dash-featured-track');
+  const prevBtn = document.getElementById('dash-featured-prev');
+  const nextBtn = document.getElementById('dash-featured-next');
+  if (!featuredTrack || !prevBtn || !nextBtn) return;
+
+  featuredTrack.addEventListener('scroll', syncFeaturedStripNav, { passive: true });
+  prevBtn.addEventListener('click', () => scrollFeaturedStrip(-1));
+  nextBtn.addEventListener('click', () => scrollFeaturedStrip(1));
+  window.addEventListener('resize', syncFeaturedStripNav);
+  window.addEventListener('load', syncFeaturedStripNav);
+  requestAnimationFrame(syncFeaturedStripNav);
+  setTimeout(syncFeaturedStripNav, 250);
 }
 
 function renderExploreShowcaseGrid(grid, rows, fallbackModel) {
@@ -268,16 +303,90 @@ function toggleVoiceInput() {
    CREDITS
 ══════════════════════════════════════════════════════════ */
 function updateCreditsUI(balance) {
-  State.credits = balance;
+  const previous = Number(State.credits || 0);
+  const next = Number(balance || 0);
+  State.credits = next;
 
   const dropVal = document.getElementById('udrop-credits-val');
-  if (dropVal) dropVal.textContent = balance.toFixed(0);
+  if (dropVal) animateCreditValue(dropVal, previous, next);
+  if (Math.round(previous) !== Math.round(next)) showCreditSlotOverlay(previous, next);
 
   const fill = document.getElementById('udrop-credits-fill');
   if (fill) {
-    const max = Math.max(State.maxCredits || 20, balance, 20);
-    fill.style.width = Math.min(100, (balance / max) * 100).toFixed(1) + '%';
+    const max = Math.max(State.maxCredits || 20, next, 20);
+    fill.style.width = Math.min(100, (next / max) * 100).toFixed(1) + '%';
   }
+}
+
+function animateCreditValue(el, from, to) {
+  const start = Math.round(Number.isFinite(from) ? from : to);
+  const end = Math.round(Number.isFinite(to) ? to : 0);
+  if (el.dataset.creditAnimating === '1') {
+    cancelAnimationFrame(Number(el.dataset.creditRaf || 0));
+  }
+  if (start === end && el.textContent) {
+    el.textContent = String(end);
+    return;
+  }
+
+  const duration = 850;
+  const startTime = performance.now();
+  el.dataset.creditAnimating = '1';
+  el.classList.add('credit-slot-rolling');
+
+  const tick = (now) => {
+    const progress = Math.min(1, (now - startTime) / duration);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const value = Math.round(start + (end - start) * eased);
+    const jitter = progress < 0.88 ? Math.floor(Math.random() * 10) : 0;
+    el.textContent = String(progress < 0.88 ? Math.max(0, value + jitter) : value);
+    if (progress < 1) {
+      el.dataset.creditRaf = String(requestAnimationFrame(tick));
+    } else {
+      el.textContent = String(end);
+      el.dataset.creditAnimating = '0';
+      el.classList.remove('credit-slot-rolling');
+      el.classList.add('credit-slot-settle');
+      setTimeout(() => el.classList.remove('credit-slot-settle'), 260);
+    }
+  };
+
+  el.dataset.creditRaf = String(requestAnimationFrame(tick));
+}
+
+function showCreditSlotOverlay(from, to) {
+  let overlay = document.getElementById('credit-slot-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'credit-slot-overlay';
+    overlay.className = 'credit-slot-overlay hidden';
+    overlay.innerHTML = `
+      <span class="credit-slot-overlay-label">CREDITS</span>
+      <strong id="credit-slot-overlay-value">0</strong>
+      <span class="credit-slot-overlay-delta" id="credit-slot-overlay-delta"></span>
+    `;
+    document.body.appendChild(overlay);
+  }
+
+  const valueEl = document.getElementById('credit-slot-overlay-value');
+  const deltaEl = document.getElementById('credit-slot-overlay-delta');
+  const delta = Math.round(to - from);
+  if (deltaEl) {
+    deltaEl.textContent = delta > 0 ? `+${delta}⚡` : `${delta}⚡`;
+    deltaEl.classList.toggle('is-positive', delta > 0);
+    deltaEl.classList.toggle('is-negative', delta < 0);
+  }
+
+  overlay.classList.remove('hidden', 'credit-slot-overlay-hide');
+  overlay.classList.add('credit-slot-overlay-show');
+  if (valueEl) animateCreditValue(valueEl, from, to);
+
+  clearTimeout(showCreditSlotOverlay.hideTimer);
+  showCreditSlotOverlay.hideTimer = setTimeout(() => {
+    overlay.classList.remove('credit-slot-overlay-show');
+    overlay.classList.add('credit-slot-overlay-hide');
+    setTimeout(() => overlay.classList.add('hidden'), 260);
+  }, 1400);
 }
 
 async function refreshCredits() {
@@ -1411,6 +1520,227 @@ function updateI2VCostLabel() {
   if (lbl) lbl.textContent = `${cost}⚡`;
 }
 
+/* ══════════════════════════════════════════════════════════
+   ONE CLICK CONTENT MACHINE
+══════════════════════════════════════════════════════════ */
+const CONTENT_PREF_KEY = 'raiko_content_machine_prefs';
+
+function loadContentMachinePrefs() {
+  try {
+    const prefs = JSON.parse(localStorage.getItem(CONTENT_PREF_KEY) || '{}');
+    const map = {
+      style: 'ocm-style',
+      tone: 'ocm-tone',
+      variations: 'ocm-variations',
+    };
+    Object.entries(map).forEach(([key, id]) => {
+      const el = document.getElementById(id);
+      if (el && prefs[key]) el.value = prefs[key];
+    });
+    const savedPlatforms = prefs.platforms || (prefs.platform ? [prefs.platform] : null);
+    if (savedPlatforms?.length) {
+      document.querySelectorAll('input[name="ocm-platform"]').forEach(input => {
+        input.checked = savedPlatforms.includes(input.value);
+      });
+    }
+    if (prefs.output_types) {
+      document.getElementById('ocm-output-image').checked = !!prefs.output_types.image;
+      document.getElementById('ocm-output-video').checked = !!prefs.output_types.video;
+      document.getElementById('ocm-output-caption').checked = !!prefs.output_types.caption;
+      document.getElementById('ocm-output-hashtags').checked = !!prefs.output_types.hashtags;
+    }
+  } catch {}
+  updateContentCostEstimate();
+}
+
+function getSelectedContentPlatforms() {
+  const platforms = Array.from(document.querySelectorAll('input[name="ocm-platform"]:checked')).map(input => input.value);
+  return platforms.length ? platforms : ['Instagram'];
+}
+
+function switchContentMachineTab(tabId) {
+  const next = tabId || 'compose';
+  document.querySelectorAll('[data-ocm-tab]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.ocmTab === next);
+  });
+  document.querySelectorAll('[data-ocm-panel]').forEach(panel => {
+    panel.classList.toggle('active', panel.dataset.ocmPanel === next);
+  });
+}
+
+function initContentMachineUI() {
+  document.getElementById('ocm-tabs')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-ocm-tab]');
+    if (!btn) return;
+    switchContentMachineTab(btn.dataset.ocmTab);
+  });
+
+  document.querySelectorAll('[data-ocm-accordion] .ocm-accordion-head').forEach(head => {
+    head.addEventListener('click', () => {
+      const card = head.closest('[data-ocm-accordion]');
+      card?.classList.toggle('open');
+    });
+  });
+
+  document.querySelectorAll('input[name="ocm-platform"], #ocm-output-image, #ocm-output-video, #ocm-output-caption, #ocm-output-hashtags, #ocm-variations')
+    .forEach(el => el.addEventListener('change', updateContentCostEstimate));
+}
+
+function buildContentMachinePayload(remixPack = null) {
+  const topic = document.getElementById('ocm-topic')?.value.trim() || '';
+  return {
+    platform: getSelectedContentPlatforms()[0] || 'Instagram',
+    platforms: getSelectedContentPlatforms(),
+    style: document.getElementById('ocm-style')?.value || 'Cinematic',
+    tone: document.getElementById('ocm-tone')?.value || 'Viral',
+    topic,
+    output_types: {
+      image: !!document.getElementById('ocm-output-image')?.checked,
+      video: !!document.getElementById('ocm-output-video')?.checked,
+      caption: !!document.getElementById('ocm-output-caption')?.checked,
+      hashtags: !!document.getElementById('ocm-output-hashtags')?.checked,
+    },
+    variations: parseInt(document.getElementById('ocm-variations')?.value || '3', 10),
+    remix_of: remixPack?.id || null,
+    remix_instruction: remixPack ? `Create a slight variation of pack ${remixPack.id} with a fresh hook, composition, and CTA while keeping the same brand style.` : null,
+    use_memory: true,
+    save_preferences: true,
+  };
+}
+
+function persistContentMachinePrefs(payload) {
+  localStorage.setItem(CONTENT_PREF_KEY, JSON.stringify({
+    platform: payload.platform,
+    platforms: payload.platforms,
+    style: payload.style,
+    tone: payload.tone,
+    variations: payload.variations,
+    output_types: payload.output_types,
+  }));
+}
+
+function estimateContentPackCredits(payload = buildContentMachinePayload()) {
+  const perPack =
+    (payload.output_types.image ? 6 : 0) +
+    (payload.output_types.video ? 12 : 0) +
+    ((payload.output_types.caption || payload.output_types.hashtags) ? 0.01 : 0);
+  return Math.round(perPack * payload.variations * Math.max(payload.platforms.length, 1) * 100) / 100;
+}
+
+function updateContentCostEstimate() {
+  const el = document.getElementById('ocm-cost-estimate');
+  if (!el) return;
+  const payload = buildContentMachinePayload();
+  el.textContent = `${estimateContentPackCredits(payload)}⚡`;
+}
+
+async function generateContentPack(remixPack = null) {
+  if (!requireAuth()) return;
+  switchContentMachineTab('compose');
+  const payload = buildContentMachinePayload(remixPack);
+  if (!payload.topic) { toast('Please enter a topic', 'error'); return; }
+  if (!payload.platforms.length) { toast('Select at least one platform', 'error'); return; }
+  if (!Object.values(payload.output_types).some(Boolean)) { toast('Select at least one output type', 'error'); return; }
+
+  const btn = document.getElementById('btn-generate-content-pack');
+  const status = document.getElementById('ocm-status');
+  if (btn) btn.disabled = true;
+  status?.classList.remove('hidden');
+  persistContentMachinePrefs(payload);
+  State.lastContentPayload = payload;
+
+  try {
+    const res = await generateContentPackRequest(payload);
+    State.contentPacks = res.packs || [];
+    renderContentPacks(State.contentPacks);
+    updateCreditsUI(res.credits_remaining);
+    toast(`Content packs ready! ⚡ ${res.credits_used} used`, 'success');
+  } catch (err) {
+    toast(err.message || 'Content pack generation failed', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+    status?.classList.add('hidden');
+  }
+}
+
+async function generateContentPackRequest(payload) {
+  if (API.contentPacks?.generate) {
+    return API.contentPacks.generate(payload);
+  }
+  return apiFetch('/content-packs/generate', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+function renderContentPacks(packs) {
+  const empty = document.getElementById('ocm-empty');
+  const grid = document.getElementById('ocm-pack-grid');
+  const explainer = document.getElementById('ocm-video-explainer');
+  if (!grid) return;
+  grid.innerHTML = '';
+  if (empty) empty.classList.toggle('hidden', packs.length > 0);
+  if (explainer) explainer.classList.toggle('hidden', packs.length > 0);
+
+  packs.forEach(pack => {
+    const card = document.createElement('article');
+    card.className = 'ocm-pack-card';
+    const hashtags = Array.isArray(pack.hashtags) ? pack.hashtags : [];
+    card.innerHTML = `
+      <div class="ocm-pack-top"><span>Pack ${escapeHtml(pack.id)}</span><button type="button" data-remix="${escapeHtml(pack.id)}">Remix</button></div>
+      ${pack.platform ? `<div class="ocm-platform-badge">${escapeHtml(pack.platform)}</div>` : ''}
+      ${pack.image_url ? `<img class="ocm-pack-media" src="${pack.image_url}" alt="Generated image for pack ${escapeHtml(pack.id)}" />` : ''}
+      ${pack.video_url ? `<video class="ocm-pack-media" src="${pack.video_url}" controls loop></video>` : ''}
+      <div class="ocm-pack-tabs" role="tablist">
+        <button class="active" type="button" data-pack-tab="caption">Caption</button>
+        <button type="button" data-pack-tab="prompts">Prompts</button>
+        <button type="button" data-pack-tab="json">JSON</button>
+      </div>
+      <div class="ocm-pack-panel active" data-pack-panel="caption">
+        <div class="ocm-pack-block"><strong>Caption</strong><p>${escapeHtml(pack.caption || '')}</p><button type="button" data-copy="caption">Copy caption</button></div>
+        <div class="ocm-pack-block"><strong>Hashtags</strong><p>${escapeHtml(hashtags.join(' '))}</p><button type="button" data-copy="hashtags">Copy hashtags</button></div>
+      </div>
+      <div class="ocm-pack-panel" data-pack-panel="prompts">
+        <div class="ocm-pack-block"><strong>Image Prompt</strong><p>${escapeHtml(pack.image_prompt || '')}</p></div>
+        <div class="ocm-pack-block"><strong>Video Prompt</strong><p>${escapeHtml(pack.video_prompt || '')}</p></div>
+      </div>
+      <div class="ocm-pack-panel" data-pack-panel="json">
+        <pre class="ocm-json">${escapeHtml(JSON.stringify({ id: pack.id, image_prompt: pack.image_prompt, video_prompt: pack.video_prompt, caption: pack.caption, hashtags }, null, 2))}</pre>
+      </div>
+    `;
+    card.querySelector('[data-copy="caption"]')?.addEventListener('click', () => copyText(pack.caption || '', 'Caption copied'));
+    card.querySelector('[data-copy="hashtags"]')?.addEventListener('click', () => copyText(hashtags.join(' '), 'Hashtags copied'));
+    card.querySelector('[data-remix]')?.addEventListener('click', () => generateContentPack(pack));
+    card.querySelector('.ocm-pack-tabs')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-pack-tab]');
+      if (!btn) return;
+      card.querySelectorAll('[data-pack-tab]').forEach(tab => tab.classList.toggle('active', tab === btn));
+      card.querySelectorAll('[data-pack-panel]').forEach(panel => panel.classList.toggle('active', panel.dataset.packPanel === btn.dataset.packTab));
+    });
+    grid.appendChild(card);
+  });
+}
+
+async function copyText(text, message = 'Copied') {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(message, 'success', 1800);
+  } catch {
+    toast('Copy failed', 'error');
+  }
+}
+
+function copyContentPacksJson() {
+  const strict = { packs: State.contentPacks.map(pack => ({
+    id: pack.id,
+    image_prompt: pack.image_prompt || '',
+    video_prompt: pack.video_prompt || '',
+    caption: pack.caption || '',
+    hashtags: Array.isArray(pack.hashtags) ? pack.hashtags : [],
+  })) };
+  copyText(JSON.stringify(strict, null, 2), 'Content pack JSON copied');
+}
+
 async function generateVideo() {
   if (!requireAuth()) return;
   const prompt = document.getElementById('video-prompt').value.trim();
@@ -2031,6 +2361,11 @@ function bindEvents() {
     switchPanel('video');
   });
 
+  loadContentMachinePrefs();
+  initContentMachineUI();
+  document.getElementById('btn-generate-content-pack')?.addEventListener('click', () => generateContentPack());
+  document.getElementById('btn-copy-content-json')?.addEventListener('click', copyContentPacksJson);
+
   // Image generate
   document.getElementById('btn-generate-image')?.addEventListener('click', generateImage);
   document.getElementById('image-model')?.addEventListener('change', updateImageCostLabel);
@@ -2497,12 +2832,7 @@ async function init() {
   renderNanoBananaProShowcase();
   renderSeedream45Showcase();
 
-  const featuredTrack = document.getElementById('dash-featured-track');
-  if (featuredTrack) {
-    featuredTrack.addEventListener('scroll', syncFeaturedStripNav, { passive: true });
-  }
-  window.addEventListener('resize', syncFeaturedStripNav);
-  setTimeout(syncFeaturedStripNav, 0);
+  initFeaturedStripNav();
 
   const authed = await checkAuth();
 

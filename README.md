@@ -2,7 +2,7 @@
 
 This README is the **source of truth for the current product behavior** so the next AI agent can continue work safely.
 
-Last updated: **2026-04-28 (My Media avatar drawer + footer update)**
+Last updated: **2026-04-28 (Content Machine + credit slot animation update)**
 
 ---
 
@@ -13,6 +13,7 @@ Raiko is a FastAPI + Vanilla JS single-page app for:
 - Authenticated AI chat (streaming)
 - AI image generation
 - AI video generation (text-to-video + image-to-video)
+- One Click Content Machine — multi-platform social content packs
 - AI image editing — **dedicated Edit panel** (separate from Image panel)
 - AI background removal (BRIA)
 - My Media library (all generated images & videos, localStorage-backed)
@@ -65,6 +66,27 @@ These were intentionally changed and should stay as-is unless explicitly request
 20. **Footer added**:
     - The app shell now ends with a black footer inspired by the provided reference image.
     - Footer uses the Raiko logo large on the left and grouped Products / Legal Links / Company links on the right.
+21. **Explore featured showcase navigation restored**:
+    - The top Explore showcase strip has explicit `<` / `>` buttons again.
+    - Left button and left fade are hidden while the strip is at the far left; right button and right fade are hidden while the strip is at the far right.
+    - Navigation is JS-managed in `frontend/app.js` via `syncFeaturedStripNav()`, `scrollFeaturedStrip(direction)`, and `initFeaturedStripNav()`.
+22. **Video Generate button style**:
+    - Text-to-video and image-to-video Generate buttons use yellow background with black text and **no shadow**, including hover state.
+23. **Content Machine panel added**:
+    - New top navbar item: **Content Machine**.
+    - `#panel-content` uses a Video-panel-inspired dark two-column layout: left sidebar controls + right explainer/results area.
+    - Left sidebar width matches Video sidebar style (`330px`), dark surface, yellow right border, internal scroll.
+    - Right side has Video-style hero/explainer before generation and switches to generated content pack cards after generation.
+    - Do not reintroduce a top standalone Content Machine header above the two-column layout; it was intentionally removed.
+24. **Content Machine generation behavior**:
+    - Users can generate **1–5 content packs per selected platform**.
+    - Platform selection is multi-select: Instagram, TikTok, YouTube Shorts, Twitter.
+    - Outputs can be toggled independently: Image, Video, Caption, Hashtags.
+    - Estimated total credit cost updates live before generation.
+    - Generated packs include platform metadata and per-pack tabs: Caption / Prompts / JSON.
+25. **Credit balance animation**:
+    - Credit balance updates use a slot-machine-style animation with light blur.
+    - `updateCreditsUI(balance)` animates the user dropdown credit value and shows a floating credit delta overlay.
 
 If you reintroduce gradients, soft shadows, pill-shaped buttons, lavender/purple colors, or standalone info "ⓘ" icons, you are regressing the product.
 
@@ -77,7 +99,7 @@ Main UI file: `frontend/index.html`
 ### Top Navbar
 
 - Black background (`#0A0A0A`), 2px yellow bottom border
-- **Left section**: Raiko logo → vertical divider → nav links: **Explore | Image | Video | Edit | Chats**
+- **Left section**: Raiko logo → vertical divider → nav links: **Explore | Content Machine | Image | Video | Edit | Chats**
 - **Right section**: **PRO** CTA button (opens pricing/credits modal) → User avatar + name
 - Active nav link: yellow text (`#FFE400`), bold
 - **Edit nav button** — hovering opens a mega-dropdown with 7 edit models in 2 columns:
@@ -100,7 +122,9 @@ Main UI file: `frontend/index.html`
 Full-width showcase/discovery page — scrollable, no fixed columns. Four sections stacked vertically:
 
 **1. Featured Showcase Strip** (`.dash-featured-strip`):
-- Horizontal row of 4 oversized cards, horizontal scroll, left/right fade masks, and explicit `<` / `>` scroll buttons.
+- Horizontal row of 4 oversized cards, horizontal scroll, scroll snap, left/right fade masks, and explicit `<` / `>` scroll buttons.
+- The `<` button and left fade hide at the left edge; the `>` button and right fade hide at the right edge.
+- Scroll buttons are initialized by `initFeaturedStripNav()` and move by one card width via `scrollFeaturedStrip(direction)`.
 - Card 1 (GPT Image 2) → `selectImageModel('openai/gpt-image-2')` + `switchPanel('image')`
 - Card 2 (Seedance 2.0 / Video) → `selectVideoModel('fal-ai/bytedance/seedance-2.0/text-to-video','text')` + `switchPanel('video')`
 - Card 3 (Nano Banana Pro) → `selectImageModel('fal-ai/nano-banana-pro')` + `switchPanel('image')`
@@ -199,15 +223,76 @@ Two-column layout: left sub-sidebar (220px) + right chat area.
 - Prompt textarea, Motion Presets grid (8 presets)
 - Model select — **10 models**: Kling v1 Standard / Kling v1 Pro / Kling v3 Pro / WAN v2.7 / Seedance 1.5 Pro / Seedance 2.0 / Sora 2 / Veo 3.1 / Grok Video / Stable Video
 - Duration select (5s / 10s)
-- Generate button
+- Generate button — yellow background, black text, no shadow; same hover state remains shadowless.
 
 **Image to Video tab (`#vid-panel-image`):**
 - Upload source image, prompt textarea, model select (Kling Standard / Kling Pro), duration select
-- Generate button
+- Generate button — yellow background, black text, no shadow; same hover state remains shadowless.
 
 **Right main area:**
 - Before generation: `#video-explainer` (how-it-works steps + example output placeholders)
 - After generation: `.has-result` on `#panel-video` → `#video-result-area` fills right area
+
+### Content Machine Panel (`#panel-content`) — NEW
+
+**Purpose:** One Click Content Machine generates cohesive, ready-to-post social content packs from one brief.
+
+**Layout:** Video-tab-inspired dark two-column layout.
+
+- **Left sidebar** (`.ocm-controls`): dark fixed-width control sidebar (`330px`) with yellow right border, internal scroll.
+- **Right main area** (`.ocm-results`): dark radial background matching Video panel main area.
+- Before generation: `.ocm-video-explainer` shows:
+  - Large hero card: “MAKE CONTENT IN ONE CLICK / RAIKO CONTENT STUDIO”
+  - Three step cards: Write your brief / Choose outputs / Get content packs
+  - Example pack type cards: Image / Video / Caption / Hashtags
+- After generation: explainer is hidden and `#ocm-pack-grid` shows generated pack cards.
+
+**Left sidebar workflow tabs** (`#ocm-tabs`):
+
+1. **Compose**
+   - Creative Brief accordion: topic textarea only.
+   - Brand Style accordion: Style and Tone selects.
+2. **Outputs**
+   - Platforms accordion: multi-select platform cards for Instagram, TikTok, YouTube Shorts, Twitter.
+   - Output Mix accordion: Image / Video / Caption / Hashtags toggles + Variations per platform selector.
+   - Variations range: **1–5 packs per selected platform**.
+3. **Memory**
+   - Explains saved preferences and remix behavior.
+
+**Generate dock:**
+
+- Shows live estimated total credits (`#ocm-cost-estimate`).
+- Generate button calls `generateContentPack()`.
+- Frontend estimate currently assumes default Content Machine models:
+  - Image: 6⚡ (`fal-ai/nano-banana-pro`)
+  - Video: 12⚡ (`fal-ai/kling-video/v1/standard/text-to-video`)
+  - Caption/hashtags text: 0.01⚡
+  - Total = per-pack cost × selected platforms × variations.
+
+**Generated pack card behavior:**
+
+- Each pack includes a platform badge.
+- Each pack has internal tabs:
+  - Caption — caption + hashtags + copy buttons
+  - Prompts — image/video prompts
+  - JSON — strict pack JSON
+- Each pack has a **Remix** button that regenerates a slight variation while keeping style/tone/platform context.
+- Global **Copy JSON** copies strict output format:
+
+```json
+{
+  "packs": [
+    {
+      "id": "Instagram-A",
+      "image_prompt": "...",
+      "video_prompt": "...",
+      "caption": "...",
+      "hashtags": ["..."],
+      "platform": "Instagram"
+    }
+  ]
+}
+```
 
 ### My Media Panel
 
@@ -231,7 +316,7 @@ Two-column split layout: left (form, yellow dot-grid overlay) + right (`beer-cat
 
 **Typography**: UI font `Space Grotesk`, mono font `JetBrains Mono` (labels, badges, dates, model names).
 
-**Interaction**: Hover → `translate(-1px, -1px)` + larger shadow. No scale transforms.
+**Interaction**: Hover → `translate(-1px, -1px)` + larger shadow. No scale transforms. Exception: Video panel Generate buttons stay shadowless and do not translate on hover.
 
 ---
 
@@ -256,11 +341,13 @@ Main logic: `frontend/app.js` | Explore showcase data: `frontend/explore-data.js
 | `i2vSourceUrl` | `null` | Image-to-video source |
 | `stylePreset` | `''` | appended to image prompt |
 | `mediaFilter` | `'all'` | My Media filter |
+| `contentPacks` | `[]` | Last generated Content Machine packs |
+| `lastContentPayload` | `null` | Last Content Machine request payload |
 
 ### Key Functions
 
 **Global (called from inline `onclick` — must not be renamed or made non-global):**
-`selectImageModel(modelId)`, `selectVideoModel(modelId, tool)`, `selectEditModel(modelId)`, `switchPanel(panelId)`, `startNewChat()`, `switchImageTool(toolId)`, `switchVideoTool(toolId)`, `showGenPlaceholder(containerId)`, `clearGenPlaceholder(containerId)`, `saveMediaItem(type, url, prompt, model)`, `loadMediaPanel()`, `openGalleryPreview(el)`, `closeGalleryPreview()`, `useGalleryPrompt()`
+`selectImageModel(modelId)`, `selectVideoModel(modelId, tool)`, `selectEditModel(modelId)`, `switchPanel(panelId)`, `startNewChat()`, `switchImageTool(toolId)`, `switchVideoTool(toolId)`, `showGenPlaceholder(containerId)`, `clearGenPlaceholder(containerId)`, `saveMediaItem(type, url, prompt, model)`, `loadMediaPanel()`, `openGalleryPreview(el)`, `closeGalleryPreview()`, `useGalleryPrompt()`, `syncFeaturedStripNav()`, `scrollFeaturedStrip(direction)`, `initFeaturedStripNav()`
 
 **Core flows:**
 - `switchPanel(panelId)` — switches active nav + panel; loads media/dashboard on enter
@@ -269,9 +356,14 @@ Main logic: `frontend/app.js` | Explore showcase data: `frontend/explore-data.js
 - `renderEditPanelResults(urls)` — unhides `#edit-result-zone`, fills `#edit-result-area`
 - `generateImage()` → `API.ai.generateImage()` → `renderImageResults()` + `saveMediaItem()`
 - `renderMediaDrawer(activePlaceholder, forceOpen)` / `openMediaDrawer(activePlaceholder)` — controls the right-side My Media drawer opened from the avatar dropdown or during image generation
+- `syncFeaturedStripNav()` / `scrollFeaturedStrip(direction)` / `initFeaturedStripNav()` — control Explore featured strip button visibility and one-card scroll navigation
 - `runEditImage()` → `API.ai.editImage()` (image panel Edit tab, legacy)
 - `generateVideo()` → `API.ai.generateVideo()` → `saveMediaItem()`
 - `generateVideoFromImage()` → `API.ai.generateVideoFromImage()` → `saveMediaItem()`
+- `generateContentPack()` → `generateContentPackRequest()` → `POST /content-packs/generate` → `renderContentPacks()`
+- `initContentMachineUI()` — wires Content Machine workflow tabs and accordion toggles.
+- `updateContentCostEstimate()` — updates live estimated total credits.
+- `animateCreditValue()` / `showCreditSlotOverlay()` — slot-machine-style credit balance animation.
 
 ### Visual Control Sync (Image Panel)
 
@@ -293,6 +385,8 @@ Main logic: `frontend/app.js` | Explore showcase data: `frontend/explore-data.js
 - `backend/fal_client.py` — fal.ai queue wrapper. Methods: `generate_image()`, `image_to_image()`, `generate_video()`, `generate_video_from_image()`, `remove_background()`. Special routing: `_ASPECT_RATIO_MODELS` (nano-banana family uses `aspect_ratio` string), `_IMAGE_SIZE_PRESET_MODELS` (Seedream uses `image_size` enum preset).
 - `backend/model_costs.py` — per-model credit costs (LLM + fal)
 - `backend/credits_router.py` — balance, transactions, purchase packs, manual add (dev-flag)
+- `backend/content_pack_engine.py` — One Click Content Machine modules: prompt builder, viral hook generator, generation engine, assembler, preference memory, cost estimator.
+- `backend/content_pack_router.py` — `/content-packs/generate` route with auth, credit pre-check, async generation, and credit deduction.
 - `backend/auth.py` — signup/login/JWT
 - `backend/database.py` — SQLite manager (`bambam_chats.db`)
 
@@ -334,6 +428,48 @@ else:
 
 ### Legacy (kept for compatibility)
 - `POST /chat/stream` | `POST /chat`
+
+### Content Packs — `POST /content-packs/generate`
+
+Requires JWT auth. Generates cohesive social content packs.
+
+**Request fields:**
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `platform` | string | Backward-compatible primary platform; first selected platform is sent here. |
+| `platforms` | list[string] | Multi-select platforms. Supported: Instagram, TikTok, YouTube Shorts, Twitter. |
+| `style` | string | Cinematic, Minimal, Anime, Dark, Product Showcase, etc. |
+| `tone` | string | Viral, Funny, Emotional, Motivational, Educational. |
+| `topic` | string | Required user brief/topic. |
+| `output_types` | object | Booleans: `image`, `video`, `caption`, `hashtags`. |
+| `variations` | int | 1–5 packs per selected platform. |
+| `remix_of` | string/null | Optional pack id to remix. |
+| `remix_instruction` | string/null | Optional remix direction. |
+| `use_memory` | bool | Reuse saved preferences when applicable. |
+| `save_preferences` | bool | Save preferences for future generations. |
+
+**Response shape:**
+
+```json
+{
+  "packs": [
+    {
+      "id": "Instagram-A",
+      "platform": "Instagram",
+      "image_prompt": "...",
+      "video_prompt": "...",
+      "caption": "...",
+      "hashtags": ["..."],
+      "image_url": "...",
+      "video_url": "..."
+    }
+  ],
+  "preferences": {},
+  "credits_used": 18.01,
+  "credits_remaining": 42
+}
+```
 
 ---
 

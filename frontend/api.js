@@ -205,6 +205,15 @@ const API = {
 
   },
 
+  // ── One Click Content Machine ────────────────────────────────────────────
+  contentPacks: {
+    generate: (payload) =>
+      apiFetch('/content-packs/generate', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+  },
+
   // ── Legacy chat (backward-compat) ────────────────────────────────────────
   chat: {
     streamLegacy: async (message, model, chatId, files, onChunk, onDone, onError) => {

@@ -1,0 +1,19 @@
+{
+  "2d060ec2-1325-4368-8ad9-8b4a3512b091": {
+    "platform": "Instagram",
+    "platforms": [
+      "Instagram"
+    ],
+    "style": "Cinematic",
+    "tone": "Viral",
+    "output_types": {
+      "image": true,
+      "video": false,
+      "caption": false,
+      "hashtags": false
+    },
+    "variations": 1,
+    "image_model": "fal-ai/nano-banana-pro",
+    "video_model": "fal-ai/kling-video/v1/standard/text-to-video"
+  }
+}

@@ -34,6 +34,7 @@ from auth import (
 # from project_files import router as project_router, init_projects
 from ai_router import router as ai_router, init_ai_router
 from credits_router import router as credits_router, init_credits_router
+from content_pack_router import router as content_pack_router, init_content_pack_router
 from collections import defaultdict
 import time
 
@@ -427,6 +428,13 @@ init_ai_router(
     gemini_client=gemini_client,
 )
 app.include_router(ai_router)
+
+init_content_pack_router(
+    db=db,
+    openrouter_client=openrouter_client,
+    openai_client=openai_client,
+)
+app.include_router(content_pack_router)
 
 # AI router'a gerÃ§ek auth dependency'Ä± inject et
 for route in ai_router.routes:
