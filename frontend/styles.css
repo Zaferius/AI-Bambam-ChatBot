@@ -1381,7 +1381,7 @@ body { background: var(--bg); }
   overflow: hidden; position: relative; z-index: 10;
 }
 
-.panel { display: none; flex-direction: column; height: 100%; }
+.panel { display: none; flex-direction: column; height: 100%; min-height: 0; }
 .panel.active { display: flex; }
 
 /* ════════════════════════════════════════════════════════
@@ -1827,6 +1827,12 @@ body { background: var(--bg); }
   background: var(--black);
 }
 
+#panel-explore-gallery {
+  overflow-y: auto;
+  flex-direction: column;
+  background: #050505;
+}
+
 /* ── Featured Strip ── */
 .dash-featured-strip {
   width: 100%; border-bottom: 2px solid var(--black);
@@ -1871,6 +1877,27 @@ body { background: var(--bg); }
   height: 100%;
   object-fit: cover;
   object-position: center;
+}
+
+.dft-restyle-loop .dft-restyle-slide {
+  opacity: 0;
+  animation: dft-restyle-fade 32s infinite;
+}
+.dft-restyle-loop .dft-restyle-slide:nth-child(1) { animation-delay: 0s; }
+.dft-restyle-loop .dft-restyle-slide:nth-child(2) { animation-delay: 4s; }
+.dft-restyle-loop .dft-restyle-slide:nth-child(3) { animation-delay: 8s; }
+.dft-restyle-loop .dft-restyle-slide:nth-child(4) { animation-delay: 12s; }
+.dft-restyle-loop .dft-restyle-slide:nth-child(5) { animation-delay: 16s; }
+.dft-restyle-loop .dft-restyle-slide:nth-child(6) { animation-delay: 20s; }
+.dft-restyle-loop .dft-restyle-slide:nth-child(7) { animation-delay: 24s; }
+.dft-restyle-loop .dft-restyle-slide:nth-child(8) { animation-delay: 28s; }
+
+@keyframes dft-restyle-fade {
+  0% { opacity: 0; }
+  2% { opacity: 1; }
+  12.5% { opacity: 1; }
+  15.5% { opacity: 0; }
+  100% { opacity: 0; }
 }
 
 /* Dot-grid overlay on thumbs */
@@ -2014,7 +2041,7 @@ body { background: var(--bg); }
   transition: background 0.12s, box-shadow 0.12s, transform 0.12s;
 }
 .dash-tile:nth-child(3n) { border-right: none; }
-.dash-tile:nth-child(4), .dash-tile:nth-child(5), .dash-tile:nth-child(6) { border-bottom: none; }
+.dash-tile:nth-child(7), .dash-tile:nth-child(8), .dash-tile:nth-child(9) { border-bottom: none; }
 .dash-tile:hover {
   background: #171714;
   box-shadow: inset 0 -4px 0 var(--yellow);
@@ -2031,6 +2058,7 @@ body { background: var(--bg); }
 .dt-icon svg { width: 18px; height: 18px; }
 .dt-icon--img  { background: var(--black); color: var(--yellow); }
 .dt-icon--seed { background: var(--black); color: var(--yellow); }
+.dt-icon--restyle { background: var(--black); color: var(--yellow); }
 .dt-icon--nb   { background: var(--black); color: var(--yellow); }
 .dt-icon--vid  { background: var(--black); color: var(--yellow); }
 .dt-icon--edit { background: var(--black); color: var(--yellow); }
@@ -2152,6 +2180,44 @@ body { background: var(--bg); }
 .dash-sc-right--gp2 {
   padding: 12px;
   background: #0A0A0A;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+}
+
+.dsc-view-all {
+  min-width: 120px;
+  padding: 9px 16px;
+  background: var(--yellow);
+  color: var(--black);
+  border: 2px solid var(--black);
+  border-radius: 2px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 #000;
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+
+.dsc-view-all--floating {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 4;
+}
+
+.dsc-view-all:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.dsc-view-all--floating:hover {
+  transform: translateX(-50%) translate(-1px, -1px);
 }
 
 /* ── New two-row gallery grid ── */
@@ -2293,6 +2359,104 @@ body { background: var(--bg); }
 .gp-overlay.open {
   display: flex;
 }
+
+/* ── Explore full gallery page ── */
+.explore-model-gallery-page {
+  margin-top: 0;
+  border-top: 2px solid var(--black);
+  background: #050505;
+  min-height: 100%;
+}
+
+.emg-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 26px 28px 18px;
+  border-bottom: 2px solid #171715;
+}
+
+.emg-kicker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: rgba(255,228,0,0.7);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.emg-title {
+  margin: 0;
+  color: var(--yellow);
+  text-transform: uppercase;
+  font-size: 38px;
+  line-height: 0.98;
+  font-weight: 900;
+}
+
+.emg-back {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  background: transparent;
+  color: #fff;
+  border: 2px solid #2A2A26;
+  border-radius: 2px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+}
+
+.emg-back:hover {
+  border-color: var(--yellow);
+  color: var(--yellow);
+}
+
+.emg-grid {
+  padding: 14px;
+  column-count: 4;
+  column-gap: 8px;
+}
+
+.emg-item {
+  display: block;
+  width: 100%;
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  margin: 0 0 8px;
+  border: 2px solid #1A1A18;
+  background: #111;
+  border-radius: 2px;
+  padding: 0;
+}
+
+.emg-item--square {
+  aspect-ratio: 1 / 1;
+}
+
+.emg-item--wide {
+  aspect-ratio: 16 / 10;
+}
+
+.emg-item--tall {
+  aspect-ratio: 3 / 4.4;
+}
+
+.emg-item--feature {
+  aspect-ratio: 16 / 11;
+}
+
+.emg-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
 .gp-modal {
   position: relative;
   display: flex;
@@ -2413,6 +2577,10 @@ body { background: var(--bg); }
   line-height: 1.65;
   color: #D0CEC8;
   font-family: 'Space Grotesk', sans-serif;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 6px;
+  word-break: break-word;
 }
 .gp-actions {
   display: flex;
@@ -4336,6 +4504,9 @@ body { background: var(--bg); }
   .dsc-grid { height: 200px; }
   .gp2-row--portraits { height: 220px; }
   .gp2-row--wide      { height: 130px; }
+  .dsc-view-all--floating { bottom: 10px; }
+  .emg-head { flex-direction: column-reverse; align-items: flex-start; }
+  .emg-grid { column-count: 2; }
 }
 
 /* ── Section Label ─────────────────────────────────────── */

@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Raiko — Your AI Universe</title>
   <meta name="description" content="Chat with any AI model, generate images & videos, use AI tools — all in one place." />
+  <meta name="theme-color" content="#0A0A0A" />
+  <link rel="icon" type="image/x-icon" href="../favicon.ico" />
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
+  <link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png" />
+  <link rel="shortcut icon" href="../favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png" />
+  <link rel="manifest" href="../site.webmanifest" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
@@ -19,7 +26,7 @@
   <div class="auth-gate-content">
     <div class="auth-logo">
       <div class="logo-orb">
-        <img src="raiko-logo.png" alt="Raiko" class="logo-img-inner" />
+        <img src="raiko-logo-trans.png" alt="Raiko" class="logo-img-inner" />
       </div>
       <span>Raiko</span>
     </div>
@@ -37,9 +44,8 @@
     <!-- Brand -->
     <div class="navbar-brand">
       <div class="logo-orb navbar-orb">
-        <img src="raiko-logo.png" alt="Raiko" class="logo-img-inner" />
+        <img src="raiko-logo-trans.png" alt="Raiko" class="logo-img-inner" />
       </div>
-      <span class="navbar-logo-text">Raiko</span>
     </div>
 
     <div class="navbar-vdivider"></div>
@@ -381,6 +387,23 @@
             </div>
           </div>
 
+          <!-- Card 5: Image Restyle -->
+          <div class="dash-feat-card" role="button" tabindex="0" onclick="switchPanel('restyler')">
+            <div class="dash-feat-thumb dft-2 dft-restyle-loop">
+              <img class="dft-media dft-restyle-slide" src="dashboard-showcase/top-showcase/image-restyle/anime_after.jpg" alt="Image Restyle showcase anime" />
+              <img class="dft-media dft-restyle-slide" src="dashboard-showcase/top-showcase/image-restyle/bw_studio_portrait_after.jpg" alt="Image Restyle showcase bw studio portrait" />
+              <img class="dft-media dft-restyle-slide" src="dashboard-showcase/top-showcase/image-restyle/cinematic_portrait_after.jpg" alt="Image Restyle showcase cinematic portrait" />
+              <img class="dft-media dft-restyle-slide" src="dashboard-showcase/top-showcase/image-restyle/ghostface_mirror_after.jpg" alt="Image Restyle showcase ghostface mirror" />
+              <img class="dft-media dft-restyle-slide" src="dashboard-showcase/top-showcase/image-restyle/hollywood_star_after.jpg" alt="Image Restyle showcase hollywood star" />
+              <img class="dft-media dft-restyle-slide" src="dashboard-showcase/top-showcase/image-restyle/moody_studio_portrait_after.jpg" alt="Image Restyle showcase moody studio portrait" />
+              <img class="dft-media dft-restyle-slide" src="dashboard-showcase/top-showcase/image-restyle/olympus_god_after.jpg" alt="Image Restyle showcase olympus god" />
+              <img class="dft-media dft-restyle-slide" src="dashboard-showcase/top-showcase/image-restyle/underwater_half_face_portrait_after.jpg" alt="Image Restyle showcase underwater half face portrait" />
+              <div class="dft-provider">Raiko Tools</div>
+              <div class="dft-headline">IMAGE<br>RESTYLE</div>
+              <div class="dft-dot-grid"></div>
+            </div>
+          </div>
+
         </div>
         <div class="dash-featured-fade-left" id="dash-featured-fade-left" aria-hidden="true"></div>
         <button
@@ -407,6 +430,7 @@
           <button class="dsc-btn" onclick="selectImageModel('openai/gpt-image-2');switchPanel('image')">+ Try Model</button>
         </div>
         <div class="dash-sc-right dash-sc-right--gp2">
+          <button class="dsc-view-all dsc-view-all--floating" onclick="openModelGalleryPage('gp2')">View all</button>
           <div class="gp2-grid" id="gp2-grid"></div>
         </div>
       </div>
@@ -420,6 +444,7 @@
           <button class="dsc-btn" onclick="selectImageModel('fal-ai/nano-banana-pro');switchPanel('image')">+ Try Model</button>
         </div>
         <div class="dash-sc-right dash-sc-right--gp2">
+          <button class="dsc-view-all dsc-view-all--floating" onclick="openModelGalleryPage('nbp')">View all</button>
           <div class="gp2-grid" id="nbp-grid"></div>
         </div>
       </div>
@@ -433,6 +458,7 @@
           <button class="dsc-btn" onclick="selectImageModel('fal-ai/bytedance/seedream/v4.5/text-to-image');switchPanel('image')">+ Try Model</button>
         </div>
         <div class="dash-sc-right dash-sc-right--gp2">
+          <button class="dsc-view-all dsc-view-all--floating" onclick="openModelGalleryPage('sd45')">View all</button>
           <div class="gp2-grid" id="sd45-grid"></div>
         </div>
       </div>
@@ -457,6 +483,16 @@
               <span class="dt-desc">Most advanced Bytedance image model</span>
             </div>
             <span class="dt-badge dt-badge--new">NEW</span>
+          </button>
+
+          <button class="dash-tile" onclick="switchPanel('restyler')">
+            <div class="dt-icon dt-icon--restyle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z"/></svg>
+            </div>
+            <div class="dt-body">
+              <span class="dt-title">Image Restyle</span>
+              <span class="dt-desc">Apply portrait styles with one click</span>
+            </div>
           </button>
 
           <button class="dash-tile" onclick="selectImageModel('fal-ai/nano-banana-pro');switchPanel('image')">
@@ -503,7 +539,7 @@
 
       <footer class="site-footer explore-footer" aria-label="Raiko footer">
         <div class="footer-brand-block">
-          <img src="raiko-logo.png" alt="Raiko" class="footer-logo" />
+          <img src="raiko-logo-trans-w.png" alt="Raiko" class="footer-logo" />
         </div>
         <nav class="footer-links" aria-label="Footer links">
           <div class="footer-col">
@@ -528,6 +564,20 @@
         </nav>
       </footer>
 
+    </section>
+
+    <!-- ══ PANEL: EXPLORE MODEL GALLERY ══════════════════════════════════════ -->
+    <section class="panel" id="panel-explore-gallery">
+      <div class="explore-model-gallery-page" id="explore-model-gallery-page">
+        <div class="emg-head">
+          <button class="emg-back" type="button" onclick="closeModelGalleryPage()">← Back to Explore</button>
+          <div class="emg-copy">
+            <div class="emg-kicker">MODEL GALLERY</div>
+            <h2 class="emg-title" id="explore-model-gallery-title">Model Gallery</h2>
+          </div>
+        </div>
+        <div class="emg-grid" id="explore-model-gallery-grid"></div>
+      </div>
     </section>
 
     <!-- ══ PANEL: CONTENT MACHINE ══════════════════════════════════════ -->
@@ -1735,7 +1785,7 @@
 
     <footer class="site-footer" id="site-footer" aria-label="Raiko footer">
       <div class="footer-brand-block">
-        <img src="raiko-logo.png" alt="Raiko" class="footer-logo" />
+        <img src="raiko-logo-trans-w.png" alt="Raiko" class="footer-logo" />
       </div>
       <nav class="footer-links" aria-label="Footer links">
         <div class="footer-col">

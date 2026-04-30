@@ -2,7 +2,7 @@
 
 This README is the **source of truth for the current product behavior** so the next AI agent can continue work safely.
 
-Last updated: **2026-04-30 (Image Restyler UI/flow polished: persistent right catalog, left large upload preview, selected badge state, sidebar generate flow)**
+Last updated: **2026-04-30 (Explore model gallery page + orientation-aware masonry + favicon/logo refresh)**
 
 ---
 
@@ -114,8 +114,43 @@ These were intentionally changed and should stay as-is unless explicitly request
     - Uploading a portrait shows a **large left-sidebar preview** constrained to sidebar bounds (no overflow).
     - Style cards are shown as a scrollable multi-column catalog (currently 5 columns on desktop, responsive down on smaller widths).
     - Selected style card uses active state styling and a **small yellow `Selected` chip**; non-selected cards show hover CTA.
+    - `Selected` chip must appear **only** on the active card. Non-active cards must never show the chip.
+    - `Selected` chip text style is plain black text (no decorative shadow/spacing effects).
     - Generation is triggered from the **left sidebar** after upload + style selection (not from a bottom global bar).
     - Upload trigger was changed from `label[for]` to button-driven click flow to avoid double-opening file chooser.
+29. **Image mega-menu Tools includes Restyler shortcut**:
+    - Inside Image navbar mega-dropdown Tools list, a **Restyler** item exists.
+    - Clicking it routes directly to `switchPanel('restyler')`.
+30. **Explore Mid Row feature tiles updated**:
+    - The tile grid now includes **Image Restyle** and routes to `switchPanel('restyler')`.
+    - Current Explore quick tile set is effectively 7 items (Generate Image, Seedream 5, Image Restyle, Nano Banana Pro, Generate Video, Image Edit, AI Chat).
+31. **Explore Gallery Preview prompt readability fix**:
+    - Long prompts inside `#gallery-preview-overlay` now scroll within the prompt block (`.gp-prompt`) so full prompt text is always readable.
+32. **Explore Featured Showcase Strip includes Restyler card**:
+    - Featured strip now includes a 5th card: **Image Restyle**.
+    - The Restyler featured card uses assets from `frontend/dashboard-showcase/top-showcase/image-restyle/`.
+    - Card media auto-rotates with smooth infinite fade loop in CSS (`.dft-restyle-slide` + `@keyframes dft-restyle-fade`).
+33. **Explore model showcases now have floating `View all` CTA inside each showcase preview area**:
+    - Buttons are positioned on top of showcase media (not between sections).
+    - Trigger function: `openModelGalleryPage(key)`.
+34. **`View all` now opens a dedicated Explore Gallery page panel (not modal, not in-place section)**:
+    - New panel: `#panel-explore-gallery`.
+    - Back action returns to Explore via `closeModelGalleryPage()` → `switchPanel('dashboard')`.
+35. **Explore Gallery content is data-driven and orientation-aware**:
+    - Data source: `window.EXPLORE_MODEL_GALLERIES` in `frontend/explore-data.js`.
+    - Items support `shape: 'wide' | 'tall' | 'square'` and render with corresponding classes.
+36. **Explore Gallery layout switched to masonry-style columns with preserved orientation feel**:
+    - Uses `.emg-grid` column flow and `break-inside: avoid` cards.
+    - Avoids rigid grid dead zones / black gaps from track-based CSS grid packing.
+37. **Explore Gallery vertical scrolling fixed**:
+    - Dedicated panel `#panel-explore-gallery` explicitly uses `overflow-y: auto`.
+38. **Branding assets updated**:
+    - Navbar/auth logo image now uses `frontend/raiko-logo-trans.png`.
+    - Footer logos now use `frontend/raiko-logo-trans-w.png`.
+    - Navbar text label `Raiko` removed; icon-only brand mark remains.
+39. **Favicon stack wired to root assets**:
+    - `frontend/index.html` now links to root `favicon.ico`, `favicon.svg`, `favicon-96x96.png`, `apple-touch-icon.png`, and `site.webmanifest`.
+    - `site.webmanifest` updated from placeholder app name/colors to `Raiko` and dark theme colors.
 
 If you reintroduce gradients, soft shadows, pill-shaped buttons, lavender/purple colors, or standalone info "ⓘ" icons, you are regressing the product.
 
@@ -129,6 +164,7 @@ Main UI file: `frontend/index.html`
 
 - Black background (`#0A0A0A`), 2px yellow bottom border
 - **Left section**: Raiko logo → vertical divider → nav links: **Explore | Image | Video | Edit | Restyler | Chats | Content Machine**
+- Brand text next to logo was removed; navbar brand is icon-only.
 - **Right section**: **PRO** CTA button (opens pricing/credits modal) → User avatar + name
 - Active nav link: yellow text (`#FFE400`), bold
 - **Edit nav button** — hovering opens a mega-dropdown with edit models in 2 columns:
@@ -136,9 +172,10 @@ Main UI file: `frontend/index.html`
   - Right col: OpenAI (GPT Image 2 Edit) + Seedream (Seedream 4.5 Edit) + xAI (Grok Imagine Edit)
   - Clicking a model calls `selectEditModel(modelId)` then `switchPanel('edit')`
 - **Image nav button** — hovering opens a mega-dropdown with all image models in 2 columns:
-  - Left col: Flux group (Schnell/Dev/Pro/2 Pro) + OpenAI (GPT Image 2)
+  - Left col: **Tools** (Create Image, Restyler, Image Upscale) + Flux group (Schnell/Dev/Pro/2 Pro) + OpenAI (GPT Image 2)
   - Right col: Nano Banana group (Flash/2/Pro) + Seedream group (4/4.5/5 Lite)
   - Clicking a model calls `selectImageModel(modelId)` then `switchPanel('image')`
+  - Clicking **Restyler** tool item routes to `switchPanel('restyler')`
 - **Video nav button** — hovering opens a mega-dropdown with all video models/tools in 2 columns:
   - Left col: Kling (v1 Standard / v1 Pro / v3 Pro) + Seedance (1.5 Pro / 2.0)
   - Right col: Premium (Sora 2 / Veo 3.1 / Grok Video / WAN v2.7 / Stable Video) + Image to Video (Kling Standard / Kling Pro) + SeedVR Video Upscale
@@ -151,19 +188,22 @@ Main UI file: `frontend/index.html`
 Full-width showcase/discovery page — scrollable, no fixed columns. Four sections stacked vertically:
 
 **1. Featured Showcase Strip** (`.dash-featured-strip`):
-- Horizontal row of 4 oversized cards, horizontal scroll, scroll snap, left/right fade masks, and explicit `<` / `>` scroll buttons.
+- Horizontal row of 5 oversized cards, horizontal scroll, scroll snap, left/right fade masks, and explicit `<` / `>` scroll buttons.
 - The `<` button and left fade hide at the left edge; the `>` button and right fade hide at the right edge.
 - Scroll buttons are initialized by `initFeaturedStripNav()` and move by one card width via `scrollFeaturedStrip(direction)`.
 - Card 1 (GPT Image 2) → `selectImageModel('openai/gpt-image-2')` + `switchPanel('image')`
 - Card 2 (Seedance 2.0 / Video) → `selectVideoModel('fal-ai/bytedance/seedance-2.0/text-to-video','text')` + `switchPanel('video')`
 - Card 3 (Nano Banana Pro) → `selectImageModel('fal-ai/nano-banana-pro')` + `switchPanel('image')`
 - Card 4 (Seedream 4.5) → `selectImageModel('fal-ai/bytedance/seedream/v4.5/text-to-image')` + `switchPanel('image')`
+- Card 5 (Image Restyle) → `switchPanel('restyler')`
 - Card visuals now use top-showcase assets under `frontend/dashboard-showcase/top-showcase/...`
+- Restyler featured card cycles images from `frontend/dashboard-showcase/top-showcase/image-restyle/` with smooth infinite fade loop.
 
 **2. Mid Row** (`.dash-mid-row`): two-column layout:
-- **Left: Feature Tiles Grid** (3×2 CSS grid):
+- **Left: Feature Tiles Grid** (3-column grid, currently 7 tiles):
   - Generate Image → `switchPanel('image')`
   - Seedream 5 (NEW badge) → selects Seedream 5 Lite + image panel
+  - Image Restyle → `switchPanel('restyler')`
   - Nano Banana Pro (UNLIMITED badge) → selects Nano Banana Pro + image panel
   - Generate Video (NEW badge) → `switchPanel('video')`
   - Image Edit → `switchPanel('image')` + `switchImageTool('edit')`
@@ -174,9 +214,17 @@ Full-width showcase/discovery page — scrollable, no fixed columns. Four sectio
 - Showcase 1: "Meet GPT Image 2" → real images from `dashboard-showcase/gpt-image-2-explore/`, custom `.gp2-grid` two-row layout rendered from external data (`frontend/explore-data.js`) into `#gp2-grid`; all images are `.gallery-item` (open Gallery Preview Modal on click)
 - Showcase 2: "Nano Banana Pro Image Generator" → real images from `dashboard-showcase/nano-banana-pro-explore/`, custom `.gp2-grid` two-row layout rendered from external data (`frontend/explore-data.js`) into `#nbp-grid`; every gallery item includes its prompt and uses Nano Banana Pro when "Use This Prompt" is clicked
 - Showcase 3: "Seedream 4.5" → real images from `dashboard-showcase/seedream-explore/`, rendered into `#sd45-grid`
+- Each showcase now has an in-card floating **View all** button that routes to the dedicated Explore Gallery panel.
+
+**Explore Gallery Panel** (`#panel-explore-gallery`):
+- Opened from showcase `View all` buttons through `openModelGalleryPage(key)`.
+- Header shows `Model Name + Gallery` title.
+- Grid is masonry-style column layout (`.emg-grid`) with orientation-aware card variants (`.emg-item--wide`, `.emg-item--tall`, `.emg-item--square`).
+- Gallery panel scrolls vertically (`overflow-y: auto`) so all items are reachable.
 
 **Gallery Preview Modal** (`#gallery-preview-overlay`, `.gp-overlay`):
 - Opened by `openGalleryPreview(el)` — reads `data-src`, `data-prompt`, `data-res`, `data-model`
+- Prompt block (`.gp-prompt`) has internal vertical scrolling for long prompt text.
 - Action buttons: **✦ Use This Prompt** (selects GPT Image 2 + switches panel + pre-fills prompt) + **↓ Download**
 - Box shadow: `8px 8px 0 var(--yellow)` brutalist style
 
@@ -681,3 +729,4 @@ Open: `http://localhost:8000`
 8. My Media is localStorage-only — no backend sync (future: `/api/media` endpoints).
 9. Edit panel: `fal-ai/bria/background/remove` result field may vary by API version (`image` vs `images`). `fal_client.remove_background()` handles both.
 10. Explore GPT and Nano Banana Pro showcases now use frontend data file + runtime render (`frontend/explore-data.js` + `renderGp2Showcase()` / `renderNanoBananaProShowcase()` in `frontend/app.js`); keep data/schema aligned when adding cards.
+11. Watch for accidental leading characters in `frontend/app.js` (e.g., stray `e` before the file header comment) — this causes immediate runtime boot errors like `ReferenceError` before app initialization.

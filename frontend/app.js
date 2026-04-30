@@ -2798,6 +2798,52 @@ function saveMedia(items) {
 let _galleryCurrentPrompt = '';
 let _galleryCurrentModelId = '';
 
+function openModelGalleryPage(key) {
+  const galleries = window.EXPLORE_MODEL_GALLERIES || {};
+  const gallery = galleries[key];
+  const titleEl = document.getElementById('explore-model-gallery-title');
+  const gridEl = document.getElementById('explore-model-gallery-grid');
+  if (!gallery || !titleEl || !gridEl) return;
+
+  titleEl.textContent = gallery.title || 'Model Gallery';
+  gridEl.innerHTML = '';
+
+  (gallery.items || []).forEach((item, index) => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    const shapeClass = item.shape === 'wide'
+      ? 'emg-item--wide'
+      : item.shape === 'tall'
+        ? 'emg-item--tall'
+        : 'emg-item--square';
+    card.className = `emg-item gallery-item ${shapeClass} ${index % 9 === 0 && item.shape === 'wide' ? 'emg-item--feature' : ''}`.trim();
+    card.dataset.src = item.src || '';
+    card.dataset.prompt = item.prompt || '';
+    card.dataset.res = item.res || '';
+    card.dataset.model = gallery.model || 'GPT Image 2';
+    card.dataset.modelId = gallery.modelId || '';
+    card.addEventListener('click', () => openGalleryPreview(card));
+
+    const img = document.createElement('img');
+    img.src = item.src || '';
+    img.alt = '';
+
+    const badge = document.createElement('div');
+    badge.className = 'gi-hover-badge';
+    badge.textContent = 'View';
+
+    card.appendChild(img);
+    card.appendChild(badge);
+    gridEl.appendChild(card);
+  });
+
+  switchPanel('explore-gallery');
+}
+
+function closeModelGalleryPage() {
+  switchPanel('dashboard');
+}
+
 function openGalleryPreview(el) {
   const src    = el.dataset.src;
   const prompt = el.dataset.prompt || '';
@@ -2848,6 +2894,11 @@ function useGalleryPrompt() {
 // Close on Escape key
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    if (State.currentPanel === 'explore-gallery') {
+      switchPanel('dashboard');
+      return;
+    }
+
     const overlay = document.getElementById('gallery-preview-overlay');
     if (overlay && overlay.classList.contains('open')) {
       overlay.classList.remove('open');
