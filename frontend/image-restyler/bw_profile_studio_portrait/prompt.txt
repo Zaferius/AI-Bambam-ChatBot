@@ -1,0 +1,3 @@
+ai_model: nano_banana_edit
+
+Use the attached image as the only exact reference and preserve identity with absolute accuracy. Do not change face, proportions, age, skin, or hair. Create a hyper-realistic black-and-white studio side-profile portrait with cinematic rim lighting, dark minimalist background, and fine photographic detail.

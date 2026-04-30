@@ -1,0 +1,3 @@
+ai_model: seedream_4
+
+Transform into a successful CEO with luxury office background, modern suit, confident leadership pose, professional corporate lighting, and ultra-clean business portrait style. Keep the same face, identity, facial structure, and expression. No face swap or identity change.

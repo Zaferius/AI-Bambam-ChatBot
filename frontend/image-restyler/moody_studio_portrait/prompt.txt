@@ -1,0 +1,3 @@
+ai_model: nano_banana_edit
+
+Create a moody studio portrait of the uploaded person under a golden-orange spotlight that forms a glowing circular halo on the wall. Let the warm light sculpt the face and upper body and cast a strong shadow to the right. Keep the original face, identity, expression, hairstyle, and proportions exactly the same. Dark minimal background, cinematic studio feel, no face swap or identity change.

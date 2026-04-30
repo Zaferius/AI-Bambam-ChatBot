@@ -1,0 +1,3 @@
+ai_model: nano_banana_edit
+
+Transform into a Hollywood movie star on a red carpet with an elegant outfit, confident pose, paparazzi flashes, glamorous lighting, and polished editorial photography. Keep the same face, identity, facial structure, and expression. No face swap or identity change.

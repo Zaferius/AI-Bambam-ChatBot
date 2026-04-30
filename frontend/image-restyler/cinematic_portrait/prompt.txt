@@ -1,0 +1,3 @@
+ai_model: nano_banana_edit
+
+Create a vertical 1080x1920 cinematic portrait with intense contrast and slightly low upward angle to emphasize jawline and neck. Use a deep crimson background, dramatic directional warm light on one side, velvety shadow on the other, and smart black suit with black shirt. Frame as a half-body portrait with quiet dominance and sculptural elegance.

@@ -243,6 +243,8 @@
         </div>
       </div>
 
+      <button class="nav-item" data-panel="restyler" id="nav-restyler">Restyler</button>
+
       <button class="nav-item" data-panel="chat" id="nav-chat">Chats</button>
 
       <button class="nav-item" data-panel="content" id="nav-content">Content Machine</button>
@@ -1656,6 +1658,55 @@
 
         </div>
       </div>
+    </section>
+
+    <!-- ══ PANEL: IMAGE RESTYLER ══════════════════════════════════════ -->
+    <section class="panel" id="panel-restyler">
+
+      <div class="restyler-shell">
+        <aside class="restyler-sidebar">
+          <div class="restyler-left-head">
+            <h2>TURN A PORTRAIT INTO A NEW STYLE</h2>
+            <p>Style your image!</p>
+          </div>
+          <input type="file" id="restyler-source-input" accept="image/*" class="hidden" />
+          <button type="button" class="restyler-upload-card-left" id="btn-restyler-upload">
+            <div class="restyler-upload-empty" id="restyler-upload-empty">
+              <strong>UPLOAD PORTRAIT</strong>
+              <em>Style your image!</em>
+            </div>
+            <img id="restyler-sidebar-preview" class="restyler-sidebar-preview hidden" alt="Uploaded portrait preview" />
+            <span class="restyler-upload-cta">↥ Choose image</span>
+          </button>
+          <div class="restyler-selected-card hidden" id="restyler-selected-card">
+            <span id="restyler-selected-label">No portrait selected</span>
+            <button type="button" id="btn-restyler-replace">Replace</button>
+          </div>
+          <div class="restyler-side-generate hidden" id="restyler-side-generate">
+            <div class="restyler-active-style" id="restyler-active-style">
+              <span class="restyler-active-kicker">SELECTED STYLE</span>
+              <strong id="restyler-active-name">Anime</strong>
+              <small id="restyler-active-model">Seedream 4 Edit · 7⚡</small>
+            </div>
+            <button class="btn-generate-img" id="btn-run-restyler">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z"/></svg>
+              Restyle <span class="img-cost-badge" id="restyler-cost-badge">7⚡</span>
+            </button>
+            <div class="gen-status hidden" id="restyler-status"><div class="spinner"></div><span>Restyling…</span></div>
+          </div>
+        </aside>
+
+        <main class="restyler-main">
+          <div class="restyler-catalog" id="restyler-hero">
+            <div class="restyler-style-grid" id="restyler-style-grid"></div>
+          </div>
+          <div class="restyler-result-panel hidden" id="restyler-result-zone">
+            <div class="edit-result-tag">RESTYLED RESULT</div>
+            <div class="edit-result-inner" id="restyler-result-area"></div>
+          </div>
+        </main>
+      </div>
+
     </section>
 
     <!-- ══ PANEL: MY MEDIA ══════════════════════════════════════ -->

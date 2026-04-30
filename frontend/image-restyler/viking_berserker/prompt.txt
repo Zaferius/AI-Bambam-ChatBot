@@ -1,0 +1,3 @@
+ai_model: seedream_4
+
+Transform into a fierce Viking berserker with horned helmet, battle axe, war paint, Nordic symbols, snowy mountains, and a primal cinematic warrior pose. Keep the same face, identity, facial structure, and expression. No face swap or identity change.

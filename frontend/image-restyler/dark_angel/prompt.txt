@@ -1,0 +1,3 @@
+ai_model: nano_banana_edit
+
+Transform into a dark fallen angel with a cold, villain-like expression, slightly narrowed eyes, black metallic wings, gothic fantasy background, and moody high-contrast lighting. Keep the same face and identity.

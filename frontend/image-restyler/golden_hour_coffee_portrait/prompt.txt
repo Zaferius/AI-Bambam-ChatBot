@@ -1,0 +1,3 @@
+ai_model: nano_banana_edit
+
+Keep the facial features exactly consistent with the uploaded person. Create a cinematic emotional portrait on Kodak Portra 400 film outside an urban coffee shop at golden hour. Warm sunset light hits one side of the face. The subject looks slightly away from the camera while holding a coffee cup with relaxed candid expression. Add subtle film grain, soft focus, city-light bokeh, and storytelling atmosphere.

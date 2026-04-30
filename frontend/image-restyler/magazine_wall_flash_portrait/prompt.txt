@@ -1,0 +1,3 @@
+ai_model: nano_banana_edit
+
+Without changing the original face, create a realistic portrait shot with a 1990s-style direct front flash. The person has a naturally styled casual hairstyle, calm slightly playful expression, and a modern oversized cream sweater. Preserve original facial structure and identity without feminizing or masculinizing features. Background: dark off-white wall with aesthetic magazine posters and stickers, cozy bedroom feel, dim ambient light, nostalgic 35mm analog flash glow.

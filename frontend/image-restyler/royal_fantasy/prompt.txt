@@ -1,0 +1,3 @@
+ai_model: nano_banana_edit
+
+Transform into a royal fantasy warrior with determined gaze, slightly lowered brows, golden armor, glowing enchanted sword, dramatic throne hall, heroic pose, and cinematic high-fantasy atmosphere. Keep the exact same face and identity.

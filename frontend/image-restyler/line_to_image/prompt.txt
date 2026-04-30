@@ -1,0 +1,3 @@
+ai_model: nano_banana_edit
+
+Convert the line art into a fully rendered realistic illustration while keeping the exact same face, expression, hairstyle, clothing, and pose. Only add color, texture, lighting, and realistic material detail.

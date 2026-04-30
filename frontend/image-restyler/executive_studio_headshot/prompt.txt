@@ -1,0 +1,3 @@
+ai_model: nano_banana_edit
+
+Keep the facial features exactly consistent with the uploaded person. Dress them in a professional navy business suit and white shirt. Place them against a clean dark-gray studio backdrop with a subtle center-light gradient and darker vignette edges. Use an 85mm portrait look with classic three-point lighting: soft key light, subtle rim light, natural catchlights. Preserve realistic skin texture and visible suit fabric detail. Final result: ultra-realistic executive headshot.

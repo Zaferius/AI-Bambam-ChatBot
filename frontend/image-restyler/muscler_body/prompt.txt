@@ -1,0 +1,3 @@
+ai_model: nano_banana_edit
+
+Transform the person into a bodybuilder physique with larger biceps while keeping anatomy realistic and proportions natural. Preserve the same face, identity, hairstyle, and clothing.

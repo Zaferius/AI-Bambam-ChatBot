@@ -1,0 +1,3 @@
+ai_model: nano_banana_edit
+
+Generate a close-up black-and-white portrait from a slightly high angle, focused on head, upper chest, and shoulders against a deep black background. Use a proud forward-facing expression, sharp 35mm portrait feel, and crisp studio contrast.

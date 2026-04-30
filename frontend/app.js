@@ -1,4 +1,4 @@
-/**
+e/**
  * app.js — Raiko SPA logic
  * Handles: navigation, chat, image gen, video gen, tools, credits, media
  */
@@ -32,6 +32,9 @@ const State = {
   currentEditModel: 'fal-ai/nano-banana-2/edit',
   currentEditTool: 'edit',
   editPanelSourceUrl: null,
+  restylerSourceUrl: null,
+  restylerStyles: [],
+  currentRestylerStyle: null,
   mediaFilter: 'all',
   contentPacks: [],
   lastContentPayload: null,
@@ -655,9 +658,206 @@ function resetEditPanelWorkspace() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   IMAGE RESTYLER
+══════════════════════════════════════════════════════════ */
+const RESTYLER_STYLE_SLUGS = [
+  'anime', 'barbie', 'business_ceo', 'bw_profile_studio_portrait', 'bw_studio_portrait',
+  'cartoon_style', 'chibi', 'cinematic_portrait', 'creative_gel_light_headshot', 'cyberpunk',
+  'dark_angel', 'digital_camera_flash_portrait', 'executive_studio_headshot', 'ghostface_mirror',
+  'golden_hour_coffee_portrait', 'gothic_style', 'hollywood_star', 'lego', 'line_to_image',
+  'magazine_wall_flash_portrait', 'medieval_knight', 'minecraft', 'monochrome_drama_headshot',
+  'moody_studio_portrait', 'muscler_body', 'natural_light_headshot', 'olympus_god',
+  'personal_brand_headshot', 'photo_grid_pose', 'pixar', 'pokemon_trainer', 'royal_fantasy',
+  'royal_fashion', 'sailor_moon', 'samurai_legends', 'simpsons_style', 'sixteen_bit_character',
+  'snow_magic', 'snowy_times', 'south_park_style', 'spec_ops', 'studio_clean_headshot', 'ufc',
+  'underwater_half_face_portrait', 'viking_berserker', 'winter_flake', 'winter_time'
+];
+
+const RESTYLER_MODEL_MAP = {
+  nano_banana_edit: { id: 'fal-ai/nano-banana-2/edit', label: 'Nano Banana 2 Edit', cost: 5 },
+  nano_banana_pro_edit: { id: 'fal-ai/nano-banana-pro/edit', label: 'Nano Banana Pro Edit', cost: 7 },
+  seedream_4: { id: 'fal-ai/bytedance/seedream/v4/edit', label: 'Seedream 4 Edit', cost: 7 },
+  seedream_45: { id: 'fal-ai/bytedance/seedream/v4.5/edit', label: 'Seedream 4.5 Edit', cost: 7 },
+};
+
+const RESTYLER_PREVIEW_FILES = {
+  anime: ['anime_before.jpg', 'anime_after.jpg'],
+  barbie: ['barbie_before.jpg', 'barbie_after.jpg'],
+  business_ceo: ['business_ceo_before.jpg', 'business_ceo_after.jpg'],
+  bw_profile_studio_portrait: ['bw_profile_studio_portrait_before.jpg', 'bw_profile_studio_portrait_after.jpg'],
+  bw_studio_portrait: ['bw_studio_portrait_before.jpg', 'bw_studio_portrait_after.jpg'],
+  cartoon_style: ['cartoon_style_before.jpg', 'cartoon_style_after.jpg'],
+  chibi: ['chibi_before.jpg', 'chibi_after.jpg'],
+  cinematic_portrait: ['cinematic_portrait_before.jpg', 'cinematic_portrait_after.jpg'],
+  creative_gel_light_headshot: ['creative_gel_light_headshot_before.jpg', 'creative_gel_light_headshot_after.jpg'],
+  cyberpunk: ['cyberpunk_before.jpg', 'cyberpunk_after.jpg'],
+  dark_angel: ['dark_angel_before.jpg', 'dark_angel_after.jpg'],
+  digital_camera_flash_portrait: ['digital_camera_flash_portrait_before.jpg', 'digital_camera_flash_portrait_after.jpg'],
+  executive_studio_headshot: ['executive_studio_headshot_before.jpg', 'executive_studio_headshot_after.jpg'],
+  ghostface_mirror: ['ghostface_mirror_before.jpg', 'ghostface_mirror_after.jpg'],
+  golden_hour_coffee_portrait: ['golden_hour_coffee_portrait_before.jpg', 'golden_hour_coffee_portrait_after.jpg'],
+  gothic_style: ['gothic_style_before.jpg', 'gothic_style_after.jpg'],
+  hollywood_star: ['hollywood_star_before.jpg', 'hollywood_star_after.jpg'],
+  lego: ['lego_before.jpg', 'lego_after.jpg'],
+  line_to_image: ['line_to_image_before.jpg', 'line_to_image_after.jpg'],
+  magazine_wall_flash_portrait: ['magazine_wall_flash_portrait_before.jpg', 'magazine_wall_flash_portrait_after.jpg'],
+  medieval_knight: ['medieval_knight_before.jpg', 'medieval_knight_after.jpg'],
+  minecraft: ['minecraft_before.jpg', 'minecraft_after.jpg'],
+  monochrome_drama_headshot: ['monochrome_drama_headshot_before.jpg', 'monochrome_drama_headshot_after.jpg'],
+  moody_studio_portrait: ['moody_studio_portrait_before.jpg', 'moody_studio_portrait_after.jpg'],
+  muscler_body: ['muscler_body_before.jpg', 'muscler_body_after.jpg'],
+  natural_light_headshot: ['natural_light_headshot_before.jpg', 'natural_light_headshot_after.jpg'],
+  olympus_god: ['olympus_god_before.jpg', 'olympus_god_after.jpg'],
+  personal_brand_headshot: ['personal_brand_headshot_before.jpg', 'personal_brand_headshot_after.jpg'],
+  photo_grid_pose: ['photo_grid_pose_before.jpg', 'photo_grid_pose_after.jpg'],
+  pixar: ['pixar_before.jpg', 'pixar_after.jpg'],
+  pokemon_trainer: ['pokemon_trainer_before.jpg', 'pokemon_trainer_after.jpg'],
+  royal_fantasy: ['royal_fantasy_before.jpg', 'royal_fantasy_after.jpg'],
+  royal_fashion: ['royal_fashion_before.jpg', 'royal_fashion_after.jpg'],
+  sailor_moon: ['sailor_moon_before.jpg', 'sailor_moon_after.jpg'],
+  samurai_legends: ['samurai_legends_before.jpg', 'samurai_legends_after.jpg'],
+  simpsons_style: ['simpsons_style_before.jpg', 'simpsons_style_after.jpg'],
+  sixteen_bit_character: ['sixteen_bit_character_before.jpg', 'sixteen_bit_character_after.jpg'],
+  snow_magic: ['snow_magic_before.jpg', 'snow_magic_after.jpg'],
+  snowy_times: ['snowy_times_before.jpg', 'snowy_times_after.jpg'],
+  south_park_style: ['south_park_style_before.jpg', 'south_park_style_after.jpg'],
+  spec_ops: ['spec_ops_before.jpg', 'spec_ops_after.jpg'],
+  studio_clean_headshot: ['studio_clean_headshot_before.jpg', 'studio_clean_headshot_after.jpg'],
+  ufc: ['ufc_before.jpg', 'ufc_after.jpg'],
+  underwater_half_face_portrait: ['underwater_half_face_portrait_before.jpg', 'underwater_half_face_portrait_after.jpg'],
+  viking_berserker: ['viking_berserker_before.jpg', 'viking_berserker_after.jpg'],
+  winter_flake: ['winter_flake_before.jpg', 'winter_flake_after.jpg'],
+  winter_time: ['winter_time_before.jpg', 'winter_time_after.jpg'],
+};
+
+function restylerTitle(slug) {
+  return slug.split('_').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
+}
+
+function parseRestylerPrompt(text, slug) {
+  const raw = String(text || '').trim();
+  const lines = raw.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  let key = 'nano_banana_edit';
+  if (lines[0]?.toLowerCase().startsWith('ai_model:')) {
+    key = lines.shift().split(':').slice(1).join(':').trim() || key;
+  }
+  const model = RESTYLER_MODEL_MAP[key] || RESTYLER_MODEL_MAP.nano_banana_edit;
+  const prompt = lines.join('\n').trim() || `Restyle the uploaded portrait as ${restylerTitle(slug)} while preserving identity, facial features, pose, and composition.`;
+  return { aiModelKey: key, modelId: model.id, modelLabel: model.label, cost: model.cost, prompt };
+}
+
+async function loadRestylerStyles() {
+  if (State.restylerStyles.length) return State.restylerStyles;
+  const styles = await Promise.all(RESTYLER_STYLE_SLUGS.map(async slug => {
+    let parsed = parseRestylerPrompt('', slug);
+    try {
+      const res = await fetch(`image-restyler/${slug}/prompt.txt`, { cache: 'no-store' });
+      if (res.ok) parsed = parseRestylerPrompt(await res.text(), slug);
+    } catch {}
+    return {
+      slug,
+      name: restylerTitle(slug),
+      before: `image-restyler/${slug}/${(RESTYLER_PREVIEW_FILES[slug] || [`${slug}_before.jpg`, `${slug}_after.jpg`])[0]}`,
+      after: `image-restyler/${slug}/${(RESTYLER_PREVIEW_FILES[slug] || [`${slug}_before.jpg`, `${slug}_after.jpg`])[1]}`,
+      ...parsed,
+    };
+  }));
+  State.restylerStyles = styles;
+  return styles;
+}
+
+async function initRestylerPanel() {
+  const grid = document.getElementById('restyler-style-grid');
+  if (!grid || grid.dataset.loaded === 'true') return;
+  const styles = await loadRestylerStyles();
+  grid.innerHTML = styles.map(style => `
+    <button type="button" class="restyler-style-card" data-style="${style.slug}">
+      <div class="restyler-style-preview">
+        <img src="${style.after}" alt="${style.name} style preview" loading="lazy" onerror="this.onerror=null;this.src='${style.before}'" />
+      </div>
+      <span class="restyler-selected-badge">Selected</span>
+      <div class="restyler-style-overlay">
+        <span>${style.name}</span>
+        <em>Use Style →</em>
+      </div>
+    </button>
+  `).join('');
+  grid.dataset.loaded = 'true';
+  selectRestylerStyle(styles[0]?.slug || 'anime');
+}
+
+function selectRestylerStyle(slug) {
+  const style = State.restylerStyles.find(item => item.slug === slug) || State.restylerStyles[0];
+  if (!style) return;
+  State.currentRestylerStyle = style;
+  document.querySelectorAll('.restyler-style-card').forEach(card => card.classList.toggle('active', card.dataset.style === style.slug));
+  const name = document.getElementById('restyler-active-name');
+  const model = document.getElementById('restyler-active-model');
+  const cost = document.getElementById('restyler-cost-badge');
+  if (name) name.textContent = style.name;
+  if (model) model.textContent = `${style.modelLabel} · ${style.cost}⚡`;
+  if (cost) cost.textContent = `${style.cost}⚡`;
+}
+
+async function handleRestylerUpload(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  showUploadProgress('Uploading portrait');
+  try {
+    const dataUrl = await fileToDataURL(file);
+    State.restylerSourceUrl = dataUrl;
+    const hero = document.getElementById('restyler-hero');
+    const panel = document.getElementById('panel-restyler');
+    const selected = document.getElementById('restyler-selected-card');
+    const sideGenerate = document.getElementById('restyler-side-generate');
+    const label = document.getElementById('restyler-selected-label');
+    const remove = document.getElementById('restyler-remove-btn');
+    const card = document.querySelector('#panel-restyler .restyler-upload-card');
+    const sidePreview = document.getElementById('restyler-sidebar-preview');
+    const empty = document.getElementById('restyler-upload-empty');
+    if (sidePreview) { sidePreview.src = dataUrl; sidePreview.classList.remove('hidden'); }
+    empty?.classList.add('hidden');
+    panel?.classList.add('has-source');
+    selected?.classList.remove('hidden');
+    sideGenerate?.classList.remove('hidden');
+    if (label) label.textContent = file.name || 'Portrait selected';
+    remove?.classList.remove('hidden');
+    card?.classList.add('has-image');
+  } finally {
+    hideUploadProgress();
+  }
+}
+
+function resetRestylerWorkspace() {
+  State.restylerSourceUrl = null;
+  const input = document.getElementById('restyler-source-input');
+  const hero = document.getElementById('restyler-hero');
+  const panel = document.getElementById('panel-restyler');
+  const selected = document.getElementById('restyler-selected-card');
+  const sideGenerate = document.getElementById('restyler-side-generate');
+  const result = document.getElementById('restyler-result-zone');
+  const area = document.getElementById('restyler-result-area');
+  const remove = document.getElementById('restyler-remove-btn');
+  const card = document.querySelector('#panel-restyler .restyler-upload-card');
+  const sidePreview = document.getElementById('restyler-sidebar-preview');
+  const empty = document.getElementById('restyler-upload-empty');
+  if (input) input.value = '';
+  if (sidePreview) { sidePreview.src = ''; sidePreview.classList.add('hidden'); }
+  empty?.classList.remove('hidden');
+  panel?.classList.remove('has-source', 'has-result');
+  selected?.classList.add('hidden');
+  sideGenerate?.classList.add('hidden');
+  result?.classList.add('hidden');
+  if (area) area.innerHTML = '';
+  remove?.classList.add('hidden');
+  card?.classList.remove('has-image');
+}
+
+/* ══════════════════════════════════════════════════════════
    NAVIGATION
 ══════════════════════════════════════════════════════════ */
 function switchPanel(panelId) {
+  const panel = document.getElementById(`panel-${panelId}`);
+
   // Update nav items
   document.querySelectorAll('.nav-item').forEach(b => {
     b.classList.toggle('active', b.dataset.panel === panelId);
@@ -671,6 +871,7 @@ function switchPanel(panelId) {
   State.currentPanel = panelId;
   if (panelId === 'dashboard') loadDashboardChats();
   if (panelId === 'media') loadMediaPanel();
+  if (panelId === 'restyler') initRestylerPanel();
   panel?.scrollTo?.({ top: 0, behavior: 'instant' });
 }
 
@@ -2527,6 +2728,56 @@ function renderEditPanelResults(urls) {
   }
 }
 
+async function runImageRestyler() {
+  if (!requireAuth()) return;
+  if (!State.restylerSourceUrl) { toast('Upload a portrait first', 'error'); return; }
+  if (!State.currentRestylerStyle) { toast('Choose a style first', 'error'); return; }
+  const btn = document.getElementById('btn-run-restyler');
+  const status = document.getElementById('restyler-status');
+  const zone = document.getElementById('restyler-result-zone');
+  const area = document.getElementById('restyler-result-area');
+  if (btn) btn.disabled = true;
+  status?.classList.remove('hidden');
+  zone?.classList.remove('hidden');
+  document.getElementById('panel-restyler')?.classList.add('has-result');
+  if (area) {
+    area.innerHTML = '<div class="upscale-result-placeholder"><div class="upscale-result-placeholder-frame"></div><div class="upscale-result-placeholder-text">Restyling portrait…</div></div>';
+  }
+  try {
+    const style = State.currentRestylerStyle;
+    const res = await API.ai.editImage(style.modelId, style.prompt, State.restylerSourceUrl, 0.75);
+    const urls = Array.isArray(res.output) ? res.output : [res.output];
+    renderRestylerResults(urls);
+    updateCreditsUI(res.credits_remaining);
+    urls.forEach(url => saveMediaItem('image', url, `${style.name}: ${style.prompt}`, style.modelId));
+    toast(`Portrait restyled! ⚡ ${res.credits_used} used`, 'success');
+  } catch (err) {
+    toast(err.message || 'Restyle failed', 'error');
+    if (area) area.innerHTML = '';
+  } finally {
+    if (btn) btn.disabled = false;
+    status?.classList.add('hidden');
+  }
+}
+
+function renderRestylerResults(urls) {
+  const area = document.getElementById('restyler-result-area');
+  if (!area) return;
+  area.innerHTML = '';
+  urls.forEach(url => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;';
+    wrap.innerHTML = `
+      <img src="${url}" alt="Restyled portrait" style="max-width:100%;max-height:100%;object-fit:contain;border:2px solid var(--black);" loading="lazy" />
+      <div style="display:flex;gap:6px;">
+        <button class="result-action-btn" onclick="window.open('${url}', '_blank')">Open</button>
+        <a class="result-action-btn" href="${url}" download="raiko_restyle.png">Download</a>
+      </div>
+    `;
+    area.appendChild(wrap);
+  });
+}
+
 /* ══════════════════════════════════════════════════════════
    MY MEDIA — localStorage helpers
 ══════════════════════════════════════════════════════════ */
@@ -2965,6 +3216,8 @@ function bindEvents() {
         }
       } else if (panelId === 'upscale') {
         openUpscaler(item.dataset.upscaleEntry || 'auto');
+      } else if (panelId === 'restyler') {
+        switchPanel('restyler');
       }
     });
   });
@@ -2987,8 +3240,19 @@ function bindEvents() {
 
   loadContentMachinePrefs();
   initContentMachineUI();
+  initRestylerPanel();
   document.getElementById('btn-generate-content-pack')?.addEventListener('click', () => generateContentPack());
   document.getElementById('btn-copy-content-json')?.addEventListener('click', copyContentPacksJson);
+
+  document.getElementById('btn-restyler-upload')?.addEventListener('click', () => document.getElementById('restyler-source-input')?.click());
+  document.getElementById('btn-restyler-replace')?.addEventListener('click', () => document.getElementById('restyler-source-input')?.click());
+  document.getElementById('restyler-source-input')?.addEventListener('change', async (e) => handleRestylerUpload(e.target.files?.[0]));
+  document.getElementById('restyler-remove-btn')?.addEventListener('click', (e) => { e.preventDefault(); resetRestylerWorkspace(); });
+  document.getElementById('restyler-style-grid')?.addEventListener('click', (e) => {
+    const card = e.target.closest('.restyler-style-card');
+    if (card) selectRestylerStyle(card.dataset.style);
+  });
+  document.getElementById('btn-run-restyler')?.addEventListener('click', runImageRestyler);
 
   // Image generate
   document.getElementById('btn-generate-image')?.addEventListener('click', generateImage);

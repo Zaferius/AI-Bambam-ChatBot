@@ -1,0 +1,3 @@
+ai_model: seedream_4
+
+Transform into a cyberpunk soldier with neon armor, tactical helmet, glowing visor, futuristic weaponry, and a neon city backdrop. Use cinematic sci-fi lighting. Keep the same face, identity, facial structure, and expression. No face swap or identity change.

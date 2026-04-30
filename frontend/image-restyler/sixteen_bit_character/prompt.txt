@@ -1,0 +1,3 @@
+ai_model: nano_banana_edit
+
+Convert the person into a 16-bit retro game character while keeping the same face and clothing recognizable. Turn the background into a pixel-art platformer world.

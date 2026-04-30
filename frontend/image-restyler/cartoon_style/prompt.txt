@@ -1,0 +1,3 @@
+ai_model: nano_banana_edit
+
+Transform into a Western cartoon character with bold outlines, simple shapes, bright playful colors, expressive face, and a fun Saturday-morning-cartoon vibe. Keep the same face, identity, facial structure, and expression. No face swap or identity change.

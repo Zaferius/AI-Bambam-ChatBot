@@ -1,0 +1,3 @@
+ai_model: nano_banana_edit
+
+Create a vertical triptych of three 2:3 frames with the same person in all panels, wearing a black coat and red scarf. Keep identity and style perfectly consistent. Mood: soft, calm, cinematic blue winter tones with falling snow or fine rain. Top: chest-up close shot under a transparent umbrella in a softly blurred snowy forest, subtle emotional expression. Middle: wide shot in a vast snowy field from behind, footprints stretching into the distance, strong negative space for solitude. Bottom: extreme side close-up focused on eye detail, skin texture, and melting snow.

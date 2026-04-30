@@ -1,0 +1,3 @@
+ai_model: nano_banana_edit
+
+Create a hyper-realistic close-up showing only the left half of the face submerged in water, with one eye in sharp focus near the left side of frame. Add caustic light patterns, suspended droplets and bubbles, soft shadows, sharp highlights, realistic pores, wet lips, lashes, subtle subsurface scattering, shallow depth of field, and dreamlike underwater macro mood. Aspect ratio 3:4.

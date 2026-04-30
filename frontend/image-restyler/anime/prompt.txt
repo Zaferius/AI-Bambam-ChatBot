@@ -1,0 +1,3 @@
+ai_model: seedream_4
+
+Turn this image into anime-style artwork with sharp outlines, vibrant colors, and expressive eyes. Keep the same pose and setting.

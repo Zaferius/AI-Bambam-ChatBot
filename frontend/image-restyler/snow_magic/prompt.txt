@@ -1,0 +1,3 @@
+ai_model: nano_banana_edit
+
+Use the uploaded person exactly as the subject without changing face, hair, race, or proportions. Create a vertical 4K triptych of three equal horizontal frames set on a quiet snowy night in Sapporo with deep blue hills, distant dark mountains, amber fence lights, direct flash, visible 35mm film grain, and realistic winter atmosphere. Frame 1: diagonal over-the-shoulder portrait with long winter coat, vivid scarf, and snow frozen in flash. Frame 2: full-body shot from slightly elevated angle on a snowy road, holding a small bouquet, footprints visible. Frame 3: intimate close-up with sharp eyes, soft sorrow or warmth, shallow depth of field, and realistic flash reflections.

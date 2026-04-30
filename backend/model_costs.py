@@ -68,6 +68,7 @@ FAL_COSTS: dict[str, float] = {
     "fal-ai/nano-banana-2/edit":                5.0,
     "fal-ai/nano-banana-pro/edit":              7.0,
     "openai/gpt-image-2/edit":                 12.0,
+    "fal-ai/bytedance/seedream/v4/edit":        7.0,
     "fal-ai/bytedance/seedream/v4.5/edit":      7.0,
     "xai/grok-imagine-image/edit":              8.0,
     "fal-ai/bria/background/remove":            3.0,

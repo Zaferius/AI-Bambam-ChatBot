@@ -1,0 +1,3 @@
+ai_model: seedream_4
+
+Transform into a noble medieval knight with shining armor, coat of arms, royal sword, castle background, and cinematic chivalric atmosphere. Emphasize detailed metal reflections. Keep the same face, identity, facial structure, and expression. No face swap or identity change.

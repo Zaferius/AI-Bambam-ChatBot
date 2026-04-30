@@ -1,0 +1,3 @@
+ai_model: nano_banana_edit
+
+Create a 3x3 grid of stylish studio portraits featuring different poses while keeping the exact same face, hairstyle, and clothing. Let the environment shift into elegant studio sets.

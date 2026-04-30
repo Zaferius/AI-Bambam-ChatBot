@@ -1,0 +1,3 @@
+ai_model: nano_banana_edit
+
+Use the attached face as reference. Show a close-up portrait displayed on the screen of a compact Canon-style digital camera, with camera body, buttons, dials, and textured surface visible around the screen. On-screen photo: indoors at night, bright built-in flash, loose dark hair, soft slightly open-lip expression, dim cluttered kitchen background softly blurred. Mood: candid, raw, nostalgic early-2000s snapshot. Muted cool tones, strong flash contrast, subtle display grain. No text or logos inside the preview image.

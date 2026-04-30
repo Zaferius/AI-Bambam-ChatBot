@@ -2,7 +2,7 @@
 
 This README is the **source of truth for the current product behavior** so the next AI agent can continue work safely.
 
-Last updated: **2026-04-30 (SeedVR upscaler post-upload layout aligned to Edit panel + bottom bar polish fix)**
+Last updated: **2026-04-30 (Image Restyler UI/flow polished: persistent right catalog, left large upload preview, selected badge state, sidebar generate flow)**
 
 ---
 
@@ -16,6 +16,7 @@ Raiko is a FastAPI + Vanilla JS single-page app for:
 - One Click Content Machine — multi-platform social content packs
 - AI image editing — **dedicated Edit panel** (separate from Image panel)
 - AI background removal (BRIA)
+- AI portrait restyling — **Image Restyler** presets from `frontend/image-restyler/`
 - AI image/video upscaling (SeedVR)
 - My Media library (all generated images & videos, localStorage-backed)
 - Credit-based usage tracking
@@ -28,7 +29,7 @@ Core UX principle: one app shell, **top horizontal navbar** navigation, persiste
 
 These were intentionally changed and should stay as-is unless explicitly requested:
 
-0. **Navbar nav link order**: **Explore | Image | Video | Edit | Chats | Content Machine** (Content Machine moved to far right, after Chats).
+0. **Navbar nav link order**: **Explore | Image | Video | Edit | Restyler | Chats | Content Machine** (Content Machine remains far right, after Chats).
 
 1. **Top navbar** replaces the old left sidebar. Navigation is now a horizontal bar at the top of every page.
 2. **Chat history sidebar** lives *inside* the Chat panel as a 220px left sub-panel (not in the top navbar).
@@ -104,6 +105,17 @@ These were intentionally changed and should stay as-is unless explicitly request
     - After video upload, a dedicated right-side upscale canvas (`#vup-canvas`) appears in Video main area.
     - Canvas uses Edit-style composition: large centered source preview, right result zone, and compact bottom bar (Factor / Format / Upscale).
     - Switching away from Upscale tab hides `#vup-canvas`; switching back restores it if source media still exists.
+28. **Image Restyler panel (`#panel-restyler`) added and polished**:
+    - Top navbar item: **Restyler**.
+    - Uses black/yellow brutalist layout with **left upload/control sidebar** and **right persistent style catalog**.
+    - Source assets live under `frontend/image-restyler/<style_slug>/` with `<style_slug>_before.jpg`, `<style_slug>_after.jpg`, and optional `prompt.txt`.
+    - `prompt.txt` supports first-line `ai_model: ...`; frontend maps `nano_banana_edit` to `fal-ai/nano-banana-2/edit` and `seedream_4` to `fal-ai/bytedance/seedream/v4/edit`.
+    - Missing `prompt.txt` files use a safe fallback prompt that preserves identity and applies the style name.
+    - Uploading a portrait shows a **large left-sidebar preview** constrained to sidebar bounds (no overflow).
+    - Style cards are shown as a scrollable multi-column catalog (currently 5 columns on desktop, responsive down on smaller widths).
+    - Selected style card uses active state styling and a **small yellow `Selected` chip**; non-selected cards show hover CTA.
+    - Generation is triggered from the **left sidebar** after upload + style selection (not from a bottom global bar).
+    - Upload trigger was changed from `label[for]` to button-driven click flow to avoid double-opening file chooser.
 
 If you reintroduce gradients, soft shadows, pill-shaped buttons, lavender/purple colors, or standalone info "ⓘ" icons, you are regressing the product.
 
@@ -116,7 +128,7 @@ Main UI file: `frontend/index.html`
 ### Top Navbar
 
 - Black background (`#0A0A0A`), 2px yellow bottom border
-- **Left section**: Raiko logo → vertical divider → nav links: **Explore | Image | Video | Edit | Chats | Content Machine**
+- **Left section**: Raiko logo → vertical divider → nav links: **Explore | Image | Video | Edit | Restyler | Chats | Content Machine**
 - **Right section**: **PRO** CTA button (opens pricing/credits modal) → User avatar + name
 - Active nav link: yellow text (`#FFE400`), bold
 - **Edit nav button** — hovering opens a mega-dropdown with edit models in 2 columns:
@@ -271,6 +283,27 @@ Two-column layout: left sub-sidebar (220px) + right chat area.
 - Before generation: `#video-explainer` (how-it-works steps + example output placeholders)
 - After generation: `.has-result` on `#panel-video` → `#video-result-area` fills right area
 
+### Image Restyler Panel (`#panel-restyler`) — NEW
+
+**Purpose:** Users upload a portrait and apply ready-made style presets from `frontend/image-restyler/`.
+
+**Layout:**
+- Left sidebar (`.restyler-sidebar`): title/subtitle, upload card, uploaded portrait preview, selected style summary, and **Restyle** action.
+- Right main area (`.restyler-main`): persistent scrollable style catalog (`#restyler-style-grid`) that remains visible after upload.
+- Result area renders in a compact right-side result panel (`#restyler-result-zone`) under the catalog.
+
+**Style folder contract:**
+- Folder: `frontend/image-restyler/<style_slug>/`
+- Preview files: `<style_slug>_before.jpg` and `<style_slug>_after.jpg`
+- Optional prompt file: `prompt.txt`
+- First prompt line can be `ai_model: nano_banana_edit` or `ai_model: seedream_4`; remaining lines are sent as the edit prompt.
+
+**Frontend flow:**
+- `initRestylerPanel()` loads known style slugs and fetches each `prompt.txt`.
+- `selectRestylerStyle(slug)` updates active style state and sidebar model/cost labels.
+- `handleRestylerUpload(file)` stores the uploaded portrait as a base64 data URL in `State.restylerSourceUrl`.
+- `runImageRestyler()` calls `API.ai.editImage(style.modelId, style.prompt, State.restylerSourceUrl, 0.75)`, renders output via `renderRestylerResults()`, saves to My Media, and updates credits.
+
 ### Content Machine Panel (`#panel-content`) — NEW
 
 **Purpose:** One Click Content Machine generates cohesive, ready-to-post social content packs from one brief.
@@ -376,6 +409,9 @@ Main logic: `frontend/app.js` | Explore showcase data: `frontend/explore-data.js
 | `imageReferenceUrls` | `[]` | Base64 data URLs for image reference uploads |
 | `editSourceUrl` | `null` | Image panel Edit tab source |
 | `editPanelSourceUrl` | `null` | Dedicated Edit panel source |
+| `restylerSourceUrl` | `null` | Image Restyler uploaded portrait |
+| `restylerStyles` | `[]` | Loaded Image Restyler preset metadata |
+| `currentRestylerStyle` | `null` | Selected Image Restyler preset |
 | `i2vSourceUrl` | `null` | Image-to-video source |
 | `videoUpscaleSourceUrl` | `null` | SeedVR video upscale source |
 | `stylePreset` | `''` | appended to image prompt |
@@ -401,6 +437,7 @@ Main logic: `frontend/app.js` | Explore showcase data: `frontend/explore-data.js
 - `generateVideoFromImage()` → `API.ai.generateVideoFromImage()` → `saveMediaItem()`
 - `upscaleVideo()` → `API.ai.generateVideo('fal-ai/seedvr/upscale/video', ..., options.extra.video_url)` → `saveMediaItem()`
 - `runSharedUpscaler()` → image: `API.ai.editImage('fal-ai/seedvr/upscale/image', ...)`; video: `API.ai.generateVideo('fal-ai/seedvr/upscale/video', ..., options.extra.video_url)`; then right result panel render + download action + `saveMediaItem()`
+- `initRestylerPanel()` / `selectRestylerStyle()` / `runImageRestyler()` → loads `frontend/image-restyler` presets, applies selected prompt/model to uploaded portrait via `API.ai.editImage()`, then saves result to My Media.
 - `generateContentPack()` → `generateContentPackRequest()` → `POST /content-packs/generate` → `renderContentPacks()`
 - `initContentMachineUI()` — wires Content Machine workflow tabs and accordion toggles.
 - `updateContentCostEstimate()` — updates live estimated total credits.
@@ -553,6 +590,7 @@ Requires JWT auth. Generates cohesive social content packs.
 | `fal-ai/nano-banana-2/edit` | 5⚡ | default |
 | `fal-ai/nano-banana-pro/edit` | 7⚡ | |
 | `openai/gpt-image-2/edit` | 12⚡ | |
+| `fal-ai/bytedance/seedream/v4/edit` | 7⚡ | used by Image Restyler `seedream_4` presets |
 | `fal-ai/bytedance/seedream/v4.5/edit` | 7⚡ | |
 | `xai/grok-imagine-image/edit` | 8⚡ | |
 | `fal-ai/bria/background/remove` | 3⚡ | no prompt required |

@@ -1,0 +1,3 @@
+ai_model: seedream_4
+
+Transform into a legendary samurai warrior with traditional armor, katana, cherry blossom background, honorable stance, feudal Japan atmosphere, and painterly cinematic detail. Keep the same face, identity, facial structure, and expression. No face swap or identity change.
