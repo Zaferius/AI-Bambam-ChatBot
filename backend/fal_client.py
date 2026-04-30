@@ -169,6 +169,32 @@ class FalAIClient:
         images = result.get("images", [])
         return [img["url"] if isinstance(img, dict) else img for img in images]
 
+    async def upscale_image(
+        self,
+        model: str,
+        image_url: str,
+        extra: Optional[dict] = None,
+    ) -> list[str]:
+        """Upscale an image and return list of URLs."""
+        model = model or "fal-ai/seedvr/upscale/image"
+        payload = {
+            "image_url": image_url,
+            "upscale_mode": "factor",
+            "upscale_factor": 2,
+            "target_resolution": "1080p",
+            "noise_scale": 0.1,
+            "output_format": "jpg",
+        }
+        if extra:
+            payload.update(extra)
+        result = await self._run(model, payload)
+        images = result.get("images") or []
+        if not images:
+            image = result.get("image")
+            if image:
+                images = [image]
+        return [img["url"] if isinstance(img, dict) else img for img in images]
+
     async def generate_video(
         self,
         model: str,
@@ -178,10 +204,22 @@ class FalAIClient:
     ) -> str:
         """Generate a video from text and return the URL."""
         model = model or "fal-ai/kling-video/v1/standard/text-to-video"
-        payload = {
-            "prompt": prompt,
-            "duration": duration,
-        }
+        if model == "fal-ai/seedvr/upscale/video":
+            payload = {
+                "video_url": (extra or {}).get("video_url", ""),
+                "upscale_mode": (extra or {}).get("upscale_mode", "factor"),
+                "upscale_factor": (extra or {}).get("upscale_factor", 2),
+                "target_resolution": (extra or {}).get("target_resolution", "1080p"),
+                "noise_scale": (extra or {}).get("noise_scale", 0.1),
+                "output_format": (extra or {}).get("output_format", "X264 (.mp4)"),
+                "output_quality": (extra or {}).get("output_quality", "high"),
+                "output_write_mode": (extra or {}).get("output_write_mode", "balanced"),
+            }
+        else:
+            payload = {
+                "prompt": prompt,
+                "duration": duration,
+            }
         if extra:
             payload.update(extra)
         result = await self._run(model, payload)

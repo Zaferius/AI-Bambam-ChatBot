@@ -832,6 +832,19 @@ body { background: var(--bg); }
   text-transform: uppercase; letter-spacing: 0.12em;
   padding: 8px 14px 4px;
 }
+.nmd-subgroup-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--black);
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  padding: 5px 10px 5px;
+  margin: 4px 14px 4px;
+  background: rgba(255, 228, 0, 0.22);
+  border: 1px solid var(--black);
+  box-shadow: 2px 2px 0 var(--black);
+}
 .nmd-item {
   display: flex; align-items: center; gap: 10px;
   padding: 7px 14px; width: 100%; text-align: left;
@@ -1013,7 +1026,7 @@ body { background: var(--bg); }
 
 .credit-slot-rolling {
   animation: creditSlotRoll 0.18s linear infinite;
-  filter: blur(1.2px);
+  filter: blur(0.9px);
 }
 
 .credit-slot-settle {
@@ -1021,14 +1034,14 @@ body { background: var(--bg); }
 }
 
 @keyframes creditSlotRoll {
-  0% { transform: translateY(-7px); opacity: 0.58; }
-  45% { transform: translateY(4px); opacity: 1; }
-  100% { transform: translateY(9px); opacity: 0.58; }
+  0% { opacity: 0.62; filter: blur(1px); }
+  50% { opacity: 1; filter: blur(0.45px); }
+  100% { opacity: 0.62; filter: blur(1px); }
 }
 
 @keyframes creditSlotSettle {
-  0% { transform: translateY(-4px); filter: blur(0.8px); }
-  100% { transform: translateY(0); filter: blur(0); }
+  0% { opacity: 0.86; filter: blur(0.8px); }
+  100% { opacity: 1; filter: blur(0); }
 }
 
 .credit-slot-overlay {
@@ -2508,12 +2521,12 @@ body { background: var(--bg); }
 }
 
 .ilh-mosaic {
-  width: min(700px, 88vw);
-  height: 252px;
+  width: min(880px, 92vw);
+  height: 340px;
   display: grid;
   grid-template-columns: 1.05fr 0.85fr 1.15fr 0.9fr;
-  grid-template-rows: 96px 112px;
-  gap: 10px;
+  grid-template-rows: 130px 150px;
+  gap: 12px;
   transform: none;
   filter: drop-shadow(0 18px 32px rgba(255, 228, 0, 0.10));
 }
@@ -2910,9 +2923,9 @@ body { background: var(--bg); }
   }
 
   .ilh-mosaic {
-    width: min(460px, 92vw);
-    height: 208px;
-    transform: scale(0.86);
+    width: min(580px, 92vw);
+    height: 260px;
+    transform: scale(0.88);
   }
 
   .ilh-copy p {
@@ -2938,8 +2951,8 @@ body { background: var(--bg); }
 }
 
 .img-canvas-area .result-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px; width: 100%; align-content: start;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px; width: 100%; align-content: start;
 }
 
 .result-img-wrap {
@@ -3152,7 +3165,7 @@ body { background: var(--bg); }
 }
 .btn-generate-img:hover { box-shadow: var(--shadow-md); transform: translate(-1px,-1px); }
 .btn-generate-img:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
-.img-cost-badge { font-size: 11px; font-weight: 700; }
+.img-cost-badge { font-size: 13px; font-weight: 800; }
 
 .btn-generate-vid {
   background: var(--yellow) !important;
@@ -4143,6 +4156,7 @@ body { background: var(--bg); }
 .video-main {
   flex: 1; display: flex; flex-direction: column;
   overflow: hidden; min-width: 0;
+  position: relative;
   background:
     radial-gradient(circle at 20% 12%, rgba(255,228,0,0.08), transparent 26%),
     radial-gradient(circle at 80% 70%, rgba(255,228,0,0.05), transparent 28%),
@@ -4751,6 +4765,21 @@ body { background: var(--bg); }
   letter-spacing: -0.04em;
   text-shadow: 2px 2px 0 var(--black);
 }
+.edit-tool-badge {
+  margin-top: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border: 2px solid var(--yellow);
+  color: var(--yellow);
+  background: var(--black);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
 .edit-source-ph-sub {
   max-width: 320px;
   font-size: 14px;
@@ -4758,6 +4787,445 @@ body { background: var(--bg); }
   font-family: var(--font-ui);
   color: rgba(255,255,255,0.68);
   letter-spacing: 0;
+}
+
+.edit-tool-steps {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.edit-tool-steps span {
+  border: 1px solid rgba(255, 228, 0, 0.55);
+  background: rgba(0,0,0,0.34);
+  color: rgba(255,255,255,0.78);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 8px 6px;
+}
+
+.video-tool-screen-head {
+  border: 2px solid rgba(255, 228, 0, 0.65);
+  background: #111314;
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: 4px 4px 0 var(--black);
+}
+
+.video-tool-screen-head h2 {
+  margin: 10px 0 6px;
+  color: var(--white);
+  font-size: 24px;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  font-weight: 900;
+}
+
+.video-tool-screen-head p {
+  margin: 0 0 10px;
+  color: rgba(255,255,255,0.68);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.video-tool-screen-head .edit-tool-steps {
+  grid-template-columns: 1fr;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   UPSCALER PANEL — shared image/video upscale tool
+   Uses the same edit-canvas + edit-bar pattern as #panel-edit
+═══════════════════════════════════════════════════════════ */
+#panel-upscale {
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background-color: #0d0f10;
+  background-image:
+    radial-gradient(circle at 50% 18%, rgba(255, 228, 0, 0.08), transparent 32%),
+    radial-gradient(circle at 50% 82%, rgba(255, 228, 0, 0.05), transparent 36%),
+    url("data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 28 28' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='14' cy='14' r='1' fill='%23FFE400' opacity='0.13'/%3E%3C/svg%3E");
+  background-size: auto, auto, 28px 28px;
+  color: var(--white);
+}
+
+/* Canvas: reuse edit-canvas, edit-source-zone, edit-upload-card, edit-source-img,
+   edit-remove-btn, edit-result-zone, edit-result-tag, edit-result-inner from Edit panel */
+
+/* Source zone sizing — same as Edit panel has-source state */
+#panel-upscale .edit-source-zone {
+  flex: 0 1 400px;
+  height: min(610px, 74vh);
+}
+
+#panel-upscale.has-upload .edit-source-zone {
+  flex: 0 1 min(760px, calc(100% - 48px));
+  height: min(620px, 70vh);
+}
+
+#panel-upscale.has-upload .edit-upload-card {
+  background: #0a0c0d;
+  border: 2px solid #2f3336;
+  box-shadow: 6px 6px 0 rgba(255, 228, 0, 0.22);
+  padding: 12px;
+  min-height: 0;
+}
+
+#panel-upscale.has-upload .edit-source-img {
+  inset: 12px;
+  width: calc(100% - 24px);
+  height: calc(100% - 24px);
+  background: #050607;
+  border: 1px solid #202427;
+}
+
+/* Result zone appears when has-upload + result ready */
+#panel-upscale .edit-result-zone {
+  border-left: 2px solid #34383a;
+}
+
+/* ── Upscale bottom bar ── */
+/* Must override .edit-bar-inner's display:grid since both classes share the element */
+.edit-bar-inner.upscale-bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: nowrap;
+}
+
+.upscale-bar-detected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.upscale-bar-type-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--yellow);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.upscale-bar-factor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.upscale-bar-format {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 1 200px;
+  min-width: 160px;
+}
+
+.upscale-bar-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.upscale-bar-select {
+  min-height: 40px;
+  width: 100%;
+  min-width: 0;
+  background: #232526;
+  border: 2px solid #34383a;
+  color: var(--white);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 10px;
+}
+
+.upscale-bar-select:focus {
+  border-color: var(--yellow);
+  box-shadow: 0 0 0 1px var(--yellow);
+}
+
+#panel-upscale .edit-bar {
+  padding: 10px 14px 16px;
+}
+
+#panel-upscale .edit-bar-right {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin-left: auto;
+}
+
+#panel-upscale .edit-bar-right .btn-generate-img {
+  min-width: 150px;
+  justify-content: center;
+}
+
+/* Factor buttons */
+.upscale-factor-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.upscale-factor-btn {
+  min-height: 40px;
+  min-width: 52px;
+  padding: 0 12px;
+  border: 2px solid #2d3135;
+  background: #232526;
+  color: #f5f6f8;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.upscale-factor-btn:hover {
+  border-color: var(--yellow);
+}
+
+.upscale-factor-btn.active {
+  border-color: var(--yellow);
+  background: var(--yellow);
+  color: var(--black);
+}
+
+/* Result area inside edit-result-zone */
+.upscale-result-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 14px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.upscale-result-inner img,
+.upscale-result-inner video {
+  width: 100%;
+  max-height: 100%;
+  min-height: 0;
+  object-fit: contain;
+  border: 2px solid var(--black);
+}
+
+.upscale-result-media {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  border: 2px solid var(--black);
+  background: #070809;
+  object-fit: contain;
+}
+
+.upscale-result-placeholder {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 10px;
+}
+
+.upscale-result-placeholder-frame {
+  flex: 1;
+  min-height: 180px;
+  border: 2px solid #2d3135;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,228,0,0.12) 50%, rgba(255,255,255,0.02) 75%);
+  background-size: 240% 100%;
+  animation: upscaleShimmer 1.4s linear infinite;
+}
+
+.upscale-result-placeholder-text {
+  color: var(--yellow);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.upscale-download-btn {
+  width: 100%;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--yellow);
+  background: var(--yellow);
+  color: var(--black);
+  text-decoration: none;
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.upscale-download-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--black);
+}
+
+@keyframes upscaleShimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+/* ── Video Upscale tab (inside Video panel sidebar + right canvas) ── */
+.vup-upload-card {
+  padding: 0;
+}
+
+.vup-upload-card .upscale-upload-btn {
+  width: 100%;
+  min-height: 46px;
+  border: 2px solid var(--yellow);
+  background: var(--yellow);
+  color: var(--black);
+  font-size: 14px;
+  font-weight: 900;
+  box-shadow: 4px 4px 0 var(--black);
+  cursor: pointer;
+  margin-top: 12px;
+}
+
+.vup-upload-card .upscale-upload-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 6px 6px 0 var(--black);
+}
+
+.vup-controls {
+  padding: 10px 0 0;
+}
+
+.vup-controls .upscale-detected-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--yellow);
+  text-transform: uppercase;
+}
+
+.vup-controls .upscale-detected-row button {
+  border: 1px solid var(--yellow);
+  background: var(--black);
+  color: var(--yellow);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 900;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+/* Right-area canvas for video upscale — fills video-main */
+.vup-canvas {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #0d0f10;
+  z-index: 2;
+}
+
+.vup-canvas .edit-canvas {
+  padding: 18px;
+}
+
+.vup-canvas #vup-source-zone {
+  flex: 0 1 min(920px, calc(100% - 48px));
+  height: min(560px, 66vh);
+}
+
+.vup-canvas #vup-preview-card {
+  background: #0a0c0d;
+  border: 2px solid #2f3336;
+  box-shadow: 6px 6px 0 rgba(255, 228, 0, 0.22);
+  padding: 12px;
+  min-height: 0;
+}
+
+.vup-canvas #video-upscale-source-preview {
+  inset: 12px;
+  width: calc(100% - 24px);
+  height: calc(100% - 24px);
+  background: #050607;
+  border: 1px solid #202427;
+}
+
+.vup-canvas .edit-bar {
+  flex-shrink: 0;
+  padding: 8px 14px 14px;
+}
+
+@media (max-width: 960px) {
+  .upscale-bar-inner {
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .upscale-bar-detected,
+  .upscale-bar-format,
+  .upscale-bar-factor,
+  #panel-upscale .edit-bar-right {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .upscale-bar-factor {
+    justify-content: space-between;
+  }
+
+  #panel-upscale .edit-canvas {
+    flex-direction: column;
+    align-items: center;
+    padding: 14px;
+  }
+
+  #panel-upscale .edit-source-zone,
+  #panel-upscale.has-upload .edit-source-zone {
+    flex: 0 0 auto;
+    width: min(760px, calc(100vw - 28px));
+    height: min(400px, 50vw);
+  }
+
+  #panel-upscale .edit-result-zone {
+    width: min(760px, calc(100vw - 28px));
+    min-height: 320px;
+    border-left: none;
+    border-top: 2px solid #34383a;
+  }
+
+  .vup-canvas {
+    position: static;
+  }
+
+  .upscale-bar-select {
+    min-width: 0;
+  }
 }
 
 .edit-upload-cta {

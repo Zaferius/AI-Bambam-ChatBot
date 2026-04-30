@@ -167,10 +167,10 @@ const API = {
     /**
      * Video generation
      */
-    generateVideo: (model, prompt, duration = '5') =>
+    generateVideo: (model, prompt, duration = '5', options = {}) =>
       apiFetch('/ai/generate', {
         method: 'POST',
-        body: JSON.stringify({ type: 'video', model, prompt, duration }),
+        body: JSON.stringify({ type: 'video', model, prompt, duration, options: options.extra || {} }),
       }),
 
     /**
@@ -191,7 +191,7 @@ const API = {
     /**
      * Image to video generation
      */
-    generateVideoFromImage: (model, prompt, imageUrl, duration = '5') =>
+    generateVideoFromImage: (model, prompt, imageUrl, duration = '5', options = {}) =>
       apiFetch('/ai/generate', {
         method: 'POST',
         body: JSON.stringify({
@@ -200,6 +200,7 @@ const API = {
           prompt,
           image_url: imageUrl,
           duration,
+          options: options.extra || {},
         }),
       }),
 

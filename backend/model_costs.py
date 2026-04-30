@@ -59,6 +59,7 @@ FAL_COSTS: dict[str, float] = {
     "fal-ai/bytedance/seedream/v4/text-to-image":       5.0,
     "fal-ai/bytedance/seedream/v4.5/text-to-image":     6.0,
     "fal-ai/bytedance/seedream/v5/lite/text-to-image":  5.0,
+    "fal-ai/seedvr/upscale/image":                      8.0,
     # Image editing / inpainting (legacy)
     "fal-ai/flux/dev/image-to-image":           4.0,
     "fal-ai/sd-inpainting":                     3.0,
@@ -84,6 +85,7 @@ FAL_COSTS: dict[str, float] = {
     # Video generation (image-to-video)
     "fal-ai/kling-video/v1/standard/image-to-video":             15.0,
     "fal-ai/kling-video/v1/pro/image-to-video":                  22.0,
+    "fal-ai/seedvr/upscale/video":                               18.0,
     # Fallback
     "default":                                   3.0,
 }

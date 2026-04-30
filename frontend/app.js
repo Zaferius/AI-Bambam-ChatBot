@@ -26,7 +26,11 @@ const State = {
   currentVideoTool: 'text',
   editSourceUrl: null,
   i2vSourceUrl: null,
+  videoUpscaleSourceUrl: null,
+  upscalerSourceUrl: null,
+  upscalerSourceType: null,
   currentEditModel: 'fal-ai/nano-banana-2/edit',
+  currentEditTool: 'edit',
   editPanelSourceUrl: null,
   mediaFilter: 'all',
   contentPacks: [],
@@ -354,6 +358,67 @@ function animateCreditValue(el, from, to) {
   el.dataset.creditRaf = String(requestAnimationFrame(tick));
 }
 
+function parseCreditLikeValue(text) {
+  const n = Number(String(text || '').replace(/[^0-9.-]/g, ''));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function animateCostLabelValue(el, from, to, decimals = 0) {
+  if (!el) return;
+  const start = Number.isFinite(from) ? from : to;
+  const end = Number.isFinite(to) ? to : 0;
+
+  if (el.dataset.costAnimating === '1') {
+    cancelAnimationFrame(Number(el.dataset.costRaf || 0));
+  }
+
+  if (Math.abs(start - end) < 0.0001 && el.textContent) {
+    const settle = decimals > 0 ? end.toFixed(decimals) : String(Math.round(end));
+    el.textContent = `${settle}⚡`;
+    el.dataset.costValue = String(end);
+    return;
+  }
+
+  const duration = 700;
+  const startTime = performance.now();
+  el.dataset.costAnimating = '1';
+  el.classList.add('credit-slot-rolling');
+
+  const tick = (now) => {
+    const progress = Math.min(1, (now - startTime) / duration);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const value = start + (end - start) * eased;
+    const jitterBase = progress < 0.86 ? (Math.random() - 0.5) : 0;
+    const jitter = decimals > 0 ? jitterBase * 0.2 : jitterBase * 3.5;
+    const displayRaw = progress < 0.86 ? Math.max(0, value + jitter) : value;
+    const display = decimals > 0 ? displayRaw.toFixed(decimals) : String(Math.round(displayRaw));
+    el.textContent = `${display}⚡`;
+
+    if (progress < 1) {
+      el.dataset.costRaf = String(requestAnimationFrame(tick));
+    } else {
+      const finalVal = decimals > 0 ? end.toFixed(decimals) : String(Math.round(end));
+      el.textContent = `${finalVal}⚡`;
+      el.dataset.costValue = String(end);
+      el.dataset.costAnimating = '0';
+      el.classList.remove('credit-slot-rolling');
+      el.classList.add('credit-slot-settle');
+      setTimeout(() => el.classList.remove('credit-slot-settle'), 220);
+    }
+  };
+
+  el.dataset.costRaf = String(requestAnimationFrame(tick));
+}
+
+function setAnimatedCostLabel(elOrId, nextValue, decimals = 0) {
+  const el = typeof elOrId === 'string' ? document.getElementById(elOrId) : elOrId;
+  if (!el) return;
+  const prev = Number.isFinite(Number(el.dataset.costValue))
+    ? Number(el.dataset.costValue)
+    : parseCreditLikeValue(el.textContent);
+  animateCostLabelValue(el, prev, Number(nextValue || 0), decimals);
+}
+
 function showCreditSlotOverlay(from, to) {
   let overlay = document.getElementById('credit-slot-overlay');
   if (!overlay) {
@@ -403,6 +468,11 @@ async function refreshCredits() {
    MODEL SELECTION HELPERS
 ══════════════════════════════════════════════════════════ */
 function selectImageModel(modelId) {
+  if (modelId === 'fal-ai/seedvr/upscale/image') {
+    selectEditModel(modelId, true);
+    switchPanel('edit');
+    return;
+  }
   const dropdown = document.getElementById('img-model-dropdown');
   const sel = document.getElementById('image-model');
   if (!dropdown || !sel) return;
@@ -422,12 +492,25 @@ function selectImageModel(modelId) {
 
 function selectVideoModel(modelId, tool = 'text') {
   switchVideoTool(tool);
-  const selId = tool === 'image' ? 'i2v-model' : 'video-model';
+  const selId = tool === 'image' ? 'i2v-model' : (tool === 'upscale' ? 'video-upscale-model' : 'video-model');
   const sel = document.getElementById(selId);
   if (sel) { sel.value = modelId; sel.dispatchEvent(new Event('change')); }
 }
 
-function selectEditModel(modelId) {
+function openUpscaler(entryType = 'auto') {
+  resetUpscaler(false);
+  switchPanel('upscale');
+  const subtitle = document.getElementById('upscale-subtitle');
+  if (subtitle) {
+    subtitle.textContent = entryType === 'video'
+      ? 'Upload a video. Raiko detects it automatically and shows SeedVR video upscale settings.'
+      : (entryType === 'image'
+        ? 'Upload an image. Raiko detects it automatically and shows SeedVR image upscale settings.'
+        : 'Upload an image or video. Raiko detects the media type automatically and shows the right SeedVR upscale settings.');
+  }
+}
+
+function selectEditModel(modelId, resetWorkspace = false) {
   const dropdown = document.getElementById('edit-model-dropdown');
   if (!dropdown) return;
   const item = dropdown.querySelector(`.imd-item[data-model="${modelId}"]`);
@@ -442,11 +525,133 @@ function selectEditModel(modelId) {
   if (cost) cost.textContent = item.dataset.cost + '⚡';
   State.currentEditModel = modelId;
   const isBgRemove = modelId === 'fal-ai/bria/background/remove';
+  const isImageUpscale = modelId === 'fal-ai/seedvr/upscale/image';
   const promptSection = document.getElementById('edit-panel-prompt-section');
-  if (promptSection) promptSection.style.display = isBgRemove ? 'none' : '';
+  if (promptSection) promptSection.style.display = (isBgRemove || isImageUpscale) ? 'none' : '';
   const costBadge = document.getElementById('edit-panel-cost-badge');
-  if (costBadge) costBadge.textContent = (item.dataset.cost || '5') + '⚡';
+  if (costBadge) setAnimatedCostLabel(costBadge, Number(item.dataset.cost || '5'));
   dropdown.classList.add('hidden');
+  const toolId = modelId === 'fal-ai/bria/background/remove'
+    ? 'bg-remove'
+    : (modelId === 'fal-ai/seedvr/upscale/image' ? 'image-upscale' : 'edit');
+  setEditToolScreen(toolId, modelId);
+  if (resetWorkspace) resetEditPanelWorkspace();
+}
+
+const EDIT_TOOL_SCREENS = {
+  edit: {
+    model: 'fal-ai/nano-banana-2/edit',
+    icon: '🍌',
+    name: 'NB 2 Edit',
+    cost: 5,
+    badge: 'IMAGE EDIT',
+    title: 'EDIT IMAGE',
+    subtitle: 'Upload an image, describe the change, and generate a new edited result.',
+    cta: '↥ Upload image',
+    button: 'Edit',
+    resultTag: 'EDIT RESULT',
+    hero: 'dashboard-showcase/seedream-explore/item-08/image.jpg',
+    steps: ['01 Upload image', '02 Describe edit', '03 Generate result'],
+  },
+  'bg-remove': {
+    model: 'fal-ai/bria/background/remove',
+    icon: '✂',
+    name: 'BG Remove',
+    cost: 3,
+    badge: 'BACKGROUND TOOL',
+    title: 'REMOVE BACKGROUND',
+    subtitle: 'Upload an image and remove the background automatically. No prompt needed.',
+    cta: '↥ Upload image for BG Remove',
+    button: 'Remove BG',
+    resultTag: 'TRANSPARENT RESULT',
+    hero: 'dashboard-showcase/gpt-image-2-explore/2/image.jpg',
+    steps: ['01 Upload image', '02 AI isolates subject', '03 Download cutout'],
+  },
+  'image-upscale': {
+    model: 'fal-ai/seedvr/upscale/image',
+    icon: '⤢',
+    name: 'SeedVR Image Upscale',
+    cost: 8,
+    badge: 'UPSCALE TOOL',
+    title: 'UPSCALE IMAGE',
+    subtitle: 'Upload an image and enhance it with SeedVR upscaling. No prompt needed.',
+    cta: '↥ Upload image to upscale',
+    button: 'Upscale',
+    resultTag: 'UPSCALED RESULT',
+    hero: 'dashboard-showcase/nano-banana-pro-explore/3/image.webp',
+    steps: ['01 Upload image', '02 SeedVR enhances detail', '03 Save upscaled image'],
+  },
+};
+
+function setEditToolScreen(toolId = 'edit', modelId = null) {
+  const nextTool = EDIT_TOOL_SCREENS[toolId] ? toolId : 'edit';
+  const cfg = EDIT_TOOL_SCREENS[nextTool];
+  State.currentEditTool = nextTool;
+
+  const resolvedModel = modelId || cfg.model;
+  State.currentEditModel = resolvedModel;
+
+  const title = document.getElementById('edit-tool-title');
+  const subtitle = document.getElementById('edit-tool-subtitle');
+  const badge = document.getElementById('edit-tool-badge');
+  const cta = document.getElementById('edit-upload-cta');
+  const hero = document.getElementById('edit-tool-hero-img');
+  const steps = document.getElementById('edit-tool-steps');
+  const resultTag = document.querySelector('#edit-result-zone .edit-result-tag');
+  const promptSection = document.getElementById('edit-panel-prompt-section');
+  const btn = document.getElementById('btn-run-edit-panel');
+
+  if (title) title.textContent = cfg.title;
+  if (subtitle) subtitle.textContent = cfg.subtitle;
+  if (badge) badge.textContent = cfg.badge;
+  if (cta) cta.textContent = cfg.cta;
+  if (hero) hero.src = cfg.hero;
+  if (steps) steps.innerHTML = cfg.steps.map(step => `<span>${step}</span>`).join('');
+  if (resultTag) resultTag.textContent = cfg.resultTag;
+  if (promptSection) promptSection.style.display = nextTool === 'edit' ? '' : 'none';
+  if (btn) {
+    const badgeHtml = `<span class="img-cost-badge" id="edit-panel-cost-badge">${cfg.cost}⚡</span>`;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>${cfg.button} ${badgeHtml}`;
+  }
+
+  const iconEl = document.getElementById('edit-imt-icon');
+  const nameEl = document.getElementById('edit-imt-name');
+  const costEl = document.getElementById('edit-imt-cost');
+  if (iconEl) iconEl.textContent = cfg.icon;
+  if (nameEl) nameEl.textContent = cfg.name;
+  if (costEl) costEl.textContent = `${cfg.cost}⚡`;
+
+  document.querySelectorAll('#edit-model-dropdown .imd-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.model === resolvedModel);
+  });
+}
+
+function resetEditPanelWorkspace() {
+  State.editPanelSourceUrl = null;
+  const input = document.getElementById('edit-panel-source-input');
+  const preview = document.getElementById('edit-panel-source-preview');
+  const inner = document.getElementById('edit-upload-inner');
+  const removeBtn = document.getElementById('edit-panel-remove-btn');
+  const uploadCard = document.querySelector('.edit-upload-card');
+  const resultZone = document.getElementById('edit-result-zone');
+  const resultArea = document.getElementById('edit-result-area');
+  const editBar = document.getElementById('edit-bar');
+  const panel = document.getElementById('panel-edit');
+  const prompt = document.getElementById('edit-panel-prompt');
+
+  if (input) input.value = '';
+  if (preview) {
+    preview.src = '';
+    preview.classList.add('hidden');
+  }
+  if (inner) inner.style.display = '';
+  if (removeBtn) removeBtn.classList.add('hidden');
+  if (uploadCard) uploadCard.classList.remove('has-image');
+  if (resultZone) resultZone.classList.add('hidden');
+  if (resultArea) resultArea.innerHTML = '';
+  if (editBar) editBar.classList.add('hidden');
+  if (panel) panel.classList.remove('has-source', 'has-result');
+  if (prompt) prompt.value = '';
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -483,14 +688,32 @@ function switchImageTool(toolId) {
 }
 
 function switchVideoTool(toolId) {
-  State.currentVideoTool = toolId === 'image' ? 'image' : 'text';
+  State.currentVideoTool = ['image', 'upscale'].includes(toolId) ? toolId : 'text';
   document.querySelectorAll('#video-tool-picker .img-tool-card').forEach(card => {
     card.classList.toggle('active', card.dataset.videoTool === State.currentVideoTool);
   });
-  ['vid-panel-text', 'vid-panel-image'].forEach(id => {
+  ['vid-panel-text', 'vid-panel-image', 'vid-panel-upscale'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('active', id === `vid-panel-${State.currentVideoTool}`);
   });
+
+  // Show/hide the vup-canvas in the right area
+  const vupCanvas = document.getElementById('vup-canvas');
+  const videoExplainer = document.getElementById('video-explainer');
+  const videoResultArea = document.getElementById('video-result-area');
+  if (State.currentVideoTool === 'upscale') {
+    // Show vup-canvas only if a video is already loaded
+    if (State.videoUpscaleSourceUrl && vupCanvas) {
+      vupCanvas.classList.remove('hidden');
+      if (videoExplainer) videoExplainer.classList.add('hidden');
+      if (videoResultArea) videoResultArea.classList.add('hidden');
+    }
+  } else {
+    // Hide vup-canvas when switching to other tools
+    if (vupCanvas) vupCanvas.classList.add('hidden');
+    if (videoExplainer) videoExplainer.classList.remove('hidden');
+    if (videoResultArea) videoResultArea.classList.remove('hidden');
+  }
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1126,13 +1349,14 @@ const IMAGE_COSTS = {
   'fal-ai/bytedance/seedream/v4.5/text-to-image':         6,
   'fal-ai/bytedance/seedream/v5/lite/text-to-image':      5,
   'openai/gpt-image-2':                                  10,
+  'fal-ai/seedvr/upscale/image':                          8,
 };
 
 function updateImageCostLabel() {
   const model = document.getElementById('image-model').value;
   const count = parseInt(document.getElementById('image-count').value) || 1;
   const cost = (IMAGE_COSTS[model] || 3) * count;
-  document.getElementById('image-cost-label').textContent = `${cost}⚡`;
+  setAnimatedCostLabel('image-cost-label', cost);
 }
 
 const IMAGE_SIZE_PRESETS = {
@@ -1505,19 +1729,25 @@ const VIDEO_COSTS = {
   'fal-ai/stable-video':                                  10,
   'fal-ai/kling-video/v1/standard/image-to-video':        15,
   'fal-ai/kling-video/v1/pro/image-to-video':             22,
+  'fal-ai/seedvr/upscale/video':                          18,
 };
 
 function updateVideoCostLabel() {
   const model = document.getElementById('video-model').value;
   const cost = VIDEO_COSTS[model] || 12;
-  document.getElementById('video-cost-label').textContent = `${cost}⚡`;
+  setAnimatedCostLabel('video-cost-label', cost);
 }
 
 function updateI2VCostLabel() {
   const model = document.getElementById('i2v-model')?.value;
   const cost = VIDEO_COSTS[model] || 15;
-  const lbl = document.getElementById('i2v-cost-label');
-  if (lbl) lbl.textContent = `${cost}⚡`;
+  setAnimatedCostLabel('i2v-cost-label', cost);
+}
+
+function updateVideoUpscaleCostLabel() {
+  const model = document.getElementById('video-upscale-model')?.value || 'fal-ai/seedvr/upscale/video';
+  const cost = VIDEO_COSTS[model] || 18;
+  setAnimatedCostLabel('video-upscale-cost-label', cost);
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1631,7 +1861,7 @@ function updateContentCostEstimate() {
   const el = document.getElementById('ocm-cost-estimate');
   if (!el) return;
   const payload = buildContentMachinePayload();
-  el.textContent = `${estimateContentPackCredits(payload)}⚡`;
+  setAnimatedCostLabel(el, estimateContentPackCredits(payload), 2);
 }
 
 async function generateContentPack(remixPack = null) {
@@ -1816,6 +2046,384 @@ async function generateVideoFromImage() {
   }
 }
 
+async function upscaleVideo() {
+  if (!requireAuth()) return;
+  if (!State.videoUpscaleSourceUrl) { toast('Please upload a video to upscale', 'error'); return; }
+
+  const model = document.getElementById('video-upscale-model')?.value || 'fal-ai/seedvr/upscale/video';
+  const mode = document.getElementById('video-upscale-mode')?.value || 'factor';
+  const factor = Number(document.querySelector('#vup-factor-buttons .upscale-factor-btn.active')?.dataset.factor || '2');
+  const target = document.getElementById('video-upscale-resolution')?.value || '1080p';
+  const format = document.getElementById('video-upscale-format')?.value || 'X264 (.mp4)';
+  const btn = document.getElementById('btn-upscale-video');
+  const status = document.getElementById('video-upscale-status');
+  const resultZone = document.getElementById('vup-result-zone');
+  const resultArea = document.getElementById('video-upscale-result-area');
+
+  if (btn) btn.disabled = true;
+  if (status) status.classList.remove('hidden');
+  if (resultZone) resultZone.classList.remove('hidden');
+  if (resultArea) {
+    resultArea.innerHTML = `
+      <div class="upscale-result-placeholder">
+        <div class="upscale-result-placeholder-frame"></div>
+        <div class="upscale-result-placeholder-text">Generating…</div>
+      </div>
+    `;
+  }
+
+  try {
+    const res = await API.ai.generateVideo(model, 'Upscale video', '5', {
+      extra: {
+        video_url: State.videoUpscaleSourceUrl,
+        upscale_mode: mode,
+        upscale_factor: factor,
+        target_resolution: target,
+        noise_scale: 0.1,
+        output_format: format,
+        output_quality: 'high',
+        output_write_mode: 'balanced',
+      },
+    });
+    const url = res.output;
+
+    if (resultArea) {
+      resultArea.innerHTML = `
+        <video class="upscale-result-media" src="${url}" controls autoplay loop></video>
+        <a href="${url}" download="raiko_upscaled_video.mp4" class="upscale-download-btn">↓ Download</a>
+      `;
+    }
+
+    saveMediaItem('video', url, 'Upscaled video', model);
+    updateCreditsUI(res.credits_remaining);
+    toast(`Video upscaled! ⚡ ${res.credits_used} used`, 'success');
+  } catch (err) {
+    if (resultZone) resultZone.classList.add('hidden');
+    toast(err.message || 'Video upscale failed', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+    if (status) status.classList.add('hidden');
+  }
+}
+
+function initVideoUpscaleTab() {
+  const input = document.getElementById('video-upscale-source-input');
+  const preview = document.getElementById('video-upscale-source-preview');
+  const uploadBtn = document.getElementById('btn-vid-upscale-upload');
+  const uploadCard = document.getElementById('vup-upload-card');
+  const controls = document.getElementById('vup-controls');
+  const canvas = document.getElementById('vup-canvas');
+  const removeBtn = document.getElementById('btn-vup-remove');
+  const previewCard = document.getElementById('vup-preview-card');
+  const resultZone = document.getElementById('vup-result-zone');
+  const resultArea = document.getElementById('video-upscale-result-area');
+
+  if (!input) return;
+
+  // Wire upload button
+  uploadBtn?.addEventListener('click', () => input.click());
+
+  // Wire factor buttons
+  const vupFactorWrap = document.getElementById('vup-factor-buttons');
+  vupFactorWrap?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.upscale-factor-btn');
+    if (!btn) return;
+    vupFactorWrap.querySelectorAll('.upscale-factor-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+
+  // Handle file selection
+  input.addEventListener('change', async () => {
+    const file = input.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('video/')) { toast('Please upload a video file', 'error'); return; }
+    if (file.size > 50 * 1024 * 1024) { toast('Video size must be 50MB or less', 'error'); return; }
+
+    showUploadProgress('Uploading video');
+    try {
+      const dataUrl = await fileToDataURL(file);
+      State.videoUpscaleSourceUrl = dataUrl;
+
+      // Show preview in canvas
+      if (preview) {
+        preview.src = dataUrl;
+        preview.classList.remove('hidden');
+      }
+      if (previewCard) previewCard.classList.add('has-image');
+      if (removeBtn) removeBtn.classList.remove('hidden');
+
+      // Switch sidebar to controls state
+      if (uploadCard) uploadCard.classList.add('hidden');
+      if (controls) controls.classList.remove('hidden');
+
+      // Show the upscale canvas in right area
+      if (canvas) canvas.classList.remove('hidden');
+
+      // Hide explainer, hide regular result area
+      const explainer = document.getElementById('video-explainer');
+      if (explainer) explainer.classList.add('hidden');
+      const videoResultArea = document.getElementById('video-result-area');
+      if (videoResultArea) videoResultArea.classList.add('hidden');
+
+      // Reset result zone
+      if (resultZone) resultZone.classList.add('hidden');
+      if (resultArea) resultArea.innerHTML = '';
+    } finally {
+      hideUploadProgress();
+    }
+  });
+
+  // Replace button
+  removeBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resetVideoUpscaleTab();
+  });
+
+  // Replace button in sidebar controls
+  document.getElementById('btn-vid-upscale-replace')?.addEventListener('click', () => resetVideoUpscaleTab());
+}
+
+function resetVideoUpscaleTab() {
+  State.videoUpscaleSourceUrl = null;
+  const input = document.getElementById('video-upscale-source-input');
+  const preview = document.getElementById('video-upscale-source-preview');
+  const uploadCard = document.getElementById('vup-upload-card');
+  const controls = document.getElementById('vup-controls');
+  const canvas = document.getElementById('vup-canvas');
+  const removeBtn = document.getElementById('btn-vup-remove');
+  const previewCard = document.getElementById('vup-preview-card');
+  const resultZone = document.getElementById('vup-result-zone');
+  const resultArea = document.getElementById('video-upscale-result-area');
+
+  if (input) input.value = '';
+  if (preview) { preview.src = ''; preview.classList.add('hidden'); }
+  if (previewCard) previewCard.classList.remove('has-image');
+  if (removeBtn) removeBtn.classList.add('hidden');
+  if (uploadCard) uploadCard.classList.remove('hidden');
+  if (controls) controls.classList.add('hidden');
+  if (canvas) canvas.classList.add('hidden');
+  if (resultZone) resultZone.classList.add('hidden');
+  if (resultArea) resultArea.innerHTML = '';
+
+  // Restore explainer and result area
+  const explainer = document.getElementById('video-explainer');
+  if (explainer) explainer.classList.remove('hidden');
+  const videoResultArea = document.getElementById('video-result-area');
+  if (videoResultArea) videoResultArea.classList.remove('hidden');
+
+  // Reset factor buttons
+  const vupFactorWrap = document.getElementById('vup-factor-buttons');
+  if (vupFactorWrap) {
+    vupFactorWrap.querySelectorAll('.upscale-factor-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
+  }
+}
+
+function resetUpscaler(clearFile = true) {
+  State.upscalerSourceUrl = null;
+  State.upscalerSourceType = null;
+  const panel = document.getElementById('panel-upscale');
+  const input = document.getElementById('upscale-source-input');
+  const img = document.getElementById('upscale-preview-image');
+  const video = document.getElementById('upscale-preview-video');
+  const bar = document.getElementById('upscale-bar');
+  const resultPanel = document.getElementById('upscale-result-panel');
+  const resultArea = document.getElementById('upscale-result-area');
+  const badge = document.getElementById('upscale-media-badge');
+  const title = document.getElementById('upscale-title');
+  const subtitle = document.getElementById('upscale-subtitle');
+  const detected = document.getElementById('upscale-detected-type');
+  const cost = document.getElementById('upscale-cost-label');
+  const format = document.getElementById('upscale-output-format');
+  const uploadCard = document.getElementById('upscale-upload-card');
+  const heroImg = document.getElementById('upscale-hero-img');
+  const uploadInner = document.getElementById('upscale-upload-inner');
+  const removeBtn = document.getElementById('upscale-reset-btn');
+
+  if (clearFile && input) input.value = '';
+  if (img) { img.src = ''; img.classList.add('hidden'); }
+  if (video) { video.src = ''; video.classList.add('hidden'); }
+  if (heroImg) { heroImg.src = 'dashboard-showcase/nano-banana-pro-explore/3/image.webp'; }
+  if (uploadInner) uploadInner.classList.remove('hidden');
+  if (uploadCard) uploadCard.classList.remove('has-image');
+  if (removeBtn) removeBtn.classList.add('hidden');
+  if (bar) bar.classList.add('hidden');
+  if (resultPanel) resultPanel.classList.add('hidden');
+  if (resultArea) resultArea.innerHTML = '';
+  if (badge) badge.textContent = 'IMAGE / VIDEO UPSCALE';
+  if (title) title.textContent = 'UPSCALE MEDIA';
+  if (subtitle) subtitle.textContent = 'Upload an image or video. Raiko detects the media type automatically and applies SeedVR upscaling.';
+  if (detected) detected.textContent = 'Detected: —';
+  if (cost) cost.textContent = '8⚡';
+  if (format) {
+    format.innerHTML = '<option value="jpg">JPG</option><option value="png">PNG</option><option value="webp">WEBP</option>';
+  }
+  if (panel) panel.classList.remove('has-upload');
+}
+
+function configureUpscalerForType(type) {
+  const isVideo = type === 'video';
+  const panel = document.getElementById('panel-upscale');
+  const badge = document.getElementById('upscale-media-badge');
+  const title = document.getElementById('upscale-title');
+  const subtitle = document.getElementById('upscale-subtitle');
+  const detected = document.getElementById('upscale-detected-type');
+  const cost = document.getElementById('upscale-cost-label');
+  const format = document.getElementById('upscale-output-format');
+  const resultTag = document.getElementById('upscale-result-tag');
+  const bar = document.getElementById('upscale-bar');
+  const uploadInner = document.getElementById('upscale-upload-inner');
+  const uploadCard = document.getElementById('upscale-upload-card');
+  const removeBtn = document.getElementById('upscale-reset-btn');
+
+  if (badge) badge.textContent = isVideo ? 'VIDEO UPSCALE' : 'IMAGE UPSCALE';
+  if (title) title.textContent = isVideo ? 'UPSCALE VIDEO' : 'UPSCALE IMAGE';
+  if (subtitle) subtitle.textContent = isVideo
+    ? 'Video detected. Choose SeedVR video upscale settings and export a sharper clip.'
+    : 'Image detected. Choose SeedVR image upscale settings and export a sharper image.';
+  if (detected) detected.textContent = `Detected: ${isVideo ? 'Video' : 'Image'}`;
+  if (cost) cost.textContent = isVideo ? '18⚡' : '8⚡';
+  if (resultTag) resultTag.textContent = isVideo ? 'UPSCALED VIDEO' : 'UPSCALED IMAGE';
+  if (format) {
+    format.innerHTML = isVideo
+      ? '<option value="X264 (.mp4)">MP4 / X264</option><option value="VP9 (.webm)">WEBM / VP9</option><option value="PRORES4444 (.mov)">MOV / ProRes 4444</option><option value="GIF (.gif)">GIF</option>'
+      : '<option value="jpg">JPG</option><option value="png">PNG</option><option value="webp">WEBP</option>';
+  }
+  // Hide the placeholder text, show the bottom bar
+  if (uploadInner) uploadInner.classList.add('hidden');
+  if (uploadCard) uploadCard.classList.add('has-image');
+  if (removeBtn) removeBtn.classList.remove('hidden');
+  if (bar) bar.classList.remove('hidden');
+  if (panel) panel.classList.add('has-upload');
+}
+
+async function handleUpscalerFile(file) {
+  if (!file) return;
+  const isImage = file.type.startsWith('image/');
+  const isVideo = file.type.startsWith('video/');
+  if (!isImage && !isVideo) {
+    toast('Please upload an image or video file', 'error');
+    return;
+  }
+  if (isVideo && file.size > 50 * 1024 * 1024) {
+    toast('Video size must be 50MB or less', 'error');
+    return;
+  }
+  showUploadProgress(`Uploading ${isVideo ? 'video' : 'image'}`);
+  try {
+    const dataUrl = await fileToDataURL(file);
+    State.upscalerSourceUrl = dataUrl;
+    State.upscalerSourceType = isVideo ? 'video' : 'image';
+    const img = document.getElementById('upscale-preview-image');
+    const video = document.getElementById('upscale-preview-video');
+    if (isVideo) {
+      if (img) img.classList.add('hidden');
+      if (video) {
+        video.src = dataUrl;
+        video.classList.remove('hidden');
+      }
+    } else {
+      if (video) {
+        video.src = '';
+        video.classList.add('hidden');
+      }
+      if (img) {
+        img.src = dataUrl;
+        img.classList.remove('hidden');
+      }
+    }
+    configureUpscalerForType(State.upscalerSourceType);
+  } finally {
+    hideUploadProgress();
+  }
+}
+
+function initUpscaleFactorButtons() {
+  const wrap = document.getElementById('upscale-factor-buttons');
+  if (!wrap) return;
+
+  wrap.addEventListener('click', (e) => {
+    const btn = e.target.closest('.upscale-factor-btn');
+    if (!btn) return;
+    wrap.querySelectorAll('.upscale-factor-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+}
+
+async function runSharedUpscaler() {
+  if (!requireAuth()) return;
+  if (!State.upscalerSourceUrl || !State.upscalerSourceType) {
+    toast('Upload an image or video first', 'error');
+    return;
+  }
+
+  const isVideo = State.upscalerSourceType === 'video';
+  const factor = Number(document.querySelector('#upscale-factor-buttons .upscale-factor-btn.active')?.dataset.factor || '2');
+  const format = document.getElementById('upscale-output-format')?.value || (isVideo ? 'X264 (.mp4)' : 'jpg');
+  const btn = document.getElementById('btn-run-upscale');
+  const status = document.getElementById('upscale-status');
+  const resultPanel = document.getElementById('upscale-result-panel');
+  const resultArea = document.getElementById('upscale-result-area');
+
+  if (btn) btn.disabled = true;
+  status?.classList.remove('hidden');
+  // Show result zone (edit-result-zone pattern)
+  if (resultPanel) resultPanel.classList.remove('hidden');
+  if (resultArea) {
+    resultArea.innerHTML = `
+      <div class="upscale-result-placeholder" id="upscale-result-placeholder">
+        <div class="upscale-result-placeholder-frame"></div>
+        <div class="upscale-result-placeholder-text">Generating…</div>
+      </div>
+    `;
+  }
+  try {
+    let res;
+    if (isVideo) {
+      res = await API.ai.generateVideo('fal-ai/seedvr/upscale/video', 'Upscale video', '5', {
+        extra: {
+          video_url: State.upscalerSourceUrl,
+          upscale_mode: 'factor',
+          upscale_factor: factor,
+          target_resolution: '1080p',
+          noise_scale: 0.1,
+          output_format: format,
+          output_quality: 'high',
+          output_write_mode: 'balanced',
+        },
+      });
+    } else {
+      res = await API.ai.editImage('fal-ai/seedvr/upscale/image', '', State.upscalerSourceUrl, 0.75);
+    }
+    const output = Array.isArray(res.output) ? res.output[0] : res.output;
+    // Source preview stays as-is; result goes into the right result zone
+
+    const formatExt = isVideo
+      ? (format.includes('webm') ? 'webm' : (format.includes('mov') ? 'mov' : (format.includes('gif') ? 'gif' : 'mp4')))
+      : (format || 'jpg').toLowerCase();
+    if (resultArea) {
+      resultArea.innerHTML = isVideo
+        ? `
+            <video src="${output}" controls class="upscale-result-media"></video>
+            <a href="${output}" download="raiko_upscaled_video.${formatExt}" class="upscale-download-btn">Download</a>
+          `
+        : `
+            <img src="${output}" alt="Upscaled output" class="upscale-result-media" />
+            <a href="${output}" download="raiko_upscaled_image.${formatExt}" class="upscale-download-btn">Download</a>
+          `;
+    }
+
+    saveMediaItem(isVideo ? 'video' : 'image', output, isVideo ? 'Upscaled video' : 'Upscaled image', isVideo ? 'fal-ai/seedvr/upscale/video' : 'fal-ai/seedvr/upscale/image');
+    updateCreditsUI(res.credits_remaining);
+    toast(`${isVideo ? 'Video' : 'Image'} upscaled! ⚡ ${res.credits_used} used`, 'success');
+  } catch (err) {
+    toast(err.message || 'Upscale failed', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+    status?.classList.add('hidden');
+  }
+}
+
 function setupImageUpload(inputId, previewId, stateKey) {
   const input = document.getElementById(inputId);
   const preview = document.getElementById(previewId);
@@ -1870,8 +2478,9 @@ async function runEditPanel() {
   if (!State.editPanelSourceUrl) { toast('Upload an image first', 'error'); return; }
 
   const isBgRemove = State.currentEditModel === 'fal-ai/bria/background/remove';
-  const prompt = isBgRemove ? '' : (document.getElementById('edit-panel-prompt')?.value.trim() || '');
-  if (!isBgRemove && !prompt) { toast('Enter an edit prompt', 'error'); return; }
+  const isImageUpscale = State.currentEditModel === 'fal-ai/seedvr/upscale/image';
+  const prompt = (isBgRemove || isImageUpscale) ? '' : (document.getElementById('edit-panel-prompt')?.value.trim() || '');
+  if (!isBgRemove && !isImageUpscale && !prompt) { toast('Enter an edit prompt', 'error'); return; }
 
   const strength = 0.75;
   const btn = document.getElementById('btn-run-edit-panel');
@@ -1884,7 +2493,7 @@ async function runEditPanel() {
     const urls = Array.isArray(res.output) ? res.output : [res.output];
     renderEditPanelResults(urls);
     updateCreditsUI(res.credits_remaining);
-    const label = isBgRemove ? 'Background removed' : prompt;
+    const label = isBgRemove ? 'Background removed' : (isImageUpscale ? 'Upscaled image' : prompt);
     urls.forEach(url => saveMediaItem('image', url, label, State.currentEditModel));
     toast(`Done! ⚡ ${res.credits_used} used`, 'success');
   } catch (err) {
@@ -2331,16 +2940,31 @@ function bindEvents() {
       e.stopPropagation();
       const modelId = item.dataset.model;
       const panelId = item.dataset.panel;
+      const imageTool = item.dataset.imageTool || '';
       const videoTool = item.dataset.videoTool || 'text';
+
       if (panelId === 'image') {
-        selectImageModel(modelId);
+        if (modelId) selectImageModel(modelId);
+        // For tool-only entries (Create/Upscale), just open image workspace for now
         switchPanel('image');
       } else if (panelId === 'video') {
         switchPanel('video');
-        setTimeout(() => selectVideoModel(modelId, videoTool), 50);
+        // Always force the requested video generator tab first
+        switchVideoTool(videoTool);
+        // Tool-only items can switch workspace tab without forcing a model
+        if (modelId) {
+          setTimeout(() => selectVideoModel(modelId, videoTool), 50);
+        }
       } else if (panelId === 'edit') {
         switchPanel('edit');
-        setTimeout(() => selectEditModel(modelId), 50);
+        const editTool = item.dataset.editTool || '';
+        if (modelId) {
+          setTimeout(() => selectEditModel(modelId, true), 50);
+        } else if (editTool) {
+          setTimeout(() => { setEditToolScreen(editTool); resetEditPanelWorkspace(); }, 50);
+        }
+      } else if (panelId === 'upscale') {
+        openUpscaler(item.dataset.upscaleEntry || 'auto');
       }
     });
   });
@@ -2461,6 +3085,13 @@ function bindEvents() {
     imgModelDropdown.addEventListener('click', (e) => {
       const item = e.target.closest('.imd-item');
       if (!item) return;
+      if (item.dataset.model === 'fal-ai/seedvr/upscale/image') {
+        imgModelDropdown.classList.add('hidden');
+        imgModelTrigger.setAttribute('aria-expanded', 'false');
+        selectEditModel(item.dataset.model, true);
+        switchPanel('edit');
+        return;
+      }
       // Update active state
       imgModelDropdown.querySelectorAll('.imd-item').forEach(i => i.classList.remove('active'));
       item.classList.add('active');
@@ -2566,30 +3197,7 @@ function bindEvents() {
   document.getElementById('edit-panel-remove-btn')?.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    State.editPanelSourceUrl = null;
-
-    const input = document.getElementById('edit-panel-source-input');
-    const preview = document.getElementById('edit-panel-source-preview');
-    const inner = document.getElementById('edit-upload-inner');
-    const removeBtn = document.getElementById('edit-panel-remove-btn');
-    const uploadCard = document.querySelector('.edit-upload-card');
-    const resultZone = document.getElementById('edit-result-zone');
-    const resultArea = document.getElementById('edit-result-area');
-    const editBar = document.getElementById('edit-bar');
-    const panel = document.getElementById('panel-edit');
-
-    if (input) input.value = '';
-    if (preview) {
-      preview.src = '';
-      preview.classList.add('hidden');
-    }
-    if (inner) inner.style.display = '';
-    if (removeBtn) removeBtn.classList.add('hidden');
-    if (uploadCard) uploadCard.classList.remove('has-image');
-    if (resultZone) resultZone.classList.add('hidden');
-    if (resultArea) resultArea.innerHTML = '';
-    if (editBar) editBar.classList.add('hidden');
-    if (panel) panel.classList.remove('has-source', 'has-result');
+    resetEditPanelWorkspace();
   });
 
   // Edit panel generate button
@@ -2600,6 +3208,21 @@ function bindEvents() {
   document.getElementById('video-model')?.addEventListener('change', updateVideoCostLabel);
   document.getElementById('btn-generate-i2v')?.addEventListener('click', generateVideoFromImage);
   document.getElementById('i2v-model')?.addEventListener('change', updateI2VCostLabel);
+  document.getElementById('btn-upscale-video')?.addEventListener('click', upscaleVideo);
+  document.getElementById('video-upscale-model')?.addEventListener('change', updateVideoUpscaleCostLabel);
+
+  const sharedUpscaleInput = document.getElementById('upscale-source-input');
+  sharedUpscaleInput?.addEventListener('change', async (e) => {
+    await handleUpscalerFile(e.target.files?.[0]);
+  });
+  // ✕ remove btn on the preview card stops propagation so it doesn't re-open file picker
+  document.getElementById('upscale-reset-btn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resetUpscaler(true);
+  });
+  document.getElementById('btn-run-upscale')?.addEventListener('click', runSharedUpscaler);
+  initUpscaleFactorButtons();
 
   // Video tool picker
   document.getElementById('video-tool-picker')?.addEventListener('click', (e) => {
@@ -2609,6 +3232,9 @@ function bindEvents() {
 
   // I2V image upload
   setupImageUpload('i2v-source-input', 'i2v-source-preview', 'i2vSourceUrl');
+
+  // Video upscale tab — new edit-style layout
+  initVideoUpscaleTab();
 
   // Image tools
   document.getElementById('img-tool-picker')?.addEventListener('click', (e) => {

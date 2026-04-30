@@ -47,14 +47,24 @@
     <!-- Nav Links -->
     <div class="navbar-nav" id="sidebar-nav">
       <button class="nav-item active" data-panel="dashboard" id="nav-dashboard">Explore</button>
-      <button class="nav-item" data-panel="content" id="nav-content">Content Machine</button>
 
       <!-- Image mega-nav -->
       <div class="nav-mega-wrap">
         <button class="nav-item" data-panel="image" id="nav-image">Image</button>
         <div class="nav-mega-drop">
           <div class="nmd-col">
-            <div class="nmd-group-label">Flux</div>
+            <div class="nmd-group-label">Tools</div>
+            <button class="nmd-item" data-panel="image" data-image-tool="create">
+              <span class="nmd-icon">✦</span>
+              <div class="nmd-body"><span class="nmd-name">Create Image</span><span class="nmd-desc">Open image generation workspace</span></div>
+            </button>
+            <button class="nmd-item" data-panel="upscale" data-upscale-entry="image">
+              <span class="nmd-icon">⬈</span>
+              <div class="nmd-body"><span class="nmd-name">Image Upscale</span><span class="nmd-desc">SeedVR · AI image upscaler · 8⚡</span></div>
+            </button>
+          </div>
+          <div class="nmd-col">
+            <div class="nmd-group-label">Models</div>
             <button class="nmd-item" data-model="fal-ai/flux/schnell" data-panel="image">
               <span class="nmd-icon">⚡</span>
               <div class="nmd-body"><span class="nmd-name">Flux Schnell</span><span class="nmd-desc">Fast generation</span></div>
@@ -76,9 +86,6 @@
               <span class="nmd-icon">◈</span>
               <div class="nmd-body"><span class="nmd-name">GPT Image 2</span><span class="nmd-desc">4K near-perfect text</span></div>
             </button>
-          </div>
-          <div class="nmd-col">
-            <div class="nmd-group-label">Nano Banana (Google)</div>
             <button class="nmd-item" data-model="fal-ai/nano-banana" data-panel="image">
               <span class="nmd-icon">🍌</span>
               <div class="nmd-body"><span class="nmd-name">Nano Banana Flash</span><span class="nmd-desc">Gemini 2.5 Flash</span></div>
@@ -113,7 +120,23 @@
         <button class="nav-item" data-panel="video" id="nav-video">Video</button>
         <div class="nav-mega-drop">
           <div class="nmd-col">
-            <div class="nmd-group-label">Text to Video — Kling</div>
+            <div class="nmd-group-label">Tools</div>
+            <div class="nmd-subgroup-label">Create Video</div>
+            <button class="nmd-item" data-panel="video" data-video-tool="text" data-video-action="create">
+              <span class="nmd-icon">🎬</span>
+              <div class="nmd-body"><span class="nmd-name">Text to Video</span><span class="nmd-desc">Switch to text-to-video generator</span></div>
+            </button>
+            <button class="nmd-item" data-panel="video" data-video-tool="image" data-video-action="upscale">
+              <span class="nmd-icon">🖼</span>
+              <div class="nmd-body"><span class="nmd-name">Image to Video</span><span class="nmd-desc">Switch to image-to-video generator</span></div>
+            </button>
+            <button class="nmd-item" data-panel="upscale" data-upscale-entry="video">
+              <span class="nmd-icon">⤢</span>
+              <div class="nmd-body"><span class="nmd-name">Video Upscale</span><span class="nmd-desc">SeedVR · AI video upscaler · 18⚡</span></div>
+            </button>
+          </div>
+          <div class="nmd-col">
+            <div class="nmd-group-label">Models</div>
             <button class="nmd-item" data-model="fal-ai/kling-video/v1/standard/text-to-video" data-panel="video" data-video-tool="text">
               <span class="nmd-icon">🎬</span>
               <div class="nmd-body"><span class="nmd-name">Kling v1 Standard</span><span class="nmd-desc">Cinematic</span></div>
@@ -135,9 +158,6 @@
               <span class="nmd-icon">🌱</span>
               <div class="nmd-body"><span class="nmd-name">Seedance 2.0</span><span class="nmd-desc">Bytedance · latest</span></div>
             </button>
-          </div>
-          <div class="nmd-col">
-            <div class="nmd-group-label">Premium Models</div>
             <button class="nmd-item" data-model="fal-ai/sora-2/text-to-video" data-panel="video" data-video-tool="text">
               <span class="nmd-icon">◈</span>
               <div class="nmd-body"><span class="nmd-name">Sora 2</span><span class="nmd-desc">OpenAI</span></div>
@@ -176,7 +196,22 @@
         <button class="nav-item" data-panel="edit" id="nav-edit">Edit</button>
         <div class="nav-mega-drop">
           <div class="nmd-col">
-            <div class="nmd-group-label">Nano Banana (Google)</div>
+            <div class="nmd-group-label">Tools</div>
+            <button class="nmd-item" data-panel="edit" data-edit-tool="create">
+              <span class="nmd-icon">✦</span>
+              <div class="nmd-body"><span class="nmd-name">Edit Image</span><span class="nmd-desc">Open image edit workspace</span></div>
+            </button>
+            <button class="nmd-item" data-panel="edit" data-edit-tool="bg-remove" data-model="fal-ai/bria/background/remove">
+              <span class="nmd-icon">✂</span>
+              <div class="nmd-body"><span class="nmd-name">BG Remove</span><span class="nmd-desc">BRIA · no prompt needed · 3⚡</span></div>
+            </button>
+            <button class="nmd-item" data-panel="upscale" data-upscale-entry="image" data-model="fal-ai/seedvr/upscale/image">
+              <span class="nmd-icon">⤢</span>
+              <div class="nmd-body"><span class="nmd-name">Image Upscale</span><span class="nmd-desc">SeedVR · no prompt needed · 8⚡</span></div>
+            </button>
+          </div>
+          <div class="nmd-col">
+            <div class="nmd-group-label">Models</div>
             <button class="nmd-item" data-model="fal-ai/nano-banana/edit" data-panel="edit">
               <span class="nmd-icon">🍌</span>
               <div class="nmd-body"><span class="nmd-name">NB Flash Edit</span><span class="nmd-desc">Gemini Flash edit · 4⚡</span></div>
@@ -189,13 +224,6 @@
               <span class="nmd-icon">🍌</span>
               <div class="nmd-body"><span class="nmd-name">NB Pro Edit</span><span class="nmd-desc">Gemini 3 Pro edit · 7⚡</span></div>
             </button>
-            <div class="nmd-group-label">Tools</div>
-            <button class="nmd-item" data-model="fal-ai/bria/background/remove" data-panel="edit">
-              <span class="nmd-icon">✂</span>
-              <div class="nmd-body"><span class="nmd-name">BG Remove</span><span class="nmd-desc">BRIA · no prompt needed · 3⚡</span></div>
-            </button>
-          </div>
-          <div class="nmd-col">
             <div class="nmd-group-label">OpenAI</div>
             <button class="nmd-item" data-model="openai/gpt-image-2/edit" data-panel="edit">
               <span class="nmd-icon">◈</span>
@@ -216,6 +244,8 @@
       </div>
 
       <button class="nav-item" data-panel="chat" id="nav-chat">Chats</button>
+
+      <button class="nav-item" data-panel="content" id="nav-content">Content Machine</button>
 
     </div>
 
@@ -474,7 +504,7 @@
             <h3>PRODUCTS</h3>
             <button type="button" onclick="switchPanel('image')">Generate Art</button>
             <button type="button" onclick="switchPanel('edit')">Restyle Image</button>
-            <button type="button" onclick="switchPanel('edit');selectEditModel('fal-ai/bria/background/remove')">AI Background Remover</button>
+            <button type="button" onclick="switchPanel('edit');selectEditModel('fal-ai/bria/background/remove', true)">AI Background Remover</button>
             <button type="button" onclick="switchPanel('video')">Generate Video</button>
           </div>
           <div class="footer-col">
@@ -886,6 +916,13 @@
                 <span class="imd-cost">10⚡</span>
               </button>
 
+              <div class="imd-group-label">— SeedVR Tools</div>
+              <button class="imd-item" data-model="fal-ai/seedvr/upscale/image" data-icon="⤢" data-cost="8">
+                <span class="imd-icon">⤢</span>
+                <span class="imd-body"><span class="imd-name">SeedVR Image Upscale</span><span class="imd-desc">Use Edit panel · no prompt</span></span>
+                <span class="imd-cost">8⚡</span>
+              </button>
+
             </div>
           </div>
 
@@ -979,6 +1016,7 @@
             <option value="fal-ai/bytedance/seedream/v4.5/text-to-image">Seedream 4.5</option>
             <option value="fal-ai/bytedance/seedream/v5/lite/text-to-image">Seedream 5 Lite</option>
             <option value="openai/gpt-image-2">GPT Image 2</option>
+            <option value="fal-ai/seedvr/upscale/image">SeedVR Image Upscale</option>
           </select>
 
           <!-- Prompt -->
@@ -1109,6 +1147,10 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
               <span>Image to Video</span>
             </button>
+            <button class="img-tool-card" data-video-tool="upscale">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+              <span>Upscale</span>
+            </button>
           </div>
 
           <!-- TEXT TO VIDEO panel -->
@@ -1162,6 +1204,7 @@
                   <option value="fal-ai/veo3.1">Veo 3.1 — 30⚡</option>
                   <option value="xai/grok-imagine-video/text-to-video">Grok Video — 22⚡</option>
                   <option value="fal-ai/stable-video">Stable Video — 10⚡</option>
+                  <option value="fal-ai/seedvr/upscale/video">SeedVR Video Upscale — 18⚡</option>
                 </select>
               </div>
             </div>
@@ -1231,6 +1274,49 @@
 
           </div>
 
+          <!-- VIDEO UPSCALE panel -->
+          <div class="img-sidebar-panel" id="vid-panel-upscale">
+
+            <!-- Upload card (initial state) -->
+            <div class="vup-upload-card" id="vup-upload-card">
+              <div class="video-tool-screen-head">
+                <span class="edit-tool-badge">VIDEO UPSCALE</span>
+                <h2>UPSCALE VIDEO</h2>
+                <p>Upload a video, choose SeedVR upscale settings, and export a sharper result.</p>
+                <div class="edit-tool-steps">
+                  <span>01 Upload video</span>
+                  <span>02 Pick factor</span>
+                  <span>03 Download result</span>
+                </div>
+              </div>
+              <input type="file" id="video-upscale-source-input" accept="video/*" class="hidden" />
+              <button type="button" class="upscale-upload-btn" id="btn-vid-upscale-upload">↥ Upload Video</button>
+            </div>
+
+            <!-- After-upload controls (shown when video is loaded) -->
+            <div class="vup-controls hidden" id="vup-controls">
+              <div class="upscale-detected-row">
+                <span id="video-upscale-detected">VIDEO READY</span>
+                <button type="button" id="btn-vid-upscale-replace">Replace</button>
+              </div>
+              <!-- hidden selects kept for JS compatibility -->
+              <select id="video-upscale-model" class="hidden">
+                <option value="fal-ai/seedvr/upscale/video">SeedVR Video Upscale — 18⚡</option>
+              </select>
+              <select id="video-upscale-mode" class="hidden">
+                <option value="factor">Factor</option>
+                <option value="target">Target Resolution</option>
+              </select>
+              <select id="video-upscale-resolution" class="hidden">
+                <option value="720p">720p</option>
+                <option value="1080p" selected>1080p</option>
+                <option value="1440p">1440p</option>
+                <option value="2160p">2160p</option>
+              </select>
+            </div>
+
+          </div>
+
         </aside>
 
         <!-- ── RIGHT MAIN: Canvas + Explainer ── -->
@@ -1241,6 +1327,59 @@
             <div class="img-canvas-placeholder">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" width="64" height="64"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
               <p>Your generated video will appear here</p>
+            </div>
+          </div>
+
+          <!-- Video Upscale canvas: shown when upscale tab is active + video uploaded -->
+          <div class="vup-canvas hidden" id="vup-canvas">
+            <!-- Preview fills canvas -->
+            <div class="edit-canvas" id="vup-edit-canvas">
+              <div class="edit-source-zone" id="vup-source-zone">
+                <label class="edit-upload-card" id="vup-preview-card">
+                  <video id="video-upscale-source-preview" class="edit-source-img hidden" controls muted></video>
+                  <button type="button" class="edit-remove-btn hidden" id="btn-vup-remove" aria-label="Replace video">✕</button>
+                </label>
+              </div>
+              <!-- Result zone -->
+              <div class="edit-result-zone hidden" id="vup-result-zone">
+                <div class="edit-result-tag">UPSCALED VIDEO</div>
+                <div class="upscale-result-inner" id="video-upscale-result-area"></div>
+              </div>
+            </div>
+            <!-- Bottom bar -->
+            <div class="edit-bar" id="vup-bar">
+              <div class="edit-bar-inner upscale-bar-inner">
+                <!-- Factor buttons -->
+                <div class="upscale-bar-factor">
+                  <span class="upscale-bar-label">Factor</span>
+                  <div class="upscale-factor-buttons" id="vup-factor-buttons">
+                    <button type="button" class="upscale-factor-btn active" data-factor="2" title="2× upscale">2×</button>
+                    <button type="button" class="upscale-factor-btn" data-factor="3" title="3× upscale">3×</button>
+                    <button type="button" class="upscale-factor-btn" data-factor="4" title="4× upscale">4×</button>
+                  </div>
+                </div>
+                <!-- Format select -->
+                <div class="upscale-bar-format">
+                  <span class="upscale-bar-label">Format</span>
+                  <select id="video-upscale-format" class="img-ctrl-select upscale-bar-select">
+                    <option value="X264 (.mp4)">MP4 / X264</option>
+                    <option value="VP9 (.webm)">WEBM / VP9</option>
+                    <option value="PRORES4444 (.mov)">MOV / ProRes 4444</option>
+                    <option value="GIF (.gif)">GIF</option>
+                  </select>
+                </div>
+                <!-- Upscale button + status -->
+                <div class="edit-bar-right">
+                  <button class="btn-generate-img" id="btn-upscale-video">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M15 3h6v6h-2V6.4l-5.3 5.3-1.4-1.4L17.6 5H15V3zM9 21H3v-6h2v2.6l5.3-5.3 1.4 1.4L6.4 19H9v2z"/></svg>
+                    Upscale <span class="img-cost-badge" id="video-upscale-cost-label">18⚡</span>
+                  </button>
+                  <div class="gen-status hidden" id="video-upscale-status">
+                    <div class="spinner"></div>
+                    <span id="video-upscale-status-text">Upscaling…</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1317,6 +1456,89 @@
       </div><!-- /video-layout -->
     </section>
 
+    <!-- ══ PANEL: UPSCALER ══════════════════════════════════════ -->
+    <section class="panel" id="panel-upscale">
+
+      <!-- ── CANVAS: upload card initially, preview + result after upload ── -->
+      <div class="edit-canvas" id="upscale-canvas">
+
+        <!-- Upload card (initial state) / Preview zone (after upload) -->
+        <div class="edit-source-zone" id="upscale-source-zone">
+          <label class="edit-upload-card" id="upscale-upload-card" for="upscale-source-input">
+            <!-- Initial placeholder (hidden after upload) -->
+            <div class="edit-source-placeholder" id="upscale-upload-inner">
+              <div class="edit-empty-preview">
+                <img id="upscale-hero-img" src="dashboard-showcase/nano-banana-pro-explore/3/image.webp" alt="" />
+              </div>
+              <span class="edit-tool-badge" id="upscale-media-badge">IMAGE / VIDEO UPSCALE</span>
+              <span class="edit-source-ph-title" id="upscale-title">UPSCALE MEDIA</span>
+              <span class="edit-source-ph-sub" id="upscale-subtitle">Upload an image or video. Raiko detects the media type automatically and applies SeedVR upscaling.</span>
+              <div class="edit-tool-steps">
+                <span>01 Upload media</span>
+                <span>02 Pick factor</span>
+                <span>03 Download result</span>
+              </div>
+              <span class="edit-upload-cta">↥ Upload image or video</span>
+            </div>
+            <!-- Uploaded preview (shown after upload) -->
+            <img id="upscale-preview-image" class="edit-source-img hidden" alt="Upscale source" />
+            <video id="upscale-preview-video" class="edit-source-img hidden" controls muted></video>
+            <button type="button" class="edit-remove-btn hidden" id="upscale-reset-btn" aria-label="Replace media">✕</button>
+          </label>
+          <input type="file" id="upscale-source-input" accept="image/*,video/*" class="hidden" />
+        </div>
+
+        <!-- Result zone — hidden until upscale completes -->
+        <div class="edit-result-zone hidden" id="upscale-result-panel">
+          <div class="edit-result-tag" id="upscale-result-tag">UPSCALED RESULT</div>
+          <div class="upscale-result-inner" id="upscale-result-area"></div>
+        </div>
+
+      </div>
+
+      <!-- ── BOTTOM BAR: factor / format / upscale button ── -->
+      <div class="edit-bar hidden" id="upscale-bar">
+        <div class="edit-bar-inner upscale-bar-inner">
+
+          <!-- Detected type + replace -->
+          <div class="upscale-bar-detected" id="upscale-bar-detected">
+            <span class="upscale-bar-type-label" id="upscale-detected-type">Detected: —</span>
+          </div>
+
+          <!-- Factor buttons -->
+          <div class="upscale-bar-factor" id="upscale-factor-wrap">
+            <span class="upscale-bar-label">Factor</span>
+            <div class="upscale-factor-buttons" id="upscale-factor-buttons">
+              <button type="button" class="upscale-factor-btn active" data-factor="2" title="2× upscale">2×</button>
+              <button type="button" class="upscale-factor-btn" data-factor="3" title="3× upscale">3×</button>
+              <button type="button" class="upscale-factor-btn" data-factor="4" title="4× upscale">4×</button>
+            </div>
+          </div>
+
+          <!-- Format select -->
+          <div class="upscale-bar-format" id="upscale-output-format-wrap">
+            <span class="upscale-bar-label">Format</span>
+            <select id="upscale-output-format" class="img-ctrl-select upscale-bar-select">
+              <option value="jpg">JPG</option>
+              <option value="png">PNG</option>
+              <option value="webp">WEBP</option>
+            </select>
+          </div>
+
+          <!-- Upscale button + status -->
+          <div class="edit-bar-right">
+            <button type="button" class="btn-generate-img" id="btn-run-upscale">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M15 3h6v6h-2V6.4l-5.3 5.3-1.4-1.4L17.6 5H15V3zM9 21H3v-6h2v2.6l5.3-5.3 1.4 1.4L6.4 19H9v2z"/></svg>
+              Upscale <span class="img-cost-badge" id="upscale-cost-label">8⚡</span>
+            </button>
+            <div class="gen-status hidden" id="upscale-status"><div class="spinner"></div><span>Upscaling…</span></div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
     <!-- ══ PANEL: EDIT ══════════════════════════════════════ -->
     <section class="panel" id="panel-edit">
 
@@ -1329,11 +1551,17 @@
           <label class="edit-upload-card" for="edit-panel-source-input">
             <div class="edit-source-placeholder" id="edit-upload-inner">
               <div class="edit-empty-preview">
-                <img src="dashboard-showcase/seedream-explore/item-08/image.jpg" alt="" />
+                <img id="edit-tool-hero-img" src="dashboard-showcase/seedream-explore/item-08/image.jpg" alt="" />
               </div>
-              <span class="edit-source-ph-title">EDIT</span>
-              <span class="edit-source-ph-sub">Paint over specific areas to edit just those regions, or skip brushing to apply changes across the entire image</span>
-              <span class="edit-upload-cta">↥ Upload media</span>
+              <span class="edit-tool-badge" id="edit-tool-badge">IMAGE EDIT</span>
+              <span class="edit-source-ph-title" id="edit-tool-title">EDIT IMAGE</span>
+              <span class="edit-source-ph-sub" id="edit-tool-subtitle">Upload an image, describe the change, and generate a new edited result.</span>
+              <div class="edit-tool-steps" id="edit-tool-steps">
+                <span>01 Upload image</span>
+                <span>02 Pick tool</span>
+                <span>03 Generate result</span>
+              </div>
+              <span class="edit-upload-cta" id="edit-upload-cta">↥ Upload image</span>
             </div>
             <img id="edit-panel-source-preview" class="edit-source-img hidden" alt="" />
             <button type="button" class="edit-remove-btn hidden" id="edit-panel-remove-btn" aria-label="Remove uploaded image">✕</button>
@@ -1401,6 +1629,11 @@
               <span class="imd-body"><span class="imd-name">BG Remove</span><span class="imd-desc">BRIA · no prompt needed</span></span>
               <span class="imd-cost">3⚡</span>
             </button>
+            <button class="imd-item" data-model="fal-ai/seedvr/upscale/image" data-icon="⤢" data-cost="8">
+              <span class="imd-icon">⤢</span>
+              <span class="imd-body"><span class="imd-name">SeedVR Image Upscale</span><span class="imd-desc">AI upscale · no prompt needed</span></span>
+              <span class="imd-cost">8⚡</span>
+            </button>
           </div>
         </div>
 
@@ -1454,7 +1687,7 @@
           <h3>PRODUCTS</h3>
           <button type="button" onclick="switchPanel('image')">Generate Art</button>
           <button type="button" onclick="switchPanel('edit')">Restyle Image</button>
-          <button type="button" onclick="switchPanel('edit');selectEditModel('fal-ai/bria/background/remove')">AI Background Remover</button>
+          <button type="button" onclick="switchPanel('edit');selectEditModel('fal-ai/bria/background/remove', true)">AI Background Remover</button>
           <button type="button" onclick="switchPanel('video')">Generate Video</button>
         </div>
         <div class="footer-col">

@@ -251,6 +251,12 @@ async def ai_generate(
                 image_url=req.image_url,
                 extra=req.options or None,
             )
+        elif model_id == "fal-ai/seedvr/upscale/image":
+            urls = await fal.upscale_image(
+                model=model_id,
+                image_url=req.image_url,
+                extra=req.options or None,
+            )
         else:
             urls = await fal.image_to_image(
                 model=model_id,

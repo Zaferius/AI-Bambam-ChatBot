@@ -2,7 +2,7 @@
 
 This README is the **source of truth for the current product behavior** so the next AI agent can continue work safely.
 
-Last updated: **2026-04-28 (Content Machine + credit slot animation update)**
+Last updated: **2026-04-30 (SeedVR upscaler post-upload layout aligned to Edit panel + bottom bar polish fix)**
 
 ---
 
@@ -16,6 +16,7 @@ Raiko is a FastAPI + Vanilla JS single-page app for:
 - One Click Content Machine — multi-platform social content packs
 - AI image editing — **dedicated Edit panel** (separate from Image panel)
 - AI background removal (BRIA)
+- AI image/video upscaling (SeedVR)
 - My Media library (all generated images & videos, localStorage-backed)
 - Credit-based usage tracking
 
@@ -26,6 +27,8 @@ Core UX principle: one app shell, **top horizontal navbar** navigation, persiste
 ## 2) Important Current Decisions (Do Not Revert)
 
 These were intentionally changed and should stay as-is unless explicitly requested:
+
+0. **Navbar nav link order**: **Explore | Image | Video | Edit | Chats | Content Machine** (Content Machine moved to far right, after Chats).
 
 1. **Top navbar** replaces the old left sidebar. Navigation is now a horizontal bar at the top of every page.
 2. **Chat history sidebar** lives *inside* the Chat panel as a 220px left sub-panel (not in the top navbar).
@@ -38,7 +41,7 @@ These were intentionally changed and should stay as-is unless explicitly request
 9. **Image Edit moved into Images panel** (Generate/Edit switch inside Images tab) — AND has a separate dedicated Edit panel in the navbar.
 10. **FaceSwap removed completely** (frontend + backend contracts).
 11. **Image & Video panels — new layout**:
-    - **Images panel**: Dark hero-style landing state with centered mosaic preview art + compact bottom composer. Prompt field sits above a quick control row. Quick controls include Model, Quality, Resolution, Aspect Ratio, Batch Size, and Generate. After generation, a dark framed placeholder appears first, then the generated image is shown centered with **Save** and **Share** actions.
+    - **Images panel**: Dark hero-style landing state with centered mosaic preview art (`.ilh-mosaic`: 880px × 340px, enlarged from 700px × 252px) + compact bottom composer. Prompt field sits above a quick control row. Quick controls include Model, Quality, Resolution, Aspect Ratio, Batch Size, and Generate. After generation, a dark framed placeholder appears first, then the generated image is shown centered with **Save** and **Share** actions. Generated result grid uses `minmax(300px, 1fr)` columns (enlarged from 220px).
     - **Video panel**: Two-column layout — left sidebar (290px) with all controls + right main area with explainer before generation and canvas after.
     - **Edit panel**: Dark centered upload card in initial state. Only upload card is visible before source selection. After upload, a compact Image-style composer appears at the bottom. Uploaded preview is larger and centered; result zone still appears on generation.
 12. **Generation placeholder**: pressing Generate shows the canvas area with a dark framed placeholder, glow/shimmer loading effect, and cycling text. Uses `showGenPlaceholder(containerId)` / `clearGenPlaceholder(containerId)`. Video panel uses `.has-result` class on `#panel-video` to toggle between explainer and canvas.
@@ -52,9 +55,10 @@ These were intentionally changed and should stay as-is unless explicitly request
     - Clicking **My Media** in the user avatar dropdown opens the drawer directly.
     - Image generation still opens it automatically with a generation-in-progress placeholder.
     - Drawer includes **All / Image / Video** filters, a placeholder card during active generation, a **Full View** button that opens the full My Media panel, and a close `✕` button.
-15. **Video panel has two tabs** (tool picker `#video-tool-picker`):
+15. **Video panel has three tabs** (tool picker `#video-tool-picker`):
     - **Text to Video** (`vid-panel-text`): prompt → motion preset → model → duration → Generate.
     - **Image to Video** (`vid-panel-image`): upload image + prompt → model → duration → Generate.
+    - **Upscale** (`vid-panel-upscale`): upload video → SeedVR model → factor/format → Upscale.
 16. **Black & Yellow Brutalist Design** — see Section 3A. Do not regress.
 17. **All UI text is English** — no Turkish strings in user-facing output.
 18. **Navbar labels/actions update**:
@@ -87,6 +91,19 @@ These were intentionally changed and should stay as-is unless explicitly request
 25. **Credit balance animation**:
     - Credit balance updates use a slot-machine-style animation with light blur.
     - `updateCreditsUI(balance)` animates the user dropdown credit value and shows a floating credit delta overlay.
+26. **Shared Upscaler panel (`#panel-upscale`) behavior changed**:
+    - **Mode** and **Target** controls were removed from the shared upscaler UI.
+    - Upscaling now runs as **factor-only** (`2× / 3× / 4×`) with hover tooltip on factor buttons.
+    - **Estimated output** helper text was removed.
+    - After upload, upscaler uses upload-state layout and shows a **right-side result panel**.
+    - On run, result panel first shows a framed **Generating…** placeholder card, then final media replaces it.
+    - Result panel includes a working **Download** action under the generated media.
+    - **Post-upload visual style now matches Edit panel**: large centered source preview, compact bottom control bar, right-side result zone, and polished single-row controls (Detected / Format / Factor / Upscale).
+27. **Video Upscale tab (`#vid-panel-upscale`) layout changed**:
+    - Sidebar keeps upload/replace workflow and lightweight tool state.
+    - After video upload, a dedicated right-side upscale canvas (`#vup-canvas`) appears in Video main area.
+    - Canvas uses Edit-style composition: large centered source preview, right result zone, and compact bottom bar (Factor / Format / Upscale).
+    - Switching away from Upscale tab hides `#vup-canvas`; switching back restores it if source media still exists.
 
 If you reintroduce gradients, soft shadows, pill-shaped buttons, lavender/purple colors, or standalone info "ⓘ" icons, you are regressing the product.
 
@@ -99,20 +116,20 @@ Main UI file: `frontend/index.html`
 ### Top Navbar
 
 - Black background (`#0A0A0A`), 2px yellow bottom border
-- **Left section**: Raiko logo → vertical divider → nav links: **Explore | Content Machine | Image | Video | Edit | Chats**
+- **Left section**: Raiko logo → vertical divider → nav links: **Explore | Image | Video | Edit | Chats | Content Machine**
 - **Right section**: **PRO** CTA button (opens pricing/credits modal) → User avatar + name
 - Active nav link: yellow text (`#FFE400`), bold
-- **Edit nav button** — hovering opens a mega-dropdown with 7 edit models in 2 columns:
-  - Left col: Nano Banana group (NB Flash Edit / NB 2 Edit / NB Pro Edit) + Tools (BG Remove)
+- **Edit nav button** — hovering opens a mega-dropdown with edit models in 2 columns:
+  - Left col: Nano Banana group (NB Flash Edit / NB 2 Edit / NB Pro Edit) + Tools (BG Remove / SeedVR Image Upscale)
   - Right col: OpenAI (GPT Image 2 Edit) + Seedream (Seedream 4.5 Edit) + xAI (Grok Imagine Edit)
   - Clicking a model calls `selectEditModel(modelId)` then `switchPanel('edit')`
 - **Image nav button** — hovering opens a mega-dropdown with all image models in 2 columns:
   - Left col: Flux group (Schnell/Dev/Pro/2 Pro) + OpenAI (GPT Image 2)
   - Right col: Nano Banana group (Flash/2/Pro) + Seedream group (4/4.5/5 Lite)
   - Clicking a model calls `selectImageModel(modelId)` then `switchPanel('image')`
-- **Video nav button** — hovering opens a mega-dropdown with all video models in 2 columns:
+- **Video nav button** — hovering opens a mega-dropdown with all video models/tools in 2 columns:
   - Left col: Kling (v1 Standard / v1 Pro / v3 Pro) + Seedance (1.5 Pro / 2.0)
-  - Right col: Premium (Sora 2 / Veo 3.1 / Grok Video / WAN v2.7 / Stable Video) + Image to Video (Kling Standard / Kling Pro)
+  - Right col: Premium (Sora 2 / Veo 3.1 / Grok Video / WAN v2.7 / Stable Video) + Image to Video (Kling Standard / Kling Pro) + SeedVR Video Upscale
   - Clicking a model calls `selectVideoModel(modelId, tool)` then `switchPanel('video')`
 - **Mega-dropdown implementation**: `position: fixed`, JS-positioned via `getBoundingClientRect()` on mouseenter; `.open` class toggles `display: flex`; 120ms close delay on mouseleave
 - User avatar click opens **user dropdown** anchored below the avatar trigger.
@@ -158,7 +175,7 @@ Two-column layout: left sub-sidebar (220px) + right chat area.
 ### Images Panel
 
 **Dark hero landing layout**:
-- Center hero art + headline before results
+- Center hero art (`.ilh-mosaic`: 880px × 340px grid with 5 preview images) + headline before results
 - Compact bottom composer (`img-controls-sidebar`) on dark surface
 - Tool picker is hidden in landing generate state and still supports `Generate` / `Edit`
 
@@ -173,6 +190,7 @@ Two-column layout: left sub-sidebar (220px) + right chat area.
   - **Aspect Ratio**: 1:1 / 4:5 / 3:4 / 2:3 / 9:16 / 5:4 / 4:3 / 3:2 / 16:9 / 21:9
   - **Batch Size**: 1 / 2 / 3 / 4
 - Batch size is fully wired: request uses `num_images`, frontend cost label multiplies by batch count, backend credit deduction multiplies by `num_images`
+- Result grid uses `minmax(300px, 1fr)` columns (enlarged from 220px) for bigger generated image previews
 - Result actions are **Save** and **Share**
 
 **Edit tab (inside Images panel — legacy):**
@@ -215,6 +233,12 @@ Two-column layout: left sub-sidebar (220px) + right chat area.
 - No prompt required → frontend sends `prompt: ""`, backend detects model ID and calls `fal.remove_background()` instead of `fal.image_to_image()`
 - Prompt + strength section hidden in UI
 
+**SeedVR Image Upscale special case:**
+- Model: `fal-ai/seedvr/upscale/image`
+- No prompt required → frontend sends `prompt: ""`, backend detects model ID and calls `fal.upscale_image()`.
+- Default fal payload: `upscale_mode: "factor"`, `upscale_factor: 2`, `target_resolution: "1080p"`, `noise_scale: 0.1`, `output_format: "jpg"`.
+- Prompt section is hidden in the dedicated Edit panel.
+
 ### Video Panel
 
 **Two-column layout** (`video-layout`): Left sidebar (290px) + right main area.
@@ -228,6 +252,20 @@ Two-column layout: left sub-sidebar (220px) + right chat area.
 **Image to Video tab (`#vid-panel-image`):**
 - Upload source image, prompt textarea, model select (Kling Standard / Kling Pro), duration select
 - Generate button — yellow background, black text, no shadow; same hover state remains shadowless.
+
+**Upscale tab (`#vid-panel-upscale`):**
+- Upload source video from sidebar card; then upscale workspace opens in right main area (`#vup-canvas`).
+- Controls are shown in compact bottom bar: factor (`2× / 3× / 4×`) + output format + Upscale.
+- Effective upscale flow is factor-first (`upscale_mode: "factor"`), with defaults: `upscale_factor: 2`, `target_resolution: "1080p"`, `noise_scale: 0.1`, `output_format: "X264 (.mp4)"`, `output_quality: "high"`, `output_write_mode: "balanced"`.
+- Generate action calls `upscaleVideo()` → `API.ai.generateVideo()` with SeedVR-specific `options.extra.video_url`; output renders in-tab result zone and is saved to My Media as video.
+
+### Shared Upscaler Panel (`#panel-upscale`)
+
+- Single shared entry for image/video upscaling (auto-detect media type after upload).
+- Post-upload state mirrors Edit panel composition: large centered source preview + right result zone + compact bottom bar.
+- Bottom bar shows: detected type, factor controls (`2× / 3× / 4×`), output format, and Upscale action.
+- Factor controls include native hover tooltips.
+- Run flow: right result panel opens with **Generating…** placeholder, then renders image/video result with a **Download** button.
 
 **Right main area:**
 - Before generation: `#video-explainer` (how-it-works steps + example output placeholders)
@@ -332,13 +370,14 @@ Main logic: `frontend/app.js` | Explore showcase data: `frontend/explore-data.js
 | `currentModel` | `'anthropic/claude-3.5-sonnet'` | chat model |
 | `chatId` | generated | |
 | `currentImageTool` | `'generate'` | `'generate'` \| `'edit'` |
-| `currentVideoTool` | `'text'` | `'text'` \| `'image'` |
+| `currentVideoTool` | `'text'` | `'text'` \| `'image'` \| `'upscale'` |
 | `currentEditModel` | `'fal-ai/nano-banana-2/edit'` | Edit panel model |
 | `imageReferenceFiles` | `[]` | Image panel reference upload file list |
 | `imageReferenceUrls` | `[]` | Base64 data URLs for image reference uploads |
 | `editSourceUrl` | `null` | Image panel Edit tab source |
 | `editPanelSourceUrl` | `null` | Dedicated Edit panel source |
 | `i2vSourceUrl` | `null` | Image-to-video source |
+| `videoUpscaleSourceUrl` | `null` | SeedVR video upscale source |
 | `stylePreset` | `''` | appended to image prompt |
 | `mediaFilter` | `'all'` | My Media filter |
 | `contentPacks` | `[]` | Last generated Content Machine packs |
@@ -360,6 +399,8 @@ Main logic: `frontend/app.js` | Explore showcase data: `frontend/explore-data.js
 - `runEditImage()` → `API.ai.editImage()` (image panel Edit tab, legacy)
 - `generateVideo()` → `API.ai.generateVideo()` → `saveMediaItem()`
 - `generateVideoFromImage()` → `API.ai.generateVideoFromImage()` → `saveMediaItem()`
+- `upscaleVideo()` → `API.ai.generateVideo('fal-ai/seedvr/upscale/video', ..., options.extra.video_url)` → `saveMediaItem()`
+- `runSharedUpscaler()` → image: `API.ai.editImage('fal-ai/seedvr/upscale/image', ...)`; video: `API.ai.generateVideo('fal-ai/seedvr/upscale/video', ..., options.extra.video_url)`; then right result panel render + download action + `saveMediaItem()`
 - `generateContentPack()` → `generateContentPackRequest()` → `POST /content-packs/generate` → `renderContentPacks()`
 - `initContentMachineUI()` — wires Content Machine workflow tabs and accordion toggles.
 - `updateContentCostEstimate()` — updates live estimated total credits.
@@ -381,8 +422,8 @@ Main logic: `frontend/app.js` | Explore showcase data: `frontend/explore-data.js
 ### Core Files
 
 - `backend/main.py` — FastAPI app, router init, model listing, legacy chat endpoints
-- `backend/ai_router.py` — Unified `/ai/generate` endpoint. Supported types: `chat`, `image`, `video`, `edit`, `image_to_video`. Edit handler dispatches: if model is `fal-ai/bria/background/remove` → calls `fal.remove_background()`, otherwise → `fal.image_to_image()`.
-- `backend/fal_client.py` — fal.ai queue wrapper. Methods: `generate_image()`, `image_to_image()`, `generate_video()`, `generate_video_from_image()`, `remove_background()`. Special routing: `_ASPECT_RATIO_MODELS` (nano-banana family uses `aspect_ratio` string), `_IMAGE_SIZE_PRESET_MODELS` (Seedream uses `image_size` enum preset).
+- `backend/ai_router.py` — Unified `/ai/generate` endpoint. Supported types: `chat`, `image`, `video`, `edit`, `image_to_video`. Edit handler dispatches: if model is `fal-ai/bria/background/remove` → calls `fal.remove_background()`; if model is `fal-ai/seedvr/upscale/image` → calls `fal.upscale_image()`; otherwise → `fal.image_to_image()`.
+- `backend/fal_client.py` — fal.ai queue wrapper. Methods: `generate_image()`, `image_to_image()`, `upscale_image()`, `generate_video()`, `generate_video_from_image()`, `remove_background()`. Special routing: `_ASPECT_RATIO_MODELS` (nano-banana family uses `aspect_ratio` string), `_IMAGE_SIZE_PRESET_MODELS` (Seedream uses `image_size` enum preset). `generate_video()` has special payload handling for `fal-ai/seedvr/upscale/video`.
 - `backend/model_costs.py` — per-model credit costs (LLM + fal)
 - `backend/credits_router.py` — balance, transactions, purchase packs, manual add (dev-flag)
 - `backend/content_pack_engine.py` — One Click Content Machine modules: prompt builder, viral hook generator, generation engine, assembler, preference memory, cost estimator.
@@ -415,13 +456,15 @@ Main logic: `frontend/app.js` | Explore showcase data: `frontend/explore-data.js
 | `chat` | `model`, `prompt`, optional `chat_id` | streaming SSE |
 | `image` | `model`, `prompt`, `width`, `height` | `fal.generate_image()` |
 | `video` | `model`, `prompt`, `duration` | `fal.generate_video()` |
-| `edit` | `model`, `image_url`, `prompt` (empty ok for BG Remove), `strength` | `fal.remove_background()` or `fal.image_to_image()` |
+| `edit` | `model`, `image_url`, `prompt` (empty ok for BG Remove / SeedVR Image Upscale), `strength` | `fal.remove_background()`, `fal.upscale_image()`, or `fal.image_to_image()` |
 | `image_to_video` | `model`, `image_url`, `prompt`, `duration` | `fal.generate_video_from_image()` |
 
 **Edit type dispatch logic** (`ai_router.py`):
 ```python
 if model_id == "fal-ai/bria/background/remove":
     urls = await fal.remove_background(model=model_id, image_url=req.image_url)
+elif model_id == "fal-ai/seedvr/upscale/image":
+    urls = await fal.upscale_image(model=model_id, image_url=req.image_url)
 else:
     urls = await fal.image_to_image(model=model_id, prompt=req.prompt, ...)
 ```
@@ -496,6 +539,7 @@ Requires JWT auth. Generates cohesive social content packs.
 | `fal-ai/bytedance/seedream/v4/text-to-image` | 5⚡ |
 | `fal-ai/bytedance/seedream/v4.5/text-to-image` | 6⚡ |
 | `fal-ai/bytedance/seedream/v5/lite/text-to-image` | 5⚡ |
+| `fal-ai/seedvr/upscale/image` | 8⚡ |
 
 ### Image — OpenAI
 | Model | Cost |
@@ -512,6 +556,7 @@ Requires JWT auth. Generates cohesive social content packs.
 | `fal-ai/bytedance/seedream/v4.5/edit` | 7⚡ | |
 | `xai/grok-imagine-image/edit` | 8⚡ | |
 | `fal-ai/bria/background/remove` | 3⚡ | no prompt required |
+| `fal-ai/seedvr/upscale/image` | 8⚡ | no prompt required; SeedVR upscale |
 
 ### Edit (Image panel legacy)
 | Model | Cost |
@@ -538,6 +583,11 @@ Requires JWT auth. Generates cohesive social content packs.
 |-------|------|
 | `fal-ai/kling-video/v1/standard/image-to-video` | 15⚡ |
 | `fal-ai/kling-video/v1/pro/image-to-video` | 22⚡ |
+
+### Video — Upscale
+| Model | Cost |
+|-------|------|
+| `fal-ai/seedvr/upscale/video` | 18⚡ |
 
 Default signup credit grant: **20 credits**.
 
