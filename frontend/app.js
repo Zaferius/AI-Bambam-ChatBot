@@ -1,4 +1,4 @@
-e/**
+/**
  * app.js — Raiko SPA logic
  * Handles: navigation, chat, image gen, video gen, tools, credits, media
  */
