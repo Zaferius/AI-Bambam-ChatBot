@@ -69,21 +69,21 @@ class SignupRequest(BaseModel):
     def validate_email(cls, v):
         pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         if not re.match(pattern, v):
-            raise ValueError('Geçerli bir email adresi girin')
+            raise ValueError('Please enter a valid email address')
         return v.lower()
     
     @validator('username')
     def validate_username(cls, v):
         if len(v) < 3 or len(v) > 30:
-            raise ValueError('Kullanıcı adı 3-30 karakter olmalı')
+            raise ValueError('Username must be between 3 and 30 characters')
         if not re.match(r'^[a-zA-Z0-9_]+$', v):
-            raise ValueError('Kullanıcı adı sadece harf, rakam ve _ içerebilir')
+            raise ValueError('Username can only contain letters, numbers, and underscore')
         return v
     
     @validator('password')
     def validate_password(cls, v):
         if len(v) < 6:
-            raise ValueError('Şifre en az 6 karakter olmalı')
+            raise ValueError('Password must be at least 6 characters long')
         return v
 
 
@@ -134,22 +134,22 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         }
 
     if credentials is None:
-        raise HTTPException(status_code=401, detail="Token gerekli")
+        raise HTTPException(status_code=401, detail="Authentication token required")
     
     payload = decode_token(credentials.credentials)
     if payload is None:
-        raise HTTPException(status_code=401, detail="Geçersiz veya süresi dolmuş token")
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
     
     user_id = payload.get("sub")
     if user_id is None:
-        raise HTTPException(status_code=401, detail="Geçersiz token")
+        raise HTTPException(status_code=401, detail="Invalid token")
     
     user = db.get_user_by_id(user_id)
     if user is None:
-        raise HTTPException(status_code=401, detail="Kullanıcı bulunamadı")
+        raise HTTPException(status_code=401, detail="User not found")
     
     if not user.get("is_active", True):
-        raise HTTPException(status_code=403, detail="Hesap devre dışı")
+        raise HTTPException(status_code=403, detail="Account disabled")
     
     return {
         "id": user["id"],
@@ -202,19 +202,19 @@ async def signup(req: SignupRequest, request: Request):
     # Email kontrolü
     existing = db.get_user_by_email(req.email)
     if existing:
-        raise HTTPException(status_code=400, detail="Bu email zaten kayıtlı")
+        raise HTTPException(status_code=400, detail="This email is already registered")
     
     # Username kontrolü
     existing = db.get_user_by_username(req.username)
     if existing:
-        raise HTTPException(status_code=400, detail="Bu kullanıcı adı zaten alınmış")
+        raise HTTPException(status_code=400, detail="This username is already taken")
     
     # Kullanıcı oluştur
     password_hash = hash_password(req.password)
     user = db.create_user(req.email, req.username, password_hash)
     
     if user is None:
-        raise HTTPException(status_code=500, detail="Kullanıcı oluşturulamadı")
+        raise HTTPException(status_code=500, detail="User could not be created")
     
     # Yeni kullanıcıya 20 hoş geldin kredisi ver
     db.init_user_credits(user["id"], initial_balance=20.0)
@@ -242,13 +242,13 @@ async def login(req: LoginRequest, request: Request):
     user = db.get_user_by_email(req.email)
     
     if not user:
-        raise HTTPException(status_code=401, detail="Email veya şifre hatalı")
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
     
     if not verify_password(req.password, user["password_hash"]):
-        raise HTTPException(status_code=401, detail="Email veya şifre hatalı")
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
     
     if not user.get("is_active", True):
-        raise HTTPException(status_code=403, detail="Hesap devre dışı")
+        raise HTTPException(status_code=403, detail="Account disabled")
     
     # Son giriş zamanını güncelle
     db.update_last_login(user["id"])

@@ -3160,20 +3160,36 @@ function startNewChat() {
 function setupUserUI() {
   const user = Auth.getUser();
   const sidebarUser = document.getElementById('sidebar-user');
+  const userTrigger = document.getElementById('navbar-user-trigger');
+  const userAvatarEl = document.getElementById('user-avatar');
+  const userNameEl = document.getElementById('user-name');
+  const userChevron = userTrigger?.querySelector('.user-chevron');
 
   if (State.isGuest || !user) {
     if (sidebarUser) {
       sidebarUser.innerHTML = `<a href="/login.html" class="btn-signin-guest">Sign In</a>`;
     }
+    if (userTrigger) {
+      userTrigger.onclick = () => { window.location.href = '/login.html'; };
+      userTrigger.setAttribute('aria-expanded', 'false');
+      userTrigger.classList.add('navbar-user-trigger--guest');
+    }
+    if (userAvatarEl) userAvatarEl.textContent = '→';
+    if (userNameEl) userNameEl.textContent = 'Sign In';
+    if (userChevron) userChevron.classList.add('hidden');
     const welcomeNameEl = document.getElementById('welcome-name');
     if (welcomeNameEl) welcomeNameEl.textContent = 'there';
     return;
   }
 
   const initial = (user.username || user.email || 'U').charAt(0).toUpperCase();
-  const userAvatarEl = document.getElementById('user-avatar');
-  const userNameEl = document.getElementById('user-name');
   const welcomeNameEl = document.getElementById('welcome-name');
+
+  if (userTrigger) {
+    userTrigger.onclick = null;
+    userTrigger.classList.remove('navbar-user-trigger--guest');
+  }
+  if (userChevron) userChevron.classList.remove('hidden');
 
   if (userAvatarEl) userAvatarEl.textContent = initial;
   if (userNameEl) userNameEl.textContent = user.username || 'User';
@@ -3200,6 +3216,10 @@ function bindEvents() {
   const userDropdown = document.getElementById('user-dropdown');
   if (userTrigger && userDropdown) {
     userTrigger.addEventListener('click', (e) => {
+      if (State.isGuest) {
+        window.location.href = '/login.html';
+        return;
+      }
       e.stopPropagation();
       const isOpen = !userDropdown.classList.contains('hidden');
       userDropdown.classList.toggle('hidden', isOpen);

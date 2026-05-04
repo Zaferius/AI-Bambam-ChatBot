@@ -2,7 +2,7 @@
 
 This README is the **source of truth for the current product behavior** so the next AI agent can continue work safely.
 
-Last updated: **2026-04-30 (Explore model gallery page + orientation-aware masonry + favicon/logo refresh)**
+Last updated: **2026-05-04 (Safe pricing recalibration + chat removal + login redesign + richer Explore media previews)**
 
 ---
 
@@ -10,7 +10,6 @@ Last updated: **2026-04-30 (Explore model gallery page + orientation-aware mason
 
 Raiko is a FastAPI + Vanilla JS single-page app for:
 
-- Authenticated AI chat (streaming)
 - AI image generation
 - AI video generation (text-to-video + image-to-video)
 - One Click Content Machine — multi-platform social content packs
@@ -21,7 +20,7 @@ Raiko is a FastAPI + Vanilla JS single-page app for:
 - My Media library (all generated images & videos, localStorage-backed)
 - Credit-based usage tracking
 
-Core UX principle: one app shell, **top horizontal navbar** navigation, persistent user-isolated chat history.
+Core UX principle: one app shell, **top horizontal navbar** navigation, guest-browsable Explore-first discovery, and black/yellow brutalist presentation.
 
 ---
 
@@ -29,15 +28,15 @@ Core UX principle: one app shell, **top horizontal navbar** navigation, persiste
 
 These were intentionally changed and should stay as-is unless explicitly requested:
 
-0. **Navbar nav link order**: **Explore | Image | Video | Edit | Restyler | Chats | Content Machine** (Content Machine remains far right, after Chats).
+0. **Navbar nav link order**: **Explore | Image | Video | Edit | Restyler | Content Machine**.
 
 1. **Top navbar** replaces the old left sidebar. Navigation is now a horizontal bar at the top of every page.
-2. **Chat history sidebar** lives *inside* the Chat panel as a 220px left sub-panel (not in the top navbar).
-3. **+ New Chat button** is only inside the chat panel's left sub-panel — it is NOT in the top navbar.
+2. **AI Chat removed from visible product UI** — no top navbar entry, no Explore tile, no footer shortcut, and no usable Chat panel in the frontend.
+3. **Guest browsing enabled** — if not authenticated, the top-right navbar shows a **Sign In** CTA that routes to the dedicated login page.
 4. **Quick Actions removed** — `+ More` button and dropdown were removed from navbar.
 5. **Doodle / Thunder toggle buttons removed from UI**.
 6. **My Media moved to user avatar dropdown** — removed from top navbar nav links; accessible only via the user avatar dropdown menu.
-7. **User avatar dropdown** — clicking the avatar/name in the top navbar opens a dropdown with: user name + "Free Plan" label, credits bar (green fill, live balance), Go Premium/Upgrade button, View profile, Manage account, Join our community, My Media, Sign out.
+7. **User avatar area behavior changed** — authenticated users still get the dropdown, but guests now see a brutalist **Sign In** CTA in the same top-right slot instead of a fake user identity.
 8. **Logo yellow border removed** — `.navbar-orb` has `border: none`, only the "R" initial is shown in the navbar logo area.
 9. **Image Edit moved into Images panel** (Generate/Edit switch inside Images tab) — AND has a separate dedicated Edit panel in the navbar.
 10. **FaceSwap removed completely** (frontend + backend contracts).
@@ -122,35 +121,52 @@ These were intentionally changed and should stay as-is unless explicitly request
     - Inside Image navbar mega-dropdown Tools list, a **Restyler** item exists.
     - Clicking it routes directly to `switchPanel('restyler')`.
 30. **Explore Mid Row feature tiles updated**:
-    - The tile grid now includes **Image Restyle** and routes to `switchPanel('restyler')`.
-    - Current Explore quick tile set is effectively 7 items (Generate Image, Seedream 5, Image Restyle, Nano Banana Pro, Generate Video, Image Edit, AI Chat).
+    - The tile grid now includes **Image Restyle**, **Content Machine**, **Image Upscale**, and **Video Upscale**.
+    - AI Chat tile was removed.
+    - Non-video tiles now use faded random image artwork from `frontend/dashboard-showcase/bottom-tools/`.
+    - Video-related tiles now use looped video artwork from `frontend/dashboard-showcase/bottom-tools/s-video1.mp4`.
 31. **Explore Gallery Preview prompt readability fix**:
     - Long prompts inside `#gallery-preview-overlay` now scroll within the prompt block (`.gp-prompt`) so full prompt text is always readable.
 32. **Explore Featured Showcase Strip includes Restyler card**:
     - Featured strip now includes a 5th card: **Image Restyle**.
     - The Restyler featured card uses assets from `frontend/dashboard-showcase/top-showcase/image-restyle/`.
     - Card media auto-rotates with smooth infinite fade loop in CSS (`.dft-restyle-slide` + `@keyframes dft-restyle-fade`).
-33. **Explore model showcases now have floating `View all` CTA inside each showcase preview area**:
+33. **Seedance featured card upgraded to looped preview media**:
+    - The Seedance card title is now **Seedance 2.0** with subtitle **TEXT TO VIDEO**.
+    - The card cycles through looped videos from `frontend/dashboard-showcase/top-showcase/seedance-explore/`.
+34. **Explore model showcases now have floating `View all` CTA inside each showcase preview area**:
     - Buttons are positioned on top of showcase media (not between sections).
     - Trigger function: `openModelGalleryPage(key)`.
-34. **`View all` now opens a dedicated Explore Gallery page panel (not modal, not in-place section)**:
+35. **`View all` now opens a dedicated Explore Gallery page panel (not modal, not in-place section)**:
     - New panel: `#panel-explore-gallery`.
     - Back action returns to Explore via `closeModelGalleryPage()` → `switchPanel('dashboard')`.
-35. **Explore Gallery content is data-driven and orientation-aware**:
+36. **Explore Gallery content is data-driven and orientation-aware**:
     - Data source: `window.EXPLORE_MODEL_GALLERIES` in `frontend/explore-data.js`.
     - Items support `shape: 'wide' | 'tall' | 'square'` and render with corresponding classes.
-36. **Explore Gallery layout switched to masonry-style columns with preserved orientation feel**:
+37. **Explore Gallery layout switched to masonry-style columns with preserved orientation feel**:
     - Uses `.emg-grid` column flow and `break-inside: avoid` cards.
     - Avoids rigid grid dead zones / black gaps from track-based CSS grid packing.
-37. **Explore Gallery vertical scrolling fixed**:
+38. **Explore Gallery vertical scrolling fixed**:
     - Dedicated panel `#panel-explore-gallery` explicitly uses `overflow-y: auto`.
-38. **Branding assets updated**:
+39. **Branding assets updated**:
     - Navbar/auth logo image now uses `frontend/raiko-logo-trans.png`.
     - Footer logos now use `frontend/raiko-logo-trans-w.png`.
     - Navbar text label `Raiko` removed; icon-only brand mark remains.
-39. **Favicon stack wired to root assets**:
+40. **Favicon stack wired to root assets**:
     - `frontend/index.html` now links to root `favicon.ico`, `favicon.svg`, `favicon-96x96.png`, `apple-touch-icon.png`, and `site.webmanifest`.
     - `site.webmanifest` updated from placeholder app name/colors to `Raiko` and dark theme colors.
+41. **Pricing system overhauled to safer economics**:
+    - Pricing modal supports **Subscriptions** and **Credit Packs** views.
+    - Subscription billing supports **Monthly** and **Yearly** toggle states.
+    - Current public subscription plans are Basic / Creator / Pro; Studio is hidden in config.
+    - Credits and pack pricing were recalibrated conservatively around higher-cost video risk.
+42. **Login page redesigned**:
+    - `frontend/login.html` now uses the Raiko logo without the yellow boxed orb treatment.
+    - Left side uses a subtle yellow dot-grid pattern instead of square tile lines.
+    - Right preview area now has a 2-stage progress bar and randomly selects between two preview sets:
+      - cat image + Seedance video
+      - girlcat image + `s-video10.mp4`
+    - Login page includes a lower-right **Explore** escape button for browsing without signing in.
 
 If you reintroduce gradients, soft shadows, pill-shaped buttons, lavender/purple colors, or standalone info "ⓘ" icons, you are regressing the product.
 
