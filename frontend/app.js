@@ -39,6 +39,7 @@ const State = {
   contentPacks: [],
   lastContentPayload: null,
   isGuest: true,
+  pricingBilling: 'monthly',
   // active input context: 'hero' | 'sticky'
   activeInput: 'hero',
 };
@@ -3016,6 +3017,64 @@ async function purchasePack(pack) {
   }
 }
 
+async function subscribePlan(plan, billing = 'monthly') {
+  try {
+    const res = await API.credits.subscribe(plan, billing);
+    updateCreditsUI(res.new_balance);
+    const planLabel = document.querySelector('.udrop-plan');
+    if (planLabel) planLabel.textContent = `${res.plan_name} Plan`;
+    toast(`${res.plan_name} activated! ${res.credits_added} credits added.`, 'success');
+    closeCreditsModal();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+function switchPricingView(view) {
+  const showSubs = view !== 'packs';
+  document.getElementById('subscription-plans')?.classList.toggle('hidden', !showSubs);
+  document.getElementById('credit-packs-section')?.classList.toggle('hidden', showSubs);
+  document.querySelectorAll('.pricing-toggle-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.pricingView === (showSubs ? 'subscriptions' : 'packs'));
+  });
+}
+
+function switchPricingBilling(billing) {
+  State.pricingBilling = billing === 'annual' ? 'annual' : 'monthly';
+  document.querySelectorAll('.pricing-billing-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.billing === State.pricingBilling);
+  });
+
+  document.querySelectorAll('.subscription-plan').forEach(card => {
+    const monthlyPrice = Number(card.dataset.monthlyPrice || 0);
+    const annualPrice = Number(card.dataset.annualPrice || monthlyPrice || 0);
+    const monthlyCredits = Number(card.dataset.monthlyCredits || 0);
+    const annualBonus = Number(card.dataset.annualBonus || 0);
+    const priceEl = card.querySelector('[data-plan-price]');
+    const subEl = card.querySelector('[data-plan-subcopy]');
+    const creditsEl = card.querySelector('[data-plan-credits]');
+    const savingsEl = card.querySelector('[data-plan-savings]');
+
+    if (State.pricingBilling === 'annual') {
+      const bonusCredits = Math.round(monthlyCredits * (1 + annualBonus / 100));
+      if (priceEl) priceEl.textContent = `$${annualPrice}/mo`;
+      if (subEl) subEl.textContent = 'Billed yearly';
+      if (creditsEl) creditsEl.innerHTML = `${bonusCredits}<span>⚡/mo</span>`;
+      if (savingsEl) {
+        const annualSavings = Math.max(0, Math.round((monthlyPrice - annualPrice) * 12));
+        savingsEl.textContent = annualSavings > 0 ? `Save $${annualSavings}/year` : 'Yearly billing';
+      }
+      card.dataset.billing = 'annual';
+    } else {
+      if (priceEl) priceEl.textContent = `$${monthlyPrice}/mo`;
+      if (subEl) subEl.textContent = 'Billed monthly';
+      if (creditsEl) creditsEl.innerHTML = `${monthlyCredits}<span>⚡/mo</span>`;
+      if (savingsEl) savingsEl.textContent = 'Monthly billing';
+      card.dataset.billing = 'monthly';
+    }
+  });
+}
+
 /* ══════════════════════════════════════════════════════════
    AUTH CHECK + INIT
 ══════════════════════════════════════════════════════════ */
@@ -3594,6 +3653,17 @@ function bindEvents() {
     const pack = e.target.closest('.credit-pack');
     if (pack) purchasePack(pack.dataset.pack);
   });
+  document.getElementById('subscription-plan-grid')?.addEventListener('click', (e) => {
+    const plan = e.target.closest('.subscription-plan');
+    if (plan) subscribePlan(plan.dataset.plan, plan.dataset.billing || 'monthly');
+  });
+  document.querySelectorAll('.pricing-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchPricingView(btn.dataset.pricingView));
+  });
+  document.querySelectorAll('.pricing-billing-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchPricingBilling(btn.dataset.billing));
+  });
+  switchPricingBilling(State.pricingBilling);
 
   document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {

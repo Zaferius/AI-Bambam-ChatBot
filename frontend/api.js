@@ -72,8 +72,11 @@ const API = {
     balance: () => apiFetch('/credits/balance'),
     transactions: (limit = 50) => apiFetch(`/credits/transactions?limit=${limit}`),
     packs: () => apiFetch('/credits/packs'),
+    subscriptions: () => apiFetch('/credits/subscriptions'),
     purchase: (pack) =>
       apiFetch('/credits/purchase', { method: 'POST', body: JSON.stringify({ pack }) }),
+    subscribe: (plan, billing = 'monthly') =>
+      apiFetch('/credits/subscribe', { method: 'POST', body: JSON.stringify({ plan, billing }) }),
     add: (amount, description = 'Manual top-up') =>
       apiFetch('/credits/add', { method: 'POST', body: JSON.stringify({ amount, description }) }),
   },

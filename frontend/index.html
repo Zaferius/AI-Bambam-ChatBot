@@ -255,8 +255,6 @@
 
       <button class="nav-item" data-panel="restyler" id="nav-restyler">Restyler</button>
 
-      <button class="nav-item" data-panel="chat" id="nav-chat">Chats</button>
-
       <button class="nav-item" data-panel="content" id="nav-content">Content Machine</button>
 
     </div>
@@ -283,7 +281,7 @@
             <div class="udrop-avatar" id="udrop-avatar"></div>
             <div class="udrop-info">
               <div class="udrop-name" id="udrop-name">User</div>
-              <div class="udrop-plan">Free Plan</div>
+              <div class="udrop-plan">No subscription</div>
             </div>
           </div>
 
@@ -466,7 +464,7 @@
       <!-- ── EXPLORE FEATURE TILES ── -->
       <div class="dash-mid-row explore-feature-tiles" id="explore-feature-tiles">
         <div class="dash-tiles-grid">
-          <button class="dash-tile" onclick="switchPanel('image')">
+          <button class="dash-tile dash-tile--image-bg" onclick="switchPanel('image')">
             <div class="dt-icon dt-icon--img">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             </div>
@@ -476,7 +474,7 @@
             </div>
           </button>
 
-          <button class="dash-tile" onclick="selectImageModel('fal-ai/bytedance/seedream/v5/lite/text-to-image');switchPanel('image')">
+          <button class="dash-tile dash-tile--image-bg" onclick="selectImageModel('fal-ai/bytedance/seedream/v5/lite/text-to-image');switchPanel('image')">
             <div class="dt-icon dt-icon--seed">🌱</div>
             <div class="dt-body">
               <span class="dt-title">Seedream 5</span>
@@ -485,7 +483,7 @@
             <span class="dt-badge dt-badge--new">NEW</span>
           </button>
 
-          <button class="dash-tile" onclick="switchPanel('restyler')">
+          <button class="dash-tile dash-tile--image-bg" onclick="switchPanel('restyler')">
             <div class="dt-icon dt-icon--restyle">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z"/></svg>
             </div>
@@ -495,7 +493,7 @@
             </div>
           </button>
 
-          <button class="dash-tile" onclick="selectImageModel('fal-ai/nano-banana-pro');switchPanel('image')">
+          <button class="dash-tile dash-tile--image-bg" onclick="selectImageModel('fal-ai/nano-banana-pro');switchPanel('image')">
             <div class="dt-icon dt-icon--nb">🍌</div>
             <div class="dt-body">
               <span class="dt-title">Nano Banana Pro</span>
@@ -504,7 +502,7 @@
             <span class="dt-badge dt-badge--unlimited">UNLIMITED</span>
           </button>
 
-          <button class="dash-tile" onclick="switchPanel('video')">
+          <button class="dash-tile dash-tile--video-bg" onclick="switchPanel('video')">
             <div class="dt-icon dt-icon--vid">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
             </div>
@@ -515,7 +513,7 @@
             <span class="dt-badge dt-badge--new">NEW</span>
           </button>
 
-          <button class="dash-tile" onclick="switchPanel('image');switchImageTool('edit')">
+          <button class="dash-tile dash-tile--image-bg" onclick="switchPanel('image');switchImageTool('edit')">
             <div class="dt-icon dt-icon--edit">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </div>
@@ -525,15 +523,36 @@
             </div>
           </button>
 
-          <button class="dash-tile" id="qc-new-chat">
-            <div class="dt-icon dt-icon--chat">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <button class="dash-tile dash-tile--image-bg" onclick="switchPanel('content')">
+            <div class="dt-icon dt-icon--content">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10"/><path d="M7 12h10"/><path d="M7 16h6"/></svg>
             </div>
             <div class="dt-body">
-              <span class="dt-title">AI Chat</span>
-              <span class="dt-desc">Chat with the world's best models</span>
+              <span class="dt-title">Content Machine</span>
+              <span class="dt-desc">Generate complete social content packs</span>
             </div>
           </button>
+
+          <button class="dash-tile dash-tile--image-bg" onclick="switchPanel('upscale')">
+            <div class="dt-icon dt-icon--upscale">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3h7v7"/><path d="M10 21H3v-7"/><path d="M21 3l-8 8"/><path d="M3 21l8-8"/></svg>
+            </div>
+            <div class="dt-body">
+              <span class="dt-title">Image Upscale</span>
+              <span class="dt-desc">Sharpen and enlarge images with AI</span>
+            </div>
+          </button>
+
+          <button class="dash-tile dash-tile--video-bg" onclick="switchPanel('video');switchVideoTool('upscale')">
+            <div class="dt-icon dt-icon--vupscale">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/><path d="M8 9l4 3-4 3"/></svg>
+            </div>
+            <div class="dt-body">
+              <span class="dt-title">Video Upscale</span>
+              <span class="dt-desc">Boost video clarity with SeedVR</span>
+            </div>
+          </button>
+
         </div>
       </div>
 
@@ -558,7 +577,6 @@
           <div class="footer-col">
             <h3>COMPANY</h3>
             <button type="button" onclick="switchPanel('dashboard')">Home</button>
-            <button type="button" onclick="switchPanel('chat')">Raiko Chat</button>
             <button type="button" class="footer-pricing-trigger">Pricing</button>
           </div>
         </nav>
@@ -726,134 +744,6 @@
       <div class="media-drawer-grid" id="media-drawer-grid">
         <div class="media-drawer-empty">No media yet</div>
       </div>
-    </section>
-
-    <!-- ══ PANEL: CHAT ══════════════════════════════════════ -->
-    <section class="panel" id="panel-chat">
-      <div class="chat-layout">
-
-      <!-- Chat History Sidebar -->
-      <aside class="chat-hsidebar">
-        <button class="btn-new-chat chat-hsb-newbtn" id="btn-new-chat-inner">+ New Chat</button>
-        <div class="chat-hsb-label">Recent</div>
-        <div id="chat-list-items" style="display:flex;flex-direction:column;gap:2px;overflow-y:auto;flex:1;min-height:0;"></div>
-      </aside>
-
-      <!-- Chat Main Area -->
-      <div class="chat-main-wrap">
-      <!-- Top bar -->
-      <div class="panel-topbar">
-        <div class="chat-topbar-actions">
-          <!-- Model selector -->
-          <div class="model-selector-wrap" id="model-selector-wrap">
-            <button class="model-selector-btn" id="model-selector-btn">
-                  <span id="model-selector-label">Claude 3.5 Sonnet</span>
-              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-            <div class="model-dropdown hidden" id="model-dropdown">
-              <div class="model-search-wrap">
-                <input type="text" class="model-search-input" id="model-search-input" placeholder="Search models…" />
-              </div>
-              <div class="model-list" id="model-list"></div>
-            </div>
-          </div>
-          <!-- Active model badge -->
-          <span id="chat-model-label" style="font-size:12px;color:var(--text-muted);align-self:center;"></span>
-        </div>
-      </div>
-
-      <!-- Messages -->
-      <div class="messages-wrap" id="messages-wrap">
-        <div class="messages-inner" id="messages-inner">
-          <!-- Welcome -->
-          <div class="welcome-screen" id="welcome-screen">
-            <h1 class="welcome-title">Hi, <span id="welcome-name">Bob</span>! How can I help?</h1>
-            
-            <div class="chat-input-hero">
-              <div class="chat-input-box hero-box" id="hero-box">
-                <!-- File attachment preview (hero) -->
-                <div class="file-attachments-preview hidden" id="hero-file-preview"></div>
-
-                <input type="file" id="hero-file-input" class="hidden" multiple />
-                <textarea
-                  id="chat-textarea-hero"
-                  class="chat-textarea"
-                  placeholder="Write a message or attach files…"
-                  rows="1"
-                ></textarea>
-                
-                <div class="chat-input-toolbar">
-                  <div class="toolbar-left">
-                    <label class="toolbar-btn" for="hero-file-input" title="Attach file">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                    </label>
-                    <button class="toolbar-btn mic-btn" id="mic-btn-hero" title="Voice input">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-                    </button>
-                  </div>
-                  <div class="toolbar-right">
-                    <span class="send-label">Send Prompt</span>
-                    <button class="chat-send-btn hero-send" id="chat-send-btn-hero">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                    </button>
-                  </div>
-                </div>
-                <div class="prompt-mode-switch" id="prompt-mode-hero">
-                  <button class="mode-btn active" data-mode="chat">Chat</button>
-                  <button class="mode-btn" data-mode="image">Generate Image</button>
-                  <button class="mode-btn" data-mode="video">Generate Video</button>
-                </div>
-              </div>
-            </div>
-
-            <div class="welcome-chips">
-              <button class="chip" data-prompt="Summarize a YouTube video for me.">📺 Summarize Video</button>
-              <button class="chip" data-prompt="Brainstorm ideas for a new blog post.">💡 Brainstorm Ideas</button>
-              <button class="chip" data-prompt="Surprise me with a random interesting fact.">🤩 Surprise me</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Input Sticky (hidden until chat starts) -->
-      <div class="chat-input-wrap hidden" id="chat-input-wrap">
-        <div class="chat-input-box wrapper-border" id="sticky-input-box">
-          <input type="file" id="chat-file-input" class="hidden" multiple />
-
-          <!-- File attachment preview (sticky) -->
-          <div class="file-attachments-preview hidden" id="sticky-file-preview"></div>
-
-          <textarea
-            id="chat-textarea"
-            class="chat-textarea"
-            placeholder="Type a message…"
-            rows="1"
-          ></textarea>
-          
-          <div class="chat-input-toolbar">
-            <div class="toolbar-left">
-              <label class="toolbar-btn" for="chat-file-input" title="Attach file">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-              </label>
-              <button class="toolbar-btn mic-btn" id="mic-btn-sticky" title="Voice input">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-              </button>
-            </div>
-            <div class="toolbar-right">
-              <button class="chat-send-btn" id="chat-send-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              </button>
-            </div>
-          </div>
-          <div class="prompt-mode-switch" id="prompt-mode-sticky">
-            <button class="mode-btn active" data-mode="chat">Chat</button>
-            <button class="mode-btn" data-mode="image">Generate Image</button>
-            <button class="mode-btn" data-mode="video">Generate Video</button>
-          </div>
-        </div>
-      </div>
-      </div><!-- /chat-main-wrap -->
-      </div><!-- /chat-layout -->
     </section>
 
     <!-- ══ PANEL: IMAGE ══════════════════════════════════════ -->
@@ -1804,7 +1694,6 @@
         <div class="footer-col">
           <h3>COMPANY</h3>
           <button type="button" onclick="switchPanel('dashboard')">Home</button>
-          <button type="button" onclick="switchPanel('chat')">Raiko Chat</button>
           <button type="button" id="footer-pricing-btn" class="footer-pricing-trigger">Pricing</button>
         </div>
       </nav>
@@ -1826,46 +1715,115 @@
     <button class="pricing-close" id="credits-modal-close" type="button" aria-label="Close pricing modal">✕</button>
 
     <div class="pricing-hero">
-      <div class="pricing-kicker">RAIKO PRO CREDITS</div>
       <h2 id="pricing-title">Choose your creative power</h2>
-      <p>Generate images, videos, edits and cinematic experiments with brutal speed. Credits never interrupt your workflow.</p>
-      <div class="pricing-badges">
-        <span>⚡ Instant top-up</span>
-        <span>▣ Works across all tools</span>
-        <span>★ Pro-grade models</span>
+      <p>Subscribe monthly for recurring credits, or buy one-off credit packs whenever you need extra creative firepower.</p>
+      <div class="pricing-toggle" role="tablist" aria-label="Pricing category">
+        <button class="pricing-toggle-btn active" type="button" data-pricing-view="subscriptions">Subscriptions</button>
+        <button class="pricing-toggle-btn" type="button" data-pricing-view="packs">Credit Packs</button>
+      </div>
+      <div class="pricing-billing" role="tablist" aria-label="Billing cadence">
+        <button class="pricing-billing-btn active" type="button" data-billing="monthly">Monthly</button>
+        <button class="pricing-billing-btn" type="button" data-billing="annual">Yearly <span>Save</span></button>
       </div>
     </div>
 
-    <div class="pricing-grid" id="credit-packs">
-      <button class="credit-pack pricing-card" type="button" data-pack="50">
-        <span class="pricing-card-label">Starter</span>
-        <strong>50<span>⚡</span></strong>
-        <em>$5.99</em>
-        <small>Perfect for quick image tests and edits.</small>
-        <span class="pricing-cta">Buy Starter</span>
+    <div class="pricing-section" id="subscription-plans">
+      <div class="pricing-grid pricing-grid--plans" id="subscription-plan-grid">
+      <button class="subscription-plan pricing-card" type="button" data-plan="basic" data-billing="monthly" data-monthly-price="4" data-annual-price="3" data-monthly-credits="30" data-annual-bonus="10">
+        <span class="pricing-card-label">Basic</span>
+        <strong data-plan-credits>30<span>⚡/mo</span></strong>
+        <em data-plan-price>$4/mo</em>
+        <div class="pricing-plan-meta">
+          <span data-plan-subcopy>Billed monthly</span>
+          <span data-plan-savings>Monthly billing</span>
+        </div>
+        <small>Entry plan with just enough credits to try Raiko every month without opening expensive premium video usage.</small>
+        <ul class="pricing-feature-list">
+          <li>Standard image and edit tools</li>
+          <li>Buy extra credit packs any time</li>
+          <li>Premium video models locked</li>
+        </ul>
+        <span class="pricing-cta">Start Basic</span>
       </button>
 
-      <button class="credit-pack pricing-card pricing-card--featured" type="button" data-pack="100">
-        <span class="pricing-ribbon">Best Value</span>
+      <button class="subscription-plan pricing-card pricing-card--featured" type="button" data-plan="creator" data-billing="monthly" data-monthly-price="19" data-annual-price="15" data-monthly-credits="180" data-annual-bonus="10">
+        <span class="pricing-ribbon">Most Popular</span>
         <span class="pricing-card-label">Creator</span>
-        <strong>100<span>⚡</span></strong>
-        <em>$9.99</em>
-        <small>More room for video generations and premium models.</small>
-        <span class="pricing-cta">Buy Creator</span>
+        <strong data-plan-credits>180<span>⚡/mo</span></strong>
+        <em data-plan-price>$19/mo</em>
+        <div class="pricing-plan-meta">
+          <span data-plan-subcopy>Billed monthly</span>
+          <span data-plan-savings>Monthly billing</span>
+        </div>
+        <small>Balanced plan for consistent solo content creation with safer premium model exposure.</small>
+        <ul class="pricing-feature-list">
+          <li>Image, edit, restyler, and standard video</li>
+          <li>Content Machine access</li>
+          <li>Premium video burns credits faster</li>
+        </ul>
+        <span class="pricing-cta">Choose Creator</span>
       </button>
 
-      <button class="credit-pack pricing-card" type="button" data-pack="250">
+      <button class="subscription-plan pricing-card" type="button" data-plan="pro" data-billing="monthly" data-monthly-price="39" data-annual-price="32" data-monthly-credits="420" data-annual-bonus="10">
+        <span class="pricing-ribbon">Best Value</span>
+        <span class="pricing-card-label">Pro</span>
+        <strong data-plan-credits>420<span>⚡/mo</span></strong>
+        <em data-plan-price>$39/mo</em>
+        <div class="pricing-plan-meta">
+          <span data-plan-subcopy>Billed monthly</span>
+          <span data-plan-savings>Monthly billing</span>
+        </div>
+        <small>For creators mixing frequent video, upscale, and content packs with full premium access.</small>
+        <ul class="pricing-feature-list">
+          <li>Premium model access</li>
+          <li>Priority queue simulation</li>
+          <li>Safer but still strong video budget</li>
+        </ul>
+        <span class="pricing-cta">Go Pro</span>
+      </button>
+      </div>
+    </div>
+
+    <div class="pricing-section hidden" id="credit-packs-section">
+      <div class="pricing-grid" id="credit-packs">
+      <button class="credit-pack pricing-card" type="button" data-pack="60">
+        <span class="pricing-card-label">Quick Boost</span>
+        <strong>60<span>⚡</span></strong>
+        <em>$6</em>
+        <small>One-off credits for tests, edits, and light image sessions.</small>
+        <span class="pricing-cta">Buy Credits</span>
+      </button>
+
+      <button class="credit-pack pricing-card pricing-card--featured" type="button" data-pack="150">
+        <span class="pricing-ribbon">Flexible</span>
+        <span class="pricing-card-label">Creator Top-Up</span>
+        <strong>150<span>⚡</span></strong>
+        <em>$15</em>
+        <small>A flexible top-up for image, edit, and standard video workflows.</small>
+        <span class="pricing-cta">Buy Top-Up</span>
+      </button>
+
+      <button class="credit-pack pricing-card" type="button" data-pack="400">
+        <span class="pricing-card-label">Power Pack</span>
+        <strong>400<span>⚡</span></strong>
+        <em>$35</em>
+        <small>Extra room for batches, Content Machine runs, and occasional premium generations.</small>
+        <span class="pricing-cta">Buy Pack</span>
+      </button>
+
+      <button class="credit-pack pricing-card" type="button" data-pack="900">
         <span class="pricing-card-label">Studio</span>
-        <strong>250<span>⚡</span></strong>
-        <em>$19.99</em>
-        <small>For longer sessions, batches and cinematic workflows.</small>
+        <strong>900<span>⚡</span></strong>
+        <em>$69</em>
+        <small>High-volume one-off credits for heavy creative sessions without a plan upgrade.</small>
         <span class="pricing-cta">Buy Studio</span>
       </button>
+      </div>
     </div>
 
     <div class="pricing-footnote">
       <span>Secure checkout simulation</span>
-      <span>Credits are added instantly to your Raiko account.</span>
+      <span>Yearly plans are billed upfront, unlock a lower monthly effective price, and still keep credit packs optional.</span>
     </div>
   </div>
 </div>

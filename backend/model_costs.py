@@ -41,52 +41,54 @@ LLM_COSTS: dict[str, float] = {
 }
 
 # ── fal.ai tools ────────────────────────────────────────────
+# Conservative launch calibration:
+# 1 credit ~= $0.015 vendor cost target, rounded upward for safety.
 FAL_COSTS: dict[str, float] = {
     # Image generation — Flux family
-    "fal-ai/flux/schnell":                      2.0,
-    "fal-ai/flux/dev":                          5.0,
-    "fal-ai/flux-pro":                          8.0,
-    "fal-ai/flux-2-pro":                       10.0,
-    "fal-ai/stable-diffusion-v3-medium":        3.0,
-    "fal-ai/aura-flow":                         4.0,
+    "fal-ai/flux/schnell":                      1.0,   # ~$0.003 / MP
+    "fal-ai/flux/dev":                          3.0,   # ~$0.025 / MP
+    "fal-ai/flux-pro":                          12.0,  # deprecated / hide in UI when possible
+    "fal-ai/flux-2-pro":                        3.0,   # ~$0.03 first MP + $0.015 extra MP
+    "fal-ai/stable-diffusion-v3-medium":        3.0,   # ~$0.035 / image
+    "fal-ai/aura-flow":                         4.0,   # unverified compute pricing; keep conservative or hide
     # Image generation — Gemini (nano-banana) family
-    "fal-ai/nano-banana":                       3.0,
-    "fal-ai/nano-banana-2":                     4.0,
-    "fal-ai/nano-banana-pro":                   6.0,
+    "fal-ai/nano-banana":                       3.0,   # ~$0.039 / image
+    "fal-ai/nano-banana-2":                     6.0,   # ~$0.08 / image base
+    "fal-ai/nano-banana-pro":                  10.0,   # ~$0.15 / image base
     # Image generation — OpenAI
-    "openai/gpt-image-2":                      10.0,
+    "openai/gpt-image-2":                      12.0,   # token-based; launch-safe fixed value
     # Image generation — Bytedance Seedream family
-    "fal-ai/bytedance/seedream/v4/text-to-image":       5.0,
-    "fal-ai/bytedance/seedream/v4.5/text-to-image":     6.0,
-    "fal-ai/bytedance/seedream/v5/lite/text-to-image":  5.0,
-    "fal-ai/seedvr/upscale/image":                      8.0,
+    "fal-ai/bytedance/seedream/v4/text-to-image":       2.0,   # ~$0.03 / image
+    "fal-ai/bytedance/seedream/v4.5/text-to-image":     3.0,   # ~$0.04 / image
+    "fal-ai/bytedance/seedream/v5/lite/text-to-image":  3.0,   # ~$0.035 / image
+    "fal-ai/seedvr/upscale/image":                      1.0,   # ~$0.001 / MP
     # Image editing / inpainting (legacy)
-    "fal-ai/flux/dev/image-to-image":           4.0,
-    "fal-ai/sd-inpainting":                     3.0,
+    "fal-ai/flux/dev/image-to-image":           3.0,   # ~$0.03 / MP
+    "fal-ai/sd-inpainting":                     3.0,   # unverified; keep conservative fixed launch value
     # Edit panel — dedicated edit models
-    "fal-ai/nano-banana/edit":                  4.0,
-    "fal-ai/nano-banana-2/edit":                5.0,
-    "fal-ai/nano-banana-pro/edit":              7.0,
-    "openai/gpt-image-2/edit":                 12.0,
-    "fal-ai/bytedance/seedream/v4/edit":        7.0,
-    "fal-ai/bytedance/seedream/v4.5/edit":      7.0,
-    "xai/grok-imagine-image/edit":              8.0,
-    "fal-ai/bria/background/remove":            3.0,
-    # Video generation (text-to-video)
-    "fal-ai/kling-video/v1/standard/text-to-video":              12.0,
-    "fal-ai/kling-video/v1/pro/text-to-video":                   20.0,
-    "fal-ai/kling-video/v3/pro/text-to-video":                   28.0,
-    "fal-ai/stable-video":                                        10.0,
-    "fal-ai/wan/v2.7/text-to-video":                             15.0,
-    "fal-ai/bytedance/seedance/v1.5/pro/text-to-video":          20.0,
-    "fal-ai/bytedance/seedance-2.0/text-to-video":               25.0,
-    "fal-ai/sora-2/text-to-video":                               35.0,
-    "fal-ai/veo3.1":                                             30.0,
-    "xai/grok-imagine-video/text-to-video":                      22.0,
+    "fal-ai/nano-banana/edit":                  3.0,   # ~$0.039 / image
+    "fal-ai/nano-banana-2/edit":                6.0,   # ~$0.08 / image base
+    "fal-ai/nano-banana-pro/edit":             10.0,   # ~$0.15 / image base
+    "openai/gpt-image-2/edit":                 14.0,   # token-based; launch-safe fixed value
+    "fal-ai/bytedance/seedream/v4/edit":        2.0,   # ~$0.03 / image
+    "fal-ai/bytedance/seedream/v4.5/edit":      3.0,   # ~$0.04 / image
+    "xai/grok-imagine-image/edit":              2.0,   # ~$0.022 / image
+    "fal-ai/bria/background/remove":            2.0,   # ~$0.018 / generation
+    # Video generation (text-to-video) — conservative 5s launch defaults
+    "fal-ai/kling-video/v1/standard/text-to-video":              15.0,   # ~$0.225 / 5s
+    "fal-ai/kling-video/v1/pro/text-to-video":                   35.0,   # proxy from nearest v1.5 pro pricing
+    "fal-ai/kling-video/v3/pro/text-to-video":                   40.0,   # audio-off conservative base
+    "fal-ai/stable-video":                                         6.0,   # ~$0.075 / video
+    "fal-ai/wan/v2.7/text-to-video":                              35.0,   # conservative 720p launch value
+    "fal-ai/bytedance/seedance/v1.5/pro/text-to-video":          20.0,   # conservative 5s launch value
+    "fal-ai/bytedance/seedance-2.0/text-to-video":              110.0,   # ~$1.517 / 5s at 720p with audio
+    "fal-ai/sora-2/text-to-video":                              100.0,   # ~$1.50 / 5s at 720p
+    "fal-ai/veo3.1":                                              70.0,   # conservative audio-off 5s base
+    "xai/grok-imagine-video/text-to-video":                      25.0,   # ~$0.25-$0.35 / 5s
     # Video generation (image-to-video)
-    "fal-ai/kling-video/v1/standard/image-to-video":             15.0,
-    "fal-ai/kling-video/v1/pro/image-to-video":                  22.0,
-    "fal-ai/seedvr/upscale/video":                               18.0,
+    "fal-ai/kling-video/v1/standard/image-to-video":             15.0,   # ~$0.225 / 5s
+    "fal-ai/kling-video/v1/pro/image-to-video":                  35.0,   # proxy from nearest v1.5 pro pricing
+    "fal-ai/seedvr/upscale/video":                               15.0,   # conservative fixed launch value
     # Fallback
     "default":                                   3.0,
 }
