@@ -2,7 +2,7 @@
 
 This README is the **source of truth for the current product behavior** so the next AI agent can continue work safely.
 
-Last updated: **2026-05-04 (Safe pricing recalibration + chat removal + login redesign + richer Explore media previews)**
+Last updated: **2026-05-05 (Seedance 2.0 Explore showcase + richer video/source previews + showcase reorder)**
 
 ---
 
@@ -167,6 +167,18 @@ These were intentionally changed and should stay as-is unless explicitly request
       - cat image + Seedance video
       - girlcat image + `s-video10.mp4`
     - Login page includes a lower-right **Explore** escape button for browsing without signing in.
+43. **Explore now includes a dedicated Seedance 2.0 showcase section**:
+    - Showcase order is now **GPT Image 2 → Seedance 2.0 → Nano Banana Pro → Seedream 4.5**.
+    - Seedance showcase assets live under `frontend/dashboard-showcase/seedance20-explore/`.
+    - Showcase uses looping video cards, including text-to-video and image-to-video examples.
+    - Seedance showcase rows are taller than default image showcase rows for a stronger video presentation.
+44. **Gallery Preview modal now supports video + source-image previews**:
+    - `openGalleryPreview(el)` supports both image and video media inside the same modal.
+    - Video showcase items render in a dedicated `<video>` preview area instead of forcing media into an `<img>`.
+    - Image-to-video items can include a `sourceImage`, shown in the right info sidebar under the model badges and above the prompt.
+    - Clicking the source image opens a larger overlay preview above the gallery modal.
+45. **Model dropdown close flow hardened**:
+    - `closeModelDropdown()` now safely no-ops if `#model-dropdown` is not present, preventing null `.classList` runtime errors triggered during gallery interactions.
 
 If you reintroduce gradients, soft shadows, pill-shaped buttons, lavender/purple colors, or standalone info "ⓘ" icons, you are regressing the product.
 
@@ -226,10 +238,11 @@ Full-width showcase/discovery page — scrollable, no fixed columns. Four sectio
   - AI Chat (`id="qc-new-chat"`) → `switchPanel('chat')` + `startNewChat()`
 - **Right: Recent Chats sidebar** (`.dash-recent-wrap`, 260px) — `#dash-chat-list`
 
-**3, 4 & 5. Showcase Sections** (`.dash-showcase`):
+**3, 4, 5 & 6. Showcase Sections** (`.dash-showcase`):
 - Showcase 1: "Meet GPT Image 2" → real images from `dashboard-showcase/gpt-image-2-explore/`, custom `.gp2-grid` two-row layout rendered from external data (`frontend/explore-data.js`) into `#gp2-grid`; all images are `.gallery-item` (open Gallery Preview Modal on click)
-- Showcase 2: "Nano Banana Pro Image Generator" → real images from `dashboard-showcase/nano-banana-pro-explore/`, custom `.gp2-grid` two-row layout rendered from external data (`frontend/explore-data.js`) into `#nbp-grid`; every gallery item includes its prompt and uses Nano Banana Pro when "Use This Prompt" is clicked
-- Showcase 3: "Seedream 4.5" → real images from `dashboard-showcase/seedream-explore/`, rendered into `#sd45-grid`
+- Showcase 2: "Seedance 2.0" → looping video previews from `dashboard-showcase/seedance20-explore/`, rendered into `#seedance20-grid`; includes both text-to-video and image-to-video examples, and image-to-video entries can expose a source image in preview
+- Showcase 3: "Nano Banana Pro Image Generator" → real images from `dashboard-showcase/nano-banana-pro-explore/`, custom `.gp2-grid` two-row layout rendered from external data (`frontend/explore-data.js`) into `#nbp-grid`; every gallery item includes its prompt and uses Nano Banana Pro when "Use This Prompt" is clicked
+- Showcase 4: "Seedream 4.5" → real images from `dashboard-showcase/seedream-explore/`, rendered into `#sd45-grid`
 - Each showcase now has an in-card floating **View all** button that routes to the dedicated Explore Gallery panel.
 
 **Explore Gallery Panel** (`#panel-explore-gallery`):
@@ -239,7 +252,9 @@ Full-width showcase/discovery page — scrollable, no fixed columns. Four sectio
 - Gallery panel scrolls vertically (`overflow-y: auto`) so all items are reachable.
 
 **Gallery Preview Modal** (`#gallery-preview-overlay`, `.gp-overlay`):
-- Opened by `openGalleryPreview(el)` — reads `data-src`, `data-prompt`, `data-res`, `data-model`
+- Opened by `openGalleryPreview(el)` — reads `data-src`, `data-prompt`, `data-res`, `data-model`, `data-media-type`, and optional `data-source-image`
+- Supports both image and video preview media in the left preview area
+- For image-to-video showcase items, a **Source image** card appears in the right sidebar above the prompt and can be opened larger in a foreground overlay
 - Prompt block (`.gp-prompt`) has internal vertical scrolling for long prompt text.
 - Action buttons: **✦ Use This Prompt** (selects GPT Image 2 + switches panel + pre-fills prompt) + **↓ Download**
 - Box shadow: `8px 8px 0 var(--yellow)` brutalist style
@@ -486,7 +501,7 @@ Main logic: `frontend/app.js` | Explore showcase data: `frontend/explore-data.js
 ### Key Functions
 
 **Global (called from inline `onclick` — must not be renamed or made non-global):**
-`selectImageModel(modelId)`, `selectVideoModel(modelId, tool)`, `selectEditModel(modelId)`, `switchPanel(panelId)`, `startNewChat()`, `switchImageTool(toolId)`, `switchVideoTool(toolId)`, `showGenPlaceholder(containerId)`, `clearGenPlaceholder(containerId)`, `saveMediaItem(type, url, prompt, model)`, `loadMediaPanel()`, `openGalleryPreview(el)`, `closeGalleryPreview()`, `useGalleryPrompt()`, `syncFeaturedStripNav()`, `scrollFeaturedStrip(direction)`, `initFeaturedStripNav()`
+`selectImageModel(modelId)`, `selectVideoModel(modelId, tool)`, `selectEditModel(modelId)`, `switchPanel(panelId)`, `startNewChat()`, `switchImageTool(toolId)`, `switchVideoTool(toolId)`, `showGenPlaceholder(containerId)`, `clearGenPlaceholder(containerId)`, `saveMediaItem(type, url, prompt, model)`, `loadMediaPanel()`, `openGalleryPreview(el)`, `closeGalleryPreview()`, `openGallerySourcePreview()`, `closeGallerySourcePreview()`, `useGalleryPrompt()`, `syncFeaturedStripNav()`, `scrollFeaturedStrip(direction)`, `initFeaturedStripNav()`
 
 **Core flows:**
 - `switchPanel(panelId)` — switches active nav + panel; loads media/dashboard on enter
@@ -496,6 +511,7 @@ Main logic: `frontend/app.js` | Explore showcase data: `frontend/explore-data.js
 - `generateImage()` → `API.ai.generateImage()` → `renderImageResults()` + `saveMediaItem()`
 - `renderMediaDrawer(activePlaceholder, forceOpen)` / `openMediaDrawer(activePlaceholder)` — controls the right-side My Media drawer opened from the avatar dropdown or during image generation
 - `syncFeaturedStripNav()` / `scrollFeaturedStrip(direction)` / `initFeaturedStripNav()` — control Explore featured strip button visibility and one-card scroll navigation
+- `renderSeedance20Showcase()` — renders the Seedance 2.0 Explore video showcase from `frontend/explore-data.js`
 - `runEditImage()` → `API.ai.editImage()` (image panel Edit tab, legacy)
 - `generateVideo()` → `API.ai.generateVideo()` → `saveMediaItem()`
 - `generateVideoFromImage()` → `API.ai.generateVideoFromImage()` → `saveMediaItem()`
