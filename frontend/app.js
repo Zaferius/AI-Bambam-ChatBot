@@ -35,6 +35,15 @@ const State = {
   restylerSourceUrl: null,
   restylerStyles: [],
   currentRestylerStyle: null,
+  expandSourceUrl: null,
+  expandAspectRatio: '1:1',
+  anglesSourceUrl: null,
+  anglesPreset: 'front_three_quarter',
+  anglesPrompt: '',
+  anglesCount: 1,
+  shotsSourceUrl: null,
+  shotsPack: 'social',
+  shotsCount: 3,
   mediaFilter: 'all',
   contentPacks: [],
   lastContentPayload: null,
@@ -900,6 +909,290 @@ function switchPanel(panelId) {
   if (panelId === 'media') loadMediaPanel();
   if (panelId === 'restyler') initRestylerPanel();
   panel?.scrollTo?.({ top: 0, behavior: 'instant' });
+}
+
+const TOOL_RATIO_MAP = {
+  '1:1': { width: 1024, height: 1024 },
+  '4:5': { width: 1024, height: 1280 },
+  '3:4': { width: 1024, height: 1365 },
+  '2:3': { width: 1024, height: 1536 },
+  '9:16': { width: 1024, height: 1820 },
+  '5:4': { width: 1280, height: 1024 },
+  '4:3': { width: 1365, height: 1024 },
+  '3:2': { width: 1536, height: 1024 },
+  '16:9': { width: 1820, height: 1024 },
+  '21:9': { width: 2048, height: 878 },
+};
+
+const ANGLE_PRESET_LABELS = {
+  front_three_quarter: 'front three-quarter angle',
+  side_profile: 'clean side profile angle',
+  low_angle: 'dramatic low-angle view',
+  high_angle: 'high-angle top-down perspective',
+  overhead: 'direct overhead shot',
+  rear_three_quarter: 'rear three-quarter angle'
+};
+
+const SHOT_PACKS = {
+  social: ['close-up portrait crop', 'medium social framing', 'wide environmental shot'],
+  fashion: ['editorial close-up', 'full body fashion frame', 'dramatic seated composition', 'detail accessory crop'],
+  portrait: ['tight portrait', 'soft medium portrait', 'environmental portrait'],
+  product: ['hero centered composition', 'detail crop', 'lifestyle placement shot'],
+  cinematic: ['wide establishing frame', 'moody medium shot', 'tight emotional close-up', 'hero poster composition']
+};
+
+function setToolSource(stateKey, dataUrl, config = {}) {
+  State[stateKey] = dataUrl;
+  const preview = document.getElementById(config.previewId);
+  const stage = document.getElementById(config.stageId);
+  const selectedCard = document.getElementById(config.selectedCardId);
+  const controls = document.getElementById(config.controlsId);
+  const workbench = document.getElementById(config.workbenchId);
+  const empty = document.getElementById(config.emptyId);
+  const selectedLabel = document.getElementById(config.selectedLabelId);
+  if (preview) {
+    preview.src = dataUrl;
+    preview.classList.remove('hidden');
+  }
+  if (stage) stage.src = dataUrl;
+  if (selectedCard) selectedCard.classList.remove('hidden');
+  if (controls) controls.classList.remove('hidden');
+  if (workbench) workbench.classList.remove('hidden');
+  if (empty) empty.classList.add('hidden');
+  if (selectedLabel) selectedLabel.textContent = 'Source ready';
+}
+
+async function bindToolUpload(inputId, stateKey, config = {}) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  input.addEventListener('change', async () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    showUploadProgress('Uploading image');
+    try {
+      const dataUrl = await fileToDataURL(file);
+      setToolSource(stateKey, dataUrl, config);
+    } finally {
+      hideUploadProgress();
+    }
+  });
+}
+
+function bindToolUploadTrigger(buttonId, inputId, replaceId = null) {
+  const button = document.getElementById(buttonId);
+  const input = document.getElementById(inputId);
+  const replace = replaceId ? document.getElementById(replaceId) : null;
+  button?.addEventListener('click', () => input?.click());
+  replace?.addEventListener('click', () => input?.click());
+}
+
+function renderToolResultGrid(containerId, urls, downloadPrefix = 'raiko_tool') {
+  const area = document.getElementById(containerId);
+  if (!area) return;
+  area.innerHTML = '';
+  urls.forEach((url, idx) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'tool-result-card';
+    wrap.innerHTML = `
+      <img src="${url}" alt="Generated result ${idx + 1}" loading="lazy" />
+      <div class="tool-result-card-actions">
+        <button class="result-action-btn" onclick="window.open('${url}', '_blank')">Open</button>
+        <a class="result-action-btn" href="${url}" download="${downloadPrefix}_${idx + 1}.png">Download</a>
+      </div>
+    `;
+    area.appendChild(wrap);
+  });
+}
+
+function extractOutputUrls(res) {
+  if (!res) return [];
+  if (Array.isArray(res.output)) return res.output.filter(Boolean);
+  if (typeof res.output === 'string' && res.output) return [res.output];
+  if (Array.isArray(res.images)) return res.images.filter(Boolean);
+  if (typeof res.image === 'string' && res.image) return [res.image];
+  return [];
+}
+
+function buildExpandPrompt(aspectRatio) {
+  return `Expand this image naturally into a ${aspectRatio} composition. Preserve the main subject, original style, lighting, and scene identity. Extend the environment beyond the current frame with coherent details and realistic composition.`;
+}
+
+function buildAnglesPrompt(preset, guidance = '') {
+  const angle = ANGLE_PRESET_LABELS[preset] || 'front three-quarter angle';
+  return `Create a new version of this image from a ${angle}. Preserve the same subject identity, outfit, styling, color palette, and overall environment as much as possible. ${guidance}`.trim();
+}
+
+function buildShotsPrompts(pack, count) {
+  const presets = SHOT_PACKS[pack] || SHOT_PACKS.social;
+  const expanded = [];
+  while (expanded.length < count) {
+    expanded.push(presets[expanded.length % presets.length]);
+  }
+  return expanded.slice(0, count).map((shot) => `Create a new version of this image as a ${shot}. Preserve the same subject identity, styling, environment mood, and visual coherence.`);
+}
+
+async function runExpandImage() {
+  if (!requireAuth()) return;
+  if (!State.expandSourceUrl) { toast('Upload an image first', 'error'); return; }
+  const btn = document.getElementById('btn-run-expand');
+  const status = document.getElementById('expand-status');
+  const zone = document.getElementById('expand-result-zone');
+  const area = document.getElementById('expand-result-area');
+  const ratio = State.expandAspectRatio || '1:1';
+  btn.disabled = true;
+  status?.classList.remove('hidden');
+  zone?.classList.remove('hidden');
+  area.innerHTML = '<div class="upscale-result-placeholder"><div class="upscale-result-placeholder-frame"></div><div class="upscale-result-placeholder-text">Expanding image…</div></div>';
+  try {
+    const res = await API.ai.editImage('openai/gpt-image-2/edit', buildExpandPrompt(ratio), State.expandSourceUrl, 0.75);
+    const urls = extractOutputUrls(res);
+    if (!urls.length) throw new Error('No expanded image returned');
+    renderToolResultGrid('expand-result-area', urls, 'raiko_expand');
+    updateCreditsUI(res.credits_remaining);
+    urls.forEach(url => saveMediaItem('image', url, `Expand Image ${ratio}`, 'openai/gpt-image-2/edit'));
+    toast(`Expanded image ready! ⚡ ${res.credits_used} used`, 'success');
+  } catch (err) {
+    toast(err.message || 'Expand failed', 'error');
+    area.innerHTML = '';
+    zone?.classList.add('hidden');
+  } finally {
+    btn.disabled = false;
+    status?.classList.add('hidden');
+  }
+}
+
+async function runAnglesTool() {
+  if (!requireAuth()) return;
+  if (!State.anglesSourceUrl) { toast('Upload an image first', 'error'); return; }
+  const btn = document.getElementById('btn-run-angles');
+  const status = document.getElementById('angles-status');
+  const zone = document.getElementById('angles-result-zone');
+  const area = document.getElementById('angles-result-area');
+  const count = Number(State.anglesCount || 1);
+  btn.disabled = true;
+  status?.classList.remove('hidden');
+  zone?.classList.remove('hidden');
+  area.innerHTML = '<div class="upscale-result-placeholder"><div class="upscale-result-placeholder-frame"></div><div class="upscale-result-placeholder-text">Generating angles…</div></div>';
+  try {
+    const prompts = Array.from({ length: count }, (_, idx) => `${buildAnglesPrompt(State.anglesPreset, State.anglesPrompt)} Variation ${idx + 1}.`);
+    const outputs = [];
+    let lastCreditsUsed = 0;
+    for (const prompt of prompts) {
+      const res = await API.ai.editImage('fal-ai/nano-banana-pro/edit', prompt, State.anglesSourceUrl, 0.75);
+      const urls = extractOutputUrls(res);
+      if (!urls.length) continue;
+      outputs.push(...urls);
+      if (res.credits_remaining !== undefined) updateCreditsUI(res.credits_remaining);
+      lastCreditsUsed += Number(res.credits_used || 0);
+    }
+    if (!outputs.length) throw new Error('No angle results returned');
+    renderToolResultGrid('angles-result-area', outputs, 'raiko_angles');
+    outputs.forEach(url => saveMediaItem('image', url, `Angles 2.0 ${State.anglesPreset}`, 'fal-ai/nano-banana-pro/edit'));
+    toast(`Angles ready! Generated ${outputs.length} result${outputs.length > 1 ? 's' : ''}. ⚡ ${lastCreditsUsed.toFixed(2)} used`, 'success');
+  } catch (err) {
+    toast(err.message || 'Angles generation failed', 'error');
+    area.innerHTML = '';
+    zone?.classList.add('hidden');
+  } finally {
+    btn.disabled = false;
+    status?.classList.add('hidden');
+  }
+}
+
+async function runShotsTool() {
+  if (!requireAuth()) return;
+  if (!State.shotsSourceUrl) { toast('Upload an image first', 'error'); return; }
+  const btn = document.getElementById('btn-run-shots');
+  const status = document.getElementById('shots-status');
+  const zone = document.getElementById('shots-result-zone');
+  const area = document.getElementById('shots-result-area');
+  const count = Number(State.shotsCount || 3);
+  btn.disabled = true;
+  status?.classList.remove('hidden');
+  zone?.classList.remove('hidden');
+  area.innerHTML = '<div class="upscale-result-placeholder"><div class="upscale-result-placeholder-frame"></div><div class="upscale-result-placeholder-text">Building shot pack…</div></div>';
+  try {
+    const prompts = buildShotsPrompts(State.shotsPack, count);
+    const outputs = [];
+    let lastCreditsUsed = 0;
+    for (const prompt of prompts) {
+      const res = await API.ai.editImage('fal-ai/nano-banana-pro/edit', prompt, State.shotsSourceUrl, 0.75);
+      const urls = extractOutputUrls(res);
+      if (!urls.length) continue;
+      outputs.push(...urls);
+      if (res.credits_remaining !== undefined) updateCreditsUI(res.credits_remaining);
+      lastCreditsUsed += Number(res.credits_used || 0);
+    }
+    if (!outputs.length) throw new Error('No shots returned');
+    renderToolResultGrid('shots-result-area', outputs, 'raiko_shots');
+    outputs.forEach(url => saveMediaItem('image', url, `Shots ${State.shotsPack}`, 'fal-ai/nano-banana-pro/edit'));
+    toast(`Shot pack ready! Generated ${outputs.length} shot${outputs.length > 1 ? 's' : ''}. ⚡ ${lastCreditsUsed.toFixed(2)} used`, 'success');
+  } catch (err) {
+    toast(err.message || 'Shots generation failed', 'error');
+    area.innerHTML = '';
+    zone?.classList.add('hidden');
+  } finally {
+    btn.disabled = false;
+    status?.classList.add('hidden');
+  }
+}
+
+function bindToolChipGroup(containerId, selector, stateKey) {
+  const root = document.getElementById(containerId);
+  if (!root) return;
+  root.querySelectorAll(selector).forEach(btn => {
+    btn.addEventListener('click', () => {
+      root.querySelectorAll(selector).forEach(el => el.classList.remove('active'));
+      btn.classList.add('active');
+      State[stateKey] = btn.dataset.expandRatio || btn.dataset.anglePreset || btn.dataset.shotsPack || State[stateKey];
+    });
+  });
+}
+
+function initNewImageTools() {
+  bindToolUploadTrigger('btn-expand-upload', 'expand-source-input', 'btn-expand-replace');
+  bindToolUploadTrigger('btn-angles-upload', 'angles-source-input', 'btn-angles-replace');
+  bindToolUploadTrigger('btn-shots-upload', 'shots-source-input', 'btn-shots-replace');
+
+  bindToolUpload('expand-source-input', 'expandSourceUrl', {
+    previewId: 'expand-source-preview',
+    stageId: 'expand-source-stage',
+    selectedCardId: 'expand-selected-card',
+    controlsId: 'expand-controls-block',
+    workbenchId: 'expand-workbench',
+    emptyId: 'expand-empty-state',
+    selectedLabelId: 'expand-selected-label'
+  });
+  bindToolUpload('angles-source-input', 'anglesSourceUrl', {
+    previewId: 'angles-source-preview',
+    stageId: 'angles-source-stage',
+    selectedCardId: 'angles-selected-card',
+    controlsId: 'angles-controls-block',
+    workbenchId: 'angles-workbench',
+    emptyId: 'angles-empty-state',
+    selectedLabelId: 'angles-selected-label'
+  });
+  bindToolUpload('shots-source-input', 'shotsSourceUrl', {
+    previewId: 'shots-source-preview',
+    stageId: 'shots-source-stage',
+    selectedCardId: 'shots-selected-card',
+    controlsId: 'shots-controls-block',
+    workbenchId: 'shots-workbench',
+    emptyId: 'shots-empty-state',
+    selectedLabelId: 'shots-selected-label'
+  });
+
+  bindToolChipGroup('expand-ratio-grid', '[data-expand-ratio]', 'expandAspectRatio');
+  bindToolChipGroup('angles-preset-grid', '[data-angle-preset]', 'anglesPreset');
+  bindToolChipGroup('shots-pack-grid', '[data-shots-pack]', 'shotsPack');
+
+  document.getElementById('angles-guidance')?.addEventListener('input', (e) => { State.anglesPrompt = e.target.value.trim(); });
+  document.getElementById('angles-count')?.addEventListener('change', (e) => { State.anglesCount = Number(e.target.value || 1); });
+  document.getElementById('shots-count')?.addEventListener('change', (e) => { State.shotsCount = Number(e.target.value || 3); });
+
+  document.getElementById('btn-run-expand')?.addEventListener('click', runExpandImage);
+  document.getElementById('btn-run-angles')?.addEventListener('click', runAnglesTool);
+  document.getElementById('btn-run-shots')?.addEventListener('click', runShotsTool);
 }
 
 function switchImageTool(toolId) {
@@ -3437,6 +3730,8 @@ function bindEvents() {
         openUpscaler(item.dataset.upscaleEntry || 'auto');
       } else if (panelId === 'restyler') {
         switchPanel('restyler');
+      } else if (['expand', 'angles', 'shots'].includes(panelId)) {
+        switchPanel(panelId);
       }
     });
   });
@@ -3961,6 +4256,7 @@ async function init() {
   document.getElementById('app').classList.remove('hidden');
   setupUserUI();
   bindEvents();
+  initNewImageTools();
 
   if (authed) {
     await Promise.all([

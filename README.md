@@ -2,7 +2,7 @@
 
 This README is the **source of truth for the current product behavior** so the next AI agent can continue work safely.
 
-Last updated: **2026-05-05 (Seedance 2.0 Explore showcase + richer video/source previews + showcase reorder)**
+Last updated: **2026-05-05 (Seedance 2.0 Explore showcase + new Image Tools suite: Expand, Angles, Shots)**
 
 ---
 
@@ -179,6 +179,19 @@ These were intentionally changed and should stay as-is unless explicitly request
     - Clicking the source image opens a larger overlay preview above the gallery modal.
 45. **Model dropdown close flow hardened**:
     - `closeModelDropdown()` now safely no-ops if `#model-dropdown` is not present, preventing null `.classList` runtime errors triggered during gallery interactions.
+46. **Image mega-menu Tools expanded with new creative workflows**:
+    - Added **Expand Image**, **Angles 2.0**, and **Shots** under the existing Image mega-menu Tools section.
+    - These tools are available from the Image dropdown only and do not appear as top-level navbar items.
+47. **Three dedicated image-tool panels added**:
+    - `#panel-expand` — upload one image, choose aspect ratio, and generate an expanded composition.
+    - `#panel-angles` — upload one image, choose an angle preset, optional guidance, and generate alternate viewpoints.
+    - `#panel-shots` — upload one image, choose a shot pack and count, and generate a multi-shot image set.
+48. **New image tools currently reuse the unified edit backend flow**:
+    - `Expand Image` uses `openai/gpt-image-2/edit` as the default orchestration model.
+    - `Angles 2.0` and `Shots` use `fal-ai/nano-banana-pro/edit` as their default orchestration model.
+    - No dedicated new backend tool endpoints were added in this iteration.
+49. **Shared Image Tools suite UI added**:
+    - New brutalist workspace components support upload-first sidebars, result stages, reusable chip selectors, and shared result-card rendering.
 
 If you reintroduce gradients, soft shadows, pill-shaped buttons, lavender/purple colors, or standalone info "ⓘ" icons, you are regressing the product.
 
@@ -200,7 +213,7 @@ Main UI file: `frontend/index.html`
   - Right col: OpenAI (GPT Image 2 Edit) + Seedream (Seedream 4.5 Edit) + xAI (Grok Imagine Edit)
   - Clicking a model calls `selectEditModel(modelId)` then `switchPanel('edit')`
 - **Image nav button** — hovering opens a mega-dropdown with all image models in 2 columns:
-  - Left col: **Tools** (Create Image, Restyler, Image Upscale) + Flux group (Schnell/Dev/Pro/2 Pro) + OpenAI (GPT Image 2)
+  - Left col: **Tools** (Create Image, Expand Image, Angles 2.0, Shots, Restyler, Image Upscale) + Flux group (Schnell/Dev/Pro/2 Pro) + OpenAI (GPT Image 2)
   - Right col: Nano Banana group (Flash/2/Pro) + Seedream group (4/4.5/5 Lite)
   - Clicking a model calls `selectImageModel(modelId)` then `switchPanel('image')`
   - Clicking **Restyler** tool item routes to `switchPanel('restyler')`
@@ -258,6 +271,21 @@ Full-width showcase/discovery page — scrollable, no fixed columns. Four sectio
 - Prompt block (`.gp-prompt`) has internal vertical scrolling for long prompt text.
 - Action buttons: **✦ Use This Prompt** (selects GPT Image 2 + switches panel + pre-fills prompt) + **↓ Download**
 - Box shadow: `8px 8px 0 var(--yellow)` brutalist style
+
+### Image Tools Panels — NEW
+
+**Expand Image Panel** (`#panel-expand`):
+- Minimal workflow: upload image → choose aspect ratio → Generate.
+- No user-facing prompt field in v1.
+- Result renders in a dedicated tool result stage.
+
+**Angles 2.0 Panel** (`#panel-angles`):
+- Workflow: upload image → angle preset → optional guidance → variation count → Generate.
+- Produces alternate viewpoints while trying to preserve subject identity and styling.
+
+**Shots Panel** (`#panel-shots`):
+- Workflow: upload image → shot pack preset → output count → Generate.
+- Produces a multi-shot composition pack from one source image.
 
 ### Chat Panel
 
@@ -491,6 +519,15 @@ Main logic: `frontend/app.js` | Explore showcase data: `frontend/explore-data.js
 | `restylerSourceUrl` | `null` | Image Restyler uploaded portrait |
 | `restylerStyles` | `[]` | Loaded Image Restyler preset metadata |
 | `currentRestylerStyle` | `null` | Selected Image Restyler preset |
+| `expandSourceUrl` | `null` | Expand Image uploaded source |
+| `expandAspectRatio` | `'1:1'` | Expand Image selected ratio |
+| `anglesSourceUrl` | `null` | Angles 2.0 uploaded source |
+| `anglesPreset` | `'front_three_quarter'` | Selected angle preset |
+| `anglesPrompt` | `''` | Optional Angles guidance |
+| `anglesCount` | `1` | Angles variation count |
+| `shotsSourceUrl` | `null` | Shots uploaded source |
+| `shotsPack` | `'social'` | Selected shot pack |
+| `shotsCount` | `3` | Shots output count |
 | `i2vSourceUrl` | `null` | Image-to-video source |
 | `videoUpscaleSourceUrl` | `null` | SeedVR video upscale source |
 | `stylePreset` | `''` | appended to image prompt |
@@ -512,6 +549,10 @@ Main logic: `frontend/app.js` | Explore showcase data: `frontend/explore-data.js
 - `renderMediaDrawer(activePlaceholder, forceOpen)` / `openMediaDrawer(activePlaceholder)` — controls the right-side My Media drawer opened from the avatar dropdown or during image generation
 - `syncFeaturedStripNav()` / `scrollFeaturedStrip(direction)` / `initFeaturedStripNav()` — control Explore featured strip button visibility and one-card scroll navigation
 - `renderSeedance20Showcase()` — renders the Seedance 2.0 Explore video showcase from `frontend/explore-data.js`
+- `initNewImageTools()` — wires uploads, chips, counts, and actions for Expand Image / Angles 2.0 / Shots
+- `runExpandImage()` — runs Expand Image using `openai/gpt-image-2/edit`
+- `runAnglesTool()` — runs Angles 2.0 using repeated `fal-ai/nano-banana-pro/edit` calls
+- `runShotsTool()` — runs Shots using repeated `fal-ai/nano-banana-pro/edit` calls
 - `runEditImage()` → `API.ai.editImage()` (image panel Edit tab, legacy)
 - `generateVideo()` → `API.ai.generateVideo()` → `saveMediaItem()`
 - `generateVideoFromImage()` → `API.ai.generateVideoFromImage()` → `saveMediaItem()`

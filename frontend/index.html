@@ -64,6 +64,18 @@
               <span class="nmd-icon">✦</span>
               <div class="nmd-body"><span class="nmd-name">Create Image</span><span class="nmd-desc">Open image generation workspace</span></div>
             </button>
+            <button class="nmd-item" data-panel="expand">
+              <span class="nmd-icon">↔</span>
+              <div class="nmd-body"><span class="nmd-name">Expand Image</span><span class="nmd-desc">Extend composition by aspect ratio</span></div>
+            </button>
+            <button class="nmd-item" data-panel="angles">
+              <span class="nmd-icon">◢</span>
+              <div class="nmd-body"><span class="nmd-name">Angles 2.0</span><span class="nmd-desc">Generate alternate camera viewpoints</span></div>
+            </button>
+            <button class="nmd-item" data-panel="shots">
+              <span class="nmd-icon">▣</span>
+              <div class="nmd-body"><span class="nmd-name">Shots</span><span class="nmd-desc">Build multi-shot image packs</span></div>
+            </button>
             <button class="nmd-item" data-panel="restyler">
               <span class="nmd-icon">🪄</span>
               <div class="nmd-body"><span class="nmd-name">Restyler</span><span class="nmd-desc">Open portrait restyler catalog</span></div>
@@ -1630,6 +1642,70 @@
       </div>
     </section>
 
+    <!-- ══ PANEL: EXPAND IMAGE ══════════════════════════════════════ -->
+    <section class="panel" id="panel-expand">
+      <div class="tool-shell tool-shell--single" id="expand-shell">
+        <aside class="tool-sidebar">
+          <div class="tool-sidebar-head">
+            <span class="edit-tool-badge">IMAGE TOOL</span>
+            <h2>EXPAND IMAGE</h2>
+            <p>Upload one image, choose a new aspect ratio, and extend the composition naturally.</p>
+          </div>
+          <input type="file" id="expand-source-input" accept="image/*" class="hidden" />
+          <button type="button" class="tool-upload-card" id="btn-expand-upload">
+            <div class="tool-upload-empty" id="expand-upload-empty">
+              <strong>UPLOAD IMAGE</strong>
+              <em>AI expand by ratio</em>
+            </div>
+            <img id="expand-source-preview" class="tool-source-preview hidden" alt="Expand source preview" />
+            <span class="tool-upload-cta">↥ Choose image</span>
+          </button>
+          <div class="tool-selected-card hidden" id="expand-selected-card">
+            <span id="expand-selected-label">Source ready</span>
+            <button type="button" id="btn-expand-replace">Replace</button>
+          </div>
+          <div class="tool-control-block hidden" id="expand-controls-block">
+            <div class="section-label">Aspect Ratio</div>
+            <div class="tool-chip-grid" id="expand-ratio-grid">
+              <button type="button" class="tool-chip active" data-expand-ratio="1:1">1:1</button>
+              <button type="button" class="tool-chip" data-expand-ratio="4:5">4:5</button>
+              <button type="button" class="tool-chip" data-expand-ratio="3:4">3:4</button>
+              <button type="button" class="tool-chip" data-expand-ratio="2:3">2:3</button>
+              <button type="button" class="tool-chip" data-expand-ratio="9:16">9:16</button>
+              <button type="button" class="tool-chip" data-expand-ratio="5:4">5:4</button>
+              <button type="button" class="tool-chip" data-expand-ratio="4:3">4:3</button>
+              <button type="button" class="tool-chip" data-expand-ratio="3:2">3:2</button>
+              <button type="button" class="tool-chip" data-expand-ratio="16:9">16:9</button>
+              <button type="button" class="tool-chip" data-expand-ratio="21:9">21:9</button>
+            </div>
+            <button class="btn-generate-img" id="btn-run-expand">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M21 8v8h-2V9.41L7.41 21 6 19.59 17.59 8H11V6h10v2z"/><path d="M3 3h7v2H5v5H3V3z"/></svg>
+              Generate <span class="img-cost-badge">12⚡</span>
+            </button>
+            <div class="gen-status hidden" id="expand-status"><div class="spinner"></div><span>Expanding…</span></div>
+          </div>
+        </aside>
+        <main class="tool-main">
+          <div class="tool-canvas" id="expand-canvas">
+            <div class="tool-empty-state" id="expand-empty-state">
+              <h3>Expand beyond the original frame</h3>
+              <p>Choose a wider or taller aspect ratio and let AI extend the scene.</p>
+            </div>
+            <div class="tool-workbench hidden" id="expand-workbench">
+              <div class="tool-source-stage">
+                <div class="edit-result-tag">SOURCE</div>
+                <img id="expand-source-stage" class="tool-stage-media" alt="Expand source" />
+              </div>
+              <div class="tool-result-stage hidden" id="expand-result-zone">
+                <div class="edit-result-tag">EXPANDED RESULT</div>
+                <div class="edit-result-inner" id="expand-result-area"></div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </section>
+
     <!-- ══ PANEL: IMAGE RESTYLER ══════════════════════════════════════ -->
     <section class="panel" id="panel-restyler">
 
@@ -1677,6 +1753,144 @@
         </main>
       </div>
 
+    </section>
+
+    <!-- ══ PANEL: ANGLES 2.0 ══════════════════════════════════════ -->
+    <section class="panel" id="panel-angles">
+      <div class="tool-shell" id="angles-shell">
+        <aside class="tool-sidebar">
+          <div class="tool-sidebar-head">
+            <span class="edit-tool-badge">IMAGE TOOL</span>
+            <h2>ANGLES 2.0</h2>
+            <p>Upload one image and generate alternate camera viewpoints while preserving the subject.</p>
+          </div>
+          <input type="file" id="angles-source-input" accept="image/*" class="hidden" />
+          <button type="button" class="tool-upload-card" id="btn-angles-upload">
+            <div class="tool-upload-empty" id="angles-upload-empty">
+              <strong>UPLOAD IMAGE</strong>
+              <em>Generate new viewpoints</em>
+            </div>
+            <img id="angles-source-preview" class="tool-source-preview hidden" alt="Angles source preview" />
+            <span class="tool-upload-cta">↥ Choose image</span>
+          </button>
+          <div class="tool-selected-card hidden" id="angles-selected-card">
+            <span id="angles-selected-label">Source ready</span>
+            <button type="button" id="btn-angles-replace">Replace</button>
+          </div>
+          <div class="tool-control-block hidden" id="angles-controls-block">
+            <div class="section-label">Angle Preset</div>
+            <div class="tool-chip-grid" id="angles-preset-grid">
+              <button type="button" class="tool-chip active" data-angle-preset="front_three_quarter">Front 3/4</button>
+              <button type="button" class="tool-chip" data-angle-preset="side_profile">Side Profile</button>
+              <button type="button" class="tool-chip" data-angle-preset="low_angle">Low Angle</button>
+              <button type="button" class="tool-chip" data-angle-preset="high_angle">High Angle</button>
+              <button type="button" class="tool-chip" data-angle-preset="overhead">Overhead</button>
+              <button type="button" class="tool-chip" data-angle-preset="rear_three_quarter">Rear 3/4</button>
+            </div>
+            <div class="section-label">Guidance</div>
+            <textarea id="angles-guidance" class="img-prompt-input tool-prompt-input" rows="3" placeholder="Optional: keep neon lighting, maintain outfit, preserve background mood..."></textarea>
+            <div class="section-label">Variations</div>
+            <div class="tool-inline-select-row">
+              <select id="angles-count" class="img-ctrl-select">
+                <option value="1">1 variation</option>
+                <option value="2">2 variations</option>
+                <option value="3">3 variations</option>
+                <option value="4">4 variations</option>
+              </select>
+            </div>
+            <button class="btn-generate-img" id="btn-run-angles">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 12l18-9-4 9 4 9-18-9zm4.5 0l7.4 3.7-1.9-3.7 1.9-3.7L7.5 12z"/></svg>
+              Generate <span class="img-cost-badge">7⚡+</span>
+            </button>
+            <div class="gen-status hidden" id="angles-status"><div class="spinner"></div><span>Generating angles…</span></div>
+          </div>
+        </aside>
+        <main class="tool-main">
+          <div class="tool-canvas" id="angles-canvas">
+            <div class="tool-empty-state" id="angles-empty-state">
+              <h3>Create alternate camera viewpoints</h3>
+              <p>Generate side angles, overhead shots, low-angle hero frames, and more.</p>
+            </div>
+            <div class="tool-workbench hidden" id="angles-workbench">
+              <div class="tool-source-stage tool-source-stage--compact">
+                <div class="edit-result-tag">SOURCE</div>
+                <img id="angles-source-stage" class="tool-stage-media" alt="Angles source" />
+              </div>
+              <div class="tool-result-stage hidden" id="angles-result-zone">
+                <div class="edit-result-tag">ANGLE RESULTS</div>
+                <div class="tool-result-grid" id="angles-result-area"></div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </section>
+
+    <!-- ══ PANEL: SHOTS ══════════════════════════════════════ -->
+    <section class="panel" id="panel-shots">
+      <div class="tool-shell" id="shots-shell">
+        <aside class="tool-sidebar">
+          <div class="tool-sidebar-head">
+            <span class="edit-tool-badge">IMAGE TOOL</span>
+            <h2>SHOTS</h2>
+            <p>Build a curated multi-shot image pack from one source image for social, editorial, or product use.</p>
+          </div>
+          <input type="file" id="shots-source-input" accept="image/*" class="hidden" />
+          <button type="button" class="tool-upload-card" id="btn-shots-upload">
+            <div class="tool-upload-empty" id="shots-upload-empty">
+              <strong>UPLOAD IMAGE</strong>
+              <em>Create a shot pack</em>
+            </div>
+            <img id="shots-source-preview" class="tool-source-preview hidden" alt="Shots source preview" />
+            <span class="tool-upload-cta">↥ Choose image</span>
+          </button>
+          <div class="tool-selected-card hidden" id="shots-selected-card">
+            <span id="shots-selected-label">Source ready</span>
+            <button type="button" id="btn-shots-replace">Replace</button>
+          </div>
+          <div class="tool-control-block hidden" id="shots-controls-block">
+            <div class="section-label">Shot Pack</div>
+            <div class="tool-chip-grid" id="shots-pack-grid">
+              <button type="button" class="tool-chip active" data-shots-pack="social">Social</button>
+              <button type="button" class="tool-chip" data-shots-pack="fashion">Fashion</button>
+              <button type="button" class="tool-chip" data-shots-pack="portrait">Portrait</button>
+              <button type="button" class="tool-chip" data-shots-pack="product">Product</button>
+              <button type="button" class="tool-chip" data-shots-pack="cinematic">Cinematic</button>
+            </div>
+            <div class="section-label">Output Count</div>
+            <div class="tool-inline-select-row">
+              <select id="shots-count" class="img-ctrl-select">
+                <option value="3">3 shots</option>
+                <option value="4">4 shots</option>
+                <option value="6">6 shots</option>
+              </select>
+            </div>
+            <button class="btn-generate-img" id="btn-run-shots">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 5h18v14H3z" opacity="0.35"/><path d="M5 7h6v4H5zM13 7h6v4h-6zM5 13h6v4H5zM13 13h6v4h-6z"/></svg>
+              Generate <span class="img-cost-badge">7⚡+</span>
+            </button>
+            <div class="gen-status hidden" id="shots-status"><div class="spinner"></div><span>Generating shot pack…</span></div>
+          </div>
+        </aside>
+        <main class="tool-main">
+          <div class="tool-canvas" id="shots-canvas">
+            <div class="tool-empty-state" id="shots-empty-state">
+              <h3>Turn one image into a full shot pack</h3>
+              <p>Generate close, medium, wide, detail, and hero compositions from the same source.</p>
+            </div>
+            <div class="tool-workbench hidden" id="shots-workbench">
+              <div class="tool-source-stage tool-source-stage--compact">
+                <div class="edit-result-tag">SOURCE</div>
+                <img id="shots-source-stage" class="tool-stage-media" alt="Shots source" />
+              </div>
+              <div class="tool-result-stage hidden" id="shots-result-zone">
+                <div class="edit-result-tag">SHOT PACK</div>
+                <div class="tool-result-grid" id="shots-result-area"></div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
     </section>
 
     <!-- ══ PANEL: MY MEDIA ══════════════════════════════════════ -->
