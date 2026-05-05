@@ -443,7 +443,21 @@
         </div>
       </div>
 
-      <!-- ── SHOWCASE 2: Nano Banana Pro ── -->
+      <!-- ── SHOWCASE 2: Seedance 2.0 ── -->
+      <div class="dash-showcase">
+        <div class="dash-sc-left">
+          <div class="dsc-eyebrow">FEATURED MODEL</div>
+          <h2 class="dsc-title">Seedance 2.0</h2>
+          <p class="dsc-desc">Bytedance Seedance 2.0 for cinematic text-to-video and image-to-video generation with strong motion quality and prompt fidelity.</p>
+          <button class="dsc-btn" onclick="selectVideoModel('fal-ai/bytedance/seedance-2.0/text-to-video','text');switchPanel('video')">+ Try Model</button>
+        </div>
+        <div class="dash-sc-right dash-sc-right--gp2">
+          <button class="dsc-view-all dsc-view-all--floating" onclick="openModelGalleryPage('seedance20')">View all</button>
+          <div class="gp2-grid gp2-grid--video" id="seedance20-grid"></div>
+        </div>
+      </div>
+
+      <!-- ── SHOWCASE 3: Nano Banana Pro ── -->
       <div class="dash-showcase dash-showcase--alt">
         <div class="dash-sc-left">
           <div class="dsc-eyebrow">FEATURED MODEL</div>
@@ -457,7 +471,7 @@
         </div>
       </div>
 
-      <!-- ── SHOWCASE 3: Seedream 4.5 ── -->
+      <!-- ── SHOWCASE 4: Seedream 4.5 ── -->
       <div class="dash-showcase">
         <div class="dash-sc-left">
           <div class="dsc-eyebrow">FEATURED MODEL</div>
@@ -1858,9 +1872,10 @@
   <div class="gp-modal" id="gallery-preview-modal">
     <button class="gp-close" onclick="closeGalleryPreview();event.stopPropagation()" aria-label="Close">✕</button>
     <div class="gp-body">
-      <!-- Left: image -->
+      <!-- Left: media -->
       <div class="gp-image-wrap">
         <img id="gp-img" src="" alt="Preview" />
+        <video id="gp-video" class="hidden" playsinline controls loop></video>
       </div>
       <!-- Right: info -->
       <div class="gp-info">
@@ -1868,6 +1883,12 @@
           <div class="gp-badge-row">
             <span class="gp-badge gp-badge--model" id="gp-model">GPT Image 2</span>
             <span class="gp-badge gp-badge--res" id="gp-res">1024×1536</span>
+          </div>
+          <div id="gp-source-card" class="gp-source-card hidden">
+            <div class="gp-source-card-label">Source image</div>
+            <button type="button" id="gp-source-open" class="gp-source-open" onclick="openGallerySourcePreview()">
+              <img id="gp-source-img" src="" alt="Source image" />
+            </button>
           </div>
           <div class="gp-section-label">PROMPT</div>
           <p class="gp-prompt" id="gp-prompt"></p>
@@ -1882,6 +1903,13 @@
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<div id="gallery-source-overlay" class="gp-source-overlay hidden" onclick="if(event.target===this)closeGallerySourcePreview()">
+  <div class="gp-source-modal">
+    <button class="gp-close" onclick="closeGallerySourcePreview();event.stopPropagation()" aria-label="Close">✕</button>
+    <img id="gp-source-large-img" src="" alt="Source image preview" />
   </div>
 </div>
 

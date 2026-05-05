@@ -152,6 +152,12 @@ function renderSeedream45Showcase() {
   renderExploreShowcaseGrid(grid, rows, 'Seedream 4.5');
 }
 
+function renderSeedance20Showcase() {
+  const grid = document.getElementById('seedance20-grid');
+  const rows = window.EXPLORE_SHOWCASE_SEEDANCE_20;
+  renderExploreShowcaseGrid(grid, rows, 'Seedance 2.0');
+}
+
 function syncFeaturedStripNav() {
   const track = document.getElementById('dash-featured-track');
   const prevBtn = document.getElementById('dash-featured-prev');
@@ -219,17 +225,37 @@ function renderExploreShowcaseGrid(grid, rows, fallbackModel) {
       card.dataset.res = item.res || '';
       card.dataset.model = item.model || fallbackModel || 'GPT Image 2';
       card.dataset.modelId = item.modelId || '';
+      card.dataset.mediaType = item.mediaType || 'image';
+      card.dataset.sourceImage = item.sourceImage || '';
       card.addEventListener('click', () => openGalleryPreview(card));
 
-      const img = document.createElement('img');
-      img.src = item.src || '';
-      img.alt = '';
+      if ((item.mediaType || '') === 'video' || /\.(mp4|webm|ogg)(\?|$)/i.test(item.src || '')) {
+        const video = document.createElement('video');
+        video.src = item.src || '';
+        video.autoplay = true;
+        video.muted = true;
+        video.loop = true;
+        video.playsInline = true;
+        video.setAttribute('aria-hidden', 'true');
+        card.appendChild(video);
+      } else {
+        const img = document.createElement('img');
+        img.src = item.src || '';
+        img.alt = '';
+        card.appendChild(img);
+      }
+
+      if (item.sourceImage) {
+        const sourcePreview = document.createElement('div');
+        sourcePreview.className = 'gi-source-preview';
+        sourcePreview.innerHTML = `<span class="gi-source-label">Source</span><img src="${item.sourceImage}" alt="">`;
+        card.appendChild(sourcePreview);
+      }
 
       const badge = document.createElement('div');
       badge.className = 'gi-hover-badge';
       badge.textContent = 'View';
 
-      card.appendChild(img);
       card.appendChild(badge);
       rowEl.appendChild(card);
     });
@@ -1067,7 +1093,9 @@ function openModelDropdown() {
 }
 
 function closeModelDropdown() {
-  document.getElementById('model-dropdown').classList.add('hidden');
+  const dropdown = document.getElementById('model-dropdown');
+  if (!dropdown) return;
+  dropdown.classList.add('hidden');
 }
 
 async function loadModels() {
@@ -2851,11 +2879,41 @@ function openGalleryPreview(el) {
   const res    = el.dataset.res    || '';
   const model  = el.dataset.model  || 'GPT Image 2';
   const modelId = el.dataset.modelId || '';
+  const mediaType = el.dataset.mediaType || ((src || '').match(/\.(mp4|webm|ogg)(\?|$)/i) ? 'video' : 'image');
+  const sourceImage = el.dataset.sourceImage || '';
+
+  const previewImg = document.getElementById('gp-img');
+  const previewVideo = document.getElementById('gp-video');
+  const sourceCard = document.getElementById('gp-source-card');
+  const sourceImg = document.getElementById('gp-source-img');
 
   _galleryCurrentPrompt = prompt;
   _galleryCurrentModelId = modelId;
 
-  document.getElementById('gp-img').src         = src;
+  if (mediaType === 'video') {
+    previewImg.classList.add('hidden');
+    previewImg.src = '';
+    previewVideo.classList.remove('hidden');
+    previewVideo.src = src;
+    previewVideo.currentTime = 0;
+    previewVideo.play().catch(() => {});
+  } else {
+    previewVideo.pause();
+    previewVideo.classList.add('hidden');
+    previewVideo.removeAttribute('src');
+    previewVideo.load();
+    previewImg.classList.remove('hidden');
+    previewImg.src = src;
+  }
+
+  if (sourceImage) {
+    sourceCard.classList.remove('hidden');
+    sourceImg.src = sourceImage;
+  } else {
+    sourceCard.classList.add('hidden');
+    sourceImg.src = '';
+  }
+
   document.getElementById('gp-prompt').textContent = prompt || '(no prompt)';
   document.getElementById('gp-res').textContent  = res;
   document.getElementById('gp-model').textContent = model;
@@ -2871,9 +2929,40 @@ function openGalleryPreview(el) {
 
 function closeGalleryPreview() {
   const overlay = document.getElementById('gallery-preview-overlay');
+  const previewImg = document.getElementById('gp-img');
+  const previewVideo = document.getElementById('gp-video');
+  const sourceCard = document.getElementById('gp-source-card');
+  const sourceImg = document.getElementById('gp-source-img');
+  closeGallerySourcePreview();
   overlay.classList.remove('open');
   document.body.style.overflow = '';
-  setTimeout(() => { document.getElementById('gp-img').src = ''; }, 250);
+  previewVideo.pause();
+  setTimeout(() => {
+    previewImg.src = '';
+    previewImg.classList.remove('hidden');
+    previewVideo.classList.add('hidden');
+    previewVideo.removeAttribute('src');
+    previewVideo.load();
+    sourceCard.classList.add('hidden');
+    sourceImg.src = '';
+  }, 250);
+}
+
+function openGallerySourcePreview() {
+  const sourceImg = document.getElementById('gp-source-img');
+  const sourceLarge = document.getElementById('gp-source-large-img');
+  const sourceOverlay = document.getElementById('gallery-source-overlay');
+  if (!sourceImg || !sourceImg.src || !sourceLarge || !sourceOverlay) return;
+  sourceLarge.src = sourceImg.src;
+  sourceOverlay.classList.remove('hidden');
+}
+
+function closeGallerySourcePreview() {
+  const sourceLarge = document.getElementById('gp-source-large-img');
+  const sourceOverlay = document.getElementById('gallery-source-overlay');
+  if (!sourceOverlay || !sourceLarge) return;
+  sourceOverlay.classList.add('hidden');
+  sourceLarge.src = '';
 }
 
 function useGalleryPrompt() {
@@ -3862,6 +3951,7 @@ async function init() {
   renderGp2Showcase();
   renderNanoBananaProShowcase();
   renderSeedream45Showcase();
+  renderSeedance20Showcase();
 
   initFeaturedStripNav();
 

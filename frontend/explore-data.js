@@ -199,6 +199,118 @@ window.EXPLORE_SHOWCASE_SEEDREAM_45 = [
   }
 ];
 
+window.EXPLORE_SHOWCASE_SEEDANCE_20 = [
+  {
+    rowClass: 'gp2-row gp2-row--video',
+    items: [
+      {
+        cellClass: 'gp2-cell gp2-cell--video gp2-cell--video-wide',
+        src: 'dashboard-showcase/seedance20-explore/video1/s-video1.mp4',
+        prompt: `First-person perspective (POV), 8K hyper-realistic, 60fps fluid motion, dark fantasy aesthetic, cinematic lighting, 1:1 square aspect ratio. [00:00 - 00:05] SEGMENT 1: The Awakening (The Hook) "POV shot. Looking down at the user's hand (as seen in @image1), where glowing blue and black veins pulse with energy. The hand is gripping a swirling black and violet energy orb. The hand crushes the orb with a heavy grip. Instantly, a massive shockwave of purple lightning and dark smoke explodes outward. From the shadows on the ground, dozens of spectral, knight-like silhouettes with glowing eyes rise and kneel before the camera. The setting is a dark, ruined stone dungeon." [00:05 - 00:10] SEGMENT 2: The Onslaught & The Boss (The Body) "Fast-paced POV combat. The camera moves forward rapidly as the user's hand wields a jagged, glowing obsidian dagger, slashing through waves of grey stone monsters that crumble into dust upon impact. The shadow knights from segment one fight alongside the user. Suddenly, the ground shakes, and a colossal, 30-foot demonic titan with multiple red eyes and jagged armor emerges from the darkness, letting out a silent, earth-shaking roar. The user raises their left hand, charging a massive violet aura." [00:10 - 00:15] SEGMENT 3: The Final Surge (The Climax) "Extreme POV close-up. The user's hand reaches toward the giant titan. A colossal spectral shadow-giant manifests behind the camera, mimicking the user's movement. All the shadow energy in the room condenses into the user's palm. The user fires a massive beam of pure abyssal purple energy that pierces through the titan's chest. The titan slowly disintegrates into black ash and embers, its red eyes fading as it collapses. The screen shakes with a heavy bass effect as the purple veins on the user's arm glow one last time before fading to black."
+Cinematic gender transformation sequence: start with a male figure in a dark, mysterious environment, subtle seductive tension in body language. Begin slow transformation with close-ups on physical change: jawline softens, shoulders narrow, hips subtly shift, hair lengthens and flows. Use dramatic lighting and dynamic camera movement, soft glowing particles, smooth skin morphing, luminous eyes, halo effects, ethereal atmosphere. Add seductive emotional nuance without explicit content — lingering gaze, graceful posture, fluid silhouette, magnetic presence. Sequence seamless and cinematic, slow motion transformation blending male to female form, film-like color grading, atmospheric shadows and highlights, polished visual flow, intense but elegant aesthetic.
+A cinematic, hyper-realistic vertical shot of a male-to-female shapeshifter transformation in a dimly lit luxurious room. The left half of the body remains rugged and masculine, while the right half is transforming into a graceful, elegant female form. Skin ripples like liquid silk at the intersection, and clothing morphs seamlessly from a masculine jacket into flowing attire. Dramatic low-key lighting emphasizes contours, intricate textures, and the surreal transformation. Dynamic expression of surprise and awe. High contrast, 8k resolution.`,
+        res: 'Seedance 2.0 video',
+        model: 'Seedance 2.0',
+        modelId: 'fal-ai/bytedance/seedance-2.0/text-to-video',
+        mediaType: 'video'
+      },
+      {
+        cellClass: 'gp2-cell gp2-cell--video',
+        src: 'dashboard-showcase/seedance20-explore/video2/s-video2.mp4',
+        prompt: 'Blue-toned scene, panoramic shot of a young white man skateboarding in an outdoor skatepark. He has short black hair, wearing a white T-shirt, black pants, and black-and-white sneakers. With arms outstretched, head lowered, and body tilted, he performs a slide action using the edge of his skateboard. The surrounding skate platforms feature grooves and steep slopes, with trees and people in the background. The sky is a clear blue with a few clouds. In the skatepark, the camera follows the man as he stands on his skateboard and glides to the right of the frame. He then jumps, twists his body, keeps both feet on the skateboard, spins twice in the air, lands, and continues to slide forward.',
+        res: 'Seedance 2.0 video',
+        model: 'Seedance 2.0',
+        modelId: 'fal-ai/bytedance/seedance-2.0/text-to-video',
+        mediaType: 'video'
+      },
+      {
+        cellClass: 'gp2-cell gp2-cell--video',
+        src: 'dashboard-showcase/seedance20-explore/video3/s-video3.mp4',
+        prompt: 'Tracking medium shot: A man in a suit moves quickly through the crowd, his expression focused. The camera follows the man as he weaves through the crowd, creating a sense of rhythmic pressure. He finally stops at the car door, takes a deep breath, and looks up.',
+        res: 'Seedance 2.0 video',
+        model: 'Seedance 2.0',
+        modelId: 'fal-ai/bytedance/seedance-2.0/text-to-video',
+        mediaType: 'video'
+      }
+    ]
+  },
+  {
+    rowClass: 'gp2-row gp2-row--video',
+    items: [
+      {
+        cellClass: 'gp2-cell gp2-cell--video',
+        src: 'dashboard-showcase/seedance20-explore/video4/s-video4.mp4',
+        prompt: '[I2V] The girl shows a charming smile by the seaside.',
+        res: 'Seedance 2.0 image-to-video',
+        model: 'Seedance 2.0',
+        modelId: 'fal-ai/bytedance/seedance-2.0/text-to-video',
+        mediaType: 'video'
+      },
+      {
+        cellClass: 'gp2-cell gp2-cell--video',
+        src: 'dashboard-showcase/seedance20-explore/video5/s-video5.mp4',
+        prompt: 'A bright orange sports car speeds along a wet racetrack. [Low-angle shot] Captures lightning flashing through storm clouds. The camera gradually pulls upward, revealing the full race scene illuminated by lights amid the downpour.',
+        res: 'Seedance 2.0 video',
+        model: 'Seedance 2.0',
+        modelId: 'fal-ai/bytedance/seedance-2.0/text-to-video',
+        mediaType: 'video'
+      },
+      {
+        cellClass: 'gp2-cell gp2-cell--video',
+        src: 'dashboard-showcase/seedance20-explore/video6/s-video6.mp4',
+        prompt: 'an orange cat holding a beer and chilling at local bar',
+        res: 'Seedance 2.0 video',
+        model: 'Seedance 2.0',
+        modelId: 'fal-ai/bytedance/seedance-2.0/text-to-video',
+        mediaType: 'video'
+      },
+      {
+        cellClass: 'gp2-cell gp2-cell--video',
+        src: 'dashboard-showcase/seedance20-explore/video7/s-video7.mp4',
+        prompt: '[I2V] A girl looks into the camera, her earrings swaying gently as she turns. The camera rotates, dreamy sunlight.',
+        res: 'Seedance 2.0 image-to-video',
+        model: 'Seedance 2.0',
+        modelId: 'fal-ai/bytedance/seedance-2.0/text-to-video',
+        mediaType: 'video'
+      }
+    ]
+  },
+  {
+    rowClass: 'gp2-row gp2-row--video',
+    items: [
+      {
+        cellClass: 'gp2-cell gp2-cell--video',
+        src: 'dashboard-showcase/seedance20-explore/video8/s-video8.mp4',
+        prompt: 'A fast-paced epic cinematic scene of a glowing phoenix made of colorful light soaring through a fantasy sky above floating islands. Bright orange, pink, purple, blue, and gold clouds swirl around it. The camera follows dynamically from a low rear angle, creating a strong sense of speed, power, and wonder. Shimmering particles and soft rainbow light trails enhance the motion. The phoenix flies smoothly between luminous clouds and floating cliffs, with cinematic lighting, vivid colors, clean composition, majestic atmosphere, highly detailed, visually clear, stylish, dramatic, smooth motion.',
+        res: 'Seedance 2.0 video',
+        model: 'Seedance 2.0',
+        modelId: 'fal-ai/bytedance/seedance-2.0/text-to-video',
+        mediaType: 'video'
+      },
+      {
+        cellClass: 'gp2-cell gp2-cell--video gp2-cell--i2v',
+        src: 'dashboard-showcase/seedance20-explore/i-video9/s-video9.mp4',
+        prompt: 'Animate the image with subtle natural motion. Keep everything the same.',
+        res: 'Seedance 2.0 image-to-video',
+        model: 'Seedance 2.0',
+        modelId: 'fal-ai/bytedance/seedance-2.0/image-to-video',
+        mediaType: 'video',
+        sourceImage: 'dashboard-showcase/seedance20-explore/i-video9/image.jpg'
+      },
+      {
+        cellClass: 'gp2-cell gp2-cell--video gp2-cell--i2v',
+        src: 'dashboard-showcase/seedance20-explore/i-video10/s-video10.mp4',
+        prompt: 'Animate the image with subtle natural motion. Keep everything the same.',
+        res: 'Seedance 2.0 image-to-video',
+        model: 'Seedance 2.0',
+        modelId: 'fal-ai/bytedance/seedance-2.0/image-to-video',
+        mediaType: 'video',
+        sourceImage: 'dashboard-showcase/seedance20-explore/i-video10/image.jpg'
+      }
+    ]
+  }
+];
+
 window.EXPLORE_MODEL_GALLERIES = {
   gp2: {
     title: 'GPT Image 2 Gallery',
@@ -248,6 +360,25 @@ window.EXPLORE_MODEL_GALLERIES = {
       res: 'Seedream 4.5 output',
       shape: ([0, 4, 7, 10, 14, 18, 22, 26].includes(i) ? 'wide' : ([1, 2, 5, 8, 11, 15, 19, 23, 27].includes(i) ? 'tall' : 'square'))
     }))
+  },
+  seedance20: {
+    title: 'Seedance 2.0 Gallery',
+    model: 'Seedance 2.0',
+    modelId: 'fal-ai/bytedance/seedance-2.0/text-to-video',
+    items: [
+      { src: 'dashboard-showcase/seedance20-explore/video1/s-video1.mp4', prompt: `First-person perspective (POV), 8K hyper-realistic, 60fps fluid motion, dark fantasy aesthetic, cinematic lighting, 1:1 square aspect ratio. [00:00 - 00:05] SEGMENT 1: The Awakening (The Hook) "POV shot. Looking down at the user's hand (as seen in @image1), where glowing blue and black veins pulse with energy. The hand is gripping a swirling black and violet energy orb. The hand crushes the orb with a heavy grip. Instantly, a massive shockwave of purple lightning and dark smoke explodes outward. From the shadows on the ground, dozens of spectral, knight-like silhouettes with glowing eyes rise and kneel before the camera. The setting is a dark, ruined stone dungeon." [00:05 - 00:10] SEGMENT 2: The Onslaught & The Boss (The Body) "Fast-paced POV combat. The camera moves forward rapidly as the user's hand wields a jagged, glowing obsidian dagger, slashing through waves of grey stone monsters that crumble into dust upon impact. The shadow knights from segment one fight alongside the user. Suddenly, the ground shakes, and a colossal, 30-foot demonic titan with multiple red eyes and jagged armor emerges from the darkness, letting out a silent, earth-shaking roar. The user raises their left hand, charging a massive violet aura." [00:10 - 00:15] SEGMENT 3: The Final Surge (The Climax) "Extreme POV close-up. The user's hand reaches toward the giant titan. A colossal spectral shadow-giant manifests behind the camera, mimicking the user's movement. All the shadow energy in the room condenses into the user's palm. The user fires a massive beam of pure abyssal purple energy that pierces through the titan's chest. The titan slowly disintegrates into black ash and embers, its red eyes fading as it collapses. The screen shakes with a heavy bass effect as the purple veins on the user's arm glow one last time before fading to black."
+Cinematic gender transformation sequence: start with a male figure in a dark, mysterious environment, subtle seductive tension in body language. Begin slow transformation with close-ups on physical change: jawline softens, shoulders narrow, hips subtly shift, hair lengthens and flows. Use dramatic lighting and dynamic camera movement, soft glowing particles, smooth skin morphing, luminous eyes, halo effects, ethereal atmosphere. Add seductive emotional nuance without explicit content — lingering gaze, graceful posture, fluid silhouette, magnetic presence. Sequence seamless and cinematic, slow motion transformation blending male to female form, film-like color grading, atmospheric shadows and highlights, polished visual flow, intense but elegant aesthetic.
+A cinematic, hyper-realistic vertical shot of a male-to-female shapeshifter transformation in a dimly lit luxurious room. The left half of the body remains rugged and masculine, while the right half is transforming into a graceful, elegant female form. Skin ripples like liquid silk at the intersection, and clothing morphs seamlessly from a masculine jacket into flowing attire. Dramatic low-key lighting emphasizes contours, intricate textures, and the surreal transformation. Dynamic expression of surprise and awe. High contrast, 8k resolution.`, res: 'Seedance 2.0 video', shape: 'wide', mediaType: 'video' },
+      { src: 'dashboard-showcase/seedance20-explore/video2/s-video2.mp4', prompt: 'Blue-toned scene, panoramic shot of a young white man skateboarding in an outdoor skatepark. He has short black hair, wearing a white T-shirt, black pants, and black-and-white sneakers. With arms outstretched, head lowered, and body tilted, he performs a slide action using the edge of his skateboard. The surrounding skate platforms feature grooves and steep slopes, with trees and people in the background. The sky is a clear blue with a few clouds. In the skatepark, the camera follows the man as he stands on his skateboard and glides to the right of the frame. He then jumps, twists his body, keeps both feet on the skateboard, spins twice in the air, lands, and continues to slide forward.', res: 'Seedance 2.0 video', shape: 'square', mediaType: 'video' },
+      { src: 'dashboard-showcase/seedance20-explore/video3/s-video3.mp4', prompt: 'Tracking medium shot: A man in a suit moves quickly through the crowd, his expression focused. The camera follows the man as he weaves through the crowd, creating a sense of rhythmic pressure. He finally stops at the car door, takes a deep breath, and looks up.', res: 'Seedance 2.0 video', shape: 'square', mediaType: 'video' },
+      { src: 'dashboard-showcase/seedance20-explore/video4/s-video4.mp4', prompt: '[I2V] The girl shows a charming smile by the seaside.', res: 'Seedance 2.0 image-to-video', shape: 'tall', mediaType: 'video' },
+      { src: 'dashboard-showcase/seedance20-explore/video5/s-video5.mp4', prompt: 'A bright orange sports car speeds along a wet racetrack. [Low-angle shot] Captures lightning flashing through storm clouds. The camera gradually pulls upward, revealing the full race scene illuminated by lights amid the downpour.', res: 'Seedance 2.0 video', shape: 'square', mediaType: 'video' },
+      { src: 'dashboard-showcase/seedance20-explore/video6/s-video6.mp4', prompt: 'an orange cat holding a beer and chilling at local bar', res: 'Seedance 2.0 video', shape: 'square', mediaType: 'video' },
+      { src: 'dashboard-showcase/seedance20-explore/video7/s-video7.mp4', prompt: '[I2V] A girl looks into the camera, her earrings swaying gently as she turns. The camera rotates, dreamy sunlight.', res: 'Seedance 2.0 image-to-video', shape: 'tall', mediaType: 'video' },
+      { src: 'dashboard-showcase/seedance20-explore/video8/s-video8.mp4', prompt: 'A fast-paced epic cinematic scene of a glowing phoenix made of colorful light soaring through a fantasy sky above floating islands. Bright orange, pink, purple, blue, and gold clouds swirl around it. The camera follows dynamically from a low rear angle, creating a strong sense of speed, power, and wonder. Shimmering particles and soft rainbow light trails enhance the motion. The phoenix flies smoothly between luminous clouds and floating cliffs, with cinematic lighting, vivid colors, clean composition, majestic atmosphere, highly detailed, visually clear, stylish, dramatic, smooth motion.', res: 'Seedance 2.0 video', shape: 'wide', mediaType: 'video' },
+      { src: 'dashboard-showcase/seedance20-explore/i-video9/s-video9.mp4', prompt: 'Animate the image with subtle natural motion. Keep everything the same.', res: 'Seedance 2.0 image-to-video', shape: 'square', mediaType: 'video', sourceImage: 'dashboard-showcase/seedance20-explore/i-video9/image.jpg', modelId: 'fal-ai/bytedance/seedance-2.0/image-to-video' },
+      { src: 'dashboard-showcase/seedance20-explore/i-video10/s-video10.mp4', prompt: 'Animate the image with subtle natural motion. Keep everything the same.', res: 'Seedance 2.0 image-to-video', shape: 'square', mediaType: 'video', sourceImage: 'dashboard-showcase/seedance20-explore/i-video10/image.jpg', modelId: 'fal-ai/bytedance/seedance-2.0/image-to-video' }
+    ]
   }
 };
 
