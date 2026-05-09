@@ -1225,8 +1225,6 @@
             <div class="img-prompt-area">
               <textarea id="i2v-prompt" class="img-prompt-input" rows="3" placeholder="Describe how this image should come to life…"></textarea>
             </div>
-            <div class="vid-enhance-hint">✦ Prompt will be auto-enhanced for video</div>
-
             <div class="section-label" style="margin-top:8px;">Model &amp; Duration</div>
             <div class="img-control-row">
               <span class="img-ctrl-dot" style="background:var(--accent); border:1px solid var(--black);"></span>
@@ -1379,9 +1377,9 @@
             <div class="video-steps">
 
               <div class="video-step">
-                <div class="video-step-thumb">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="36" height="36" opacity="0.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                  <span class="video-step-ph-label">Write a prompt or<br>pick a preset below</span>
+                <div class="video-step-thumb video-step-thumb-media">
+                  <video class="video-step-preview" src="dashboard-showcase/seedance20-explore/video1/s-video1.mp4" autoplay muted loop playsinline></video>
+                  <div class="video-step-overlay-label">TEXT TO VIDEO</div>
                 </div>
                 <div class="video-step-num">01</div>
                 <h3 class="video-step-title">WRITE YOUR PROMPT</h3>
@@ -1400,9 +1398,9 @@
               </div>
 
               <div class="video-step">
-                <div class="video-step-thumb video-step-thumb-result">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="36" height="36" opacity="0.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-                  <span class="video-step-ph-label">Your video will<br>appear here</span>
+                <div class="video-step-thumb video-step-thumb-media video-step-thumb-result">
+                  <video class="video-step-preview" src="dashboard-showcase/seedance20-explore/i-video9/s-video9.mp4" autoplay muted loop playsinline></video>
+                  <div class="video-step-overlay-label">IMAGE TO VIDEO</div>
                 </div>
                 <div class="video-step-num">03</div>
                 <h3 class="video-step-title">GET YOUR VIDEO</h3>
@@ -1416,20 +1414,28 @@
               <div class="video-examples-label">Example Outputs</div>
               <div class="video-examples-grid">
                 <div class="video-example-card">
-                  <div class="vec-thumb"><span class="vec-icon">🎬</span></div>
-                  <div class="vec-meta"><span class="vec-tag">Cinematic</span><span class="vec-model">Kling Standard</span></div>
+                  <div class="vec-thumb">
+                    <video class="vec-video" src="dashboard-showcase/seedance20-explore/video2/s-video2.mp4" autoplay muted loop playsinline></video>
+                  </div>
+                  <div class="vec-meta"><span class="vec-tag">Cinematic Orbit</span><span class="vec-model">Seedance 2.0</span></div>
                 </div>
                 <div class="video-example-card">
-                  <div class="vec-thumb"><span class="vec-icon">⚡</span></div>
-                  <div class="vec-meta"><span class="vec-tag">Action</span><span class="vec-model">Kling Standard</span></div>
+                  <div class="vec-thumb">
+                    <video class="vec-video" src="dashboard-showcase/seedance20-explore/video4/s-video4.mp4" autoplay muted loop playsinline></video>
+                  </div>
+                  <div class="vec-meta"><span class="vec-tag">Action Burst</span><span class="vec-model">Seedance 2.0</span></div>
                 </div>
                 <div class="video-example-card">
-                  <div class="vec-thumb"><span class="vec-icon">🚁</span></div>
-                  <div class="vec-meta"><span class="vec-tag">Drone Shot</span><span class="vec-model">Kling Standard</span></div>
+                  <div class="vec-thumb">
+                    <video class="vec-video" src="dashboard-showcase/seedance20-explore/video6/s-video6.mp4" autoplay muted loop playsinline></video>
+                  </div>
+                  <div class="vec-meta"><span class="vec-tag">Aerial Flow</span><span class="vec-model">Seedance 2.0</span></div>
                 </div>
                 <div class="video-example-card">
-                  <div class="vec-thumb"><span class="vec-icon">🌿</span></div>
-                  <div class="vec-meta"><span class="vec-tag">Nature</span><span class="vec-model">Stable Video</span></div>
+                  <div class="vec-thumb">
+                    <video class="vec-video" src="dashboard-showcase/seedance20-explore/i-video10/s-video10.mp4" autoplay muted loop playsinline></video>
+                  </div>
+                  <div class="vec-meta"><span class="vec-tag">Image Motion</span><span class="vec-model">Seedance 2.0</span></div>
                 </div>
               </div>
             </div>
