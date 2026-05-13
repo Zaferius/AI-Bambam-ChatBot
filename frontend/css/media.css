@@ -1,0 +1,104 @@
+/* ── Footer ───────────────────────────────────────────── */
+.site-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 48px;
+  background: #090a0b;
+  color: var(--white);
+  border-top: 2px solid var(--yellow);
+  padding: 34px clamp(28px, 10vw, 210px) 28px;
+  min-height: 210px;
+  flex-shrink: 0;
+}
+
+#main-area > #site-footer {
+  display: none;
+}
+
+.footer-brand-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 360px;
+}
+
+.footer-logo {
+  width: min(260px, 30vw);
+  height: auto;
+  display: block;
+}
+
+.footer-links {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 54px;
+  min-width: min(560px, 52vw);
+}
+
+.footer-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.footer-col h3 {
+  margin: 0 0 4px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 4px;
+  color: #ffffff;
+}
+
+.footer-col button {
+  border: 0;
+  background: transparent;
+  color: #aeb6c1;
+  padding: 0;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.footer-col button:hover {
+  color: var(--yellow);
+  transform: translate(-1px, -1px);
+}
+
+@media (max-width: 900px) {
+  .site-footer {
+    flex-direction: column;
+    padding: 36px 24px;
+  }
+  .footer-brand-block { min-width: 0; }
+  .footer-logo { width: min(300px, 80vw); }
+  .footer-links {
+    grid-template-columns: 1fr;
+    min-width: 0;
+    gap: 28px;
+  }
+}
+
+/* ════════════════════════════════════════════════════════
+   RESPONSIVE
+════════════════════════════════════════════════════════ */
+@media (max-width: 980px) {
+  .main-area { border-radius: 0; }
+  #panel-image, #panel-video { flex-direction: column !important; align-items: center; }
+  .media-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  .img-controls-sidebar { width: 100%; }
+  .dash-tiles-grid { grid-template-columns: repeat(2, 1fr); }
+  .dash-recent-wrap { width: 220px; }
+  .dash-sc-left { width: 240px; padding: 28px 20px; }
+  .dsc-title { font-size: 20px; }
+  .chat-hsidebar { width: 180px; min-width: 180px; }
+  .navbar-user-trigger .user-name { display: none; }
+  .navbar-logo-text { display: none; }
+}
+
+@media (max-width: 700px) {
+  .chat-hsidebar { display: none; }
+  .navbar-nav { gap: 0; }
+  .navbar-nav .nav-item { padding: 6px 8px; font-size: 12px; }
+}

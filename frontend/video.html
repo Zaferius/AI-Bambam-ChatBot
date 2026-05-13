@@ -17,7 +17,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/main.css?v=20260513a" />
 </head>
-<body>
+<body data-page="video">
 
 <!-- ════════════════════════════════════════════════════════════
      AUTH GATE — shown until user is logged in
@@ -53,7 +53,7 @@
 
     <!-- Nav Links -->
     <div class="navbar-nav" id="sidebar-nav">
-      <button class="nav-item active" data-panel="dashboard" id="nav-dashboard">Explore</button>
+      <button class="nav-item" data-panel="dashboard" id="nav-dashboard">Explore</button>
 
       <!-- Image mega-nav -->
       <div class="nav-mega-wrap">
@@ -140,7 +140,7 @@
 
       <!-- Video mega-nav -->
       <div class="nav-mega-wrap">
-        <button class="nav-item" data-panel="video" id="nav-video">Video</button>
+        <button class="nav-item active" data-panel="video" id="nav-video">Video</button>
         <div class="nav-mega-drop">
           <div class="nmd-col">
             <div class="nmd-group-label">Tools</div>
@@ -384,293 +384,337 @@
 
   <!-- ── MAIN ────────────────────────────────────────────── -->
   <main class="main-area" id="main-area">
+<!-- ══ PANEL: VIDEO ══════════════════════════════════════ -->
+    <section class="panel active" id="panel-video" data-page-panel="video">
+      <div class="video-layout">
 
-    <!-- ══ PANEL: DASHBOARD ══════════════════════════════════════ -->
-    <section class="panel active" id="panel-dashboard">
+        <!-- ── LEFT SIDEBAR: Controls ── -->
+        <aside class="video-sidebar">
 
-      <!-- ── FEATURED SHOWCASE STRIP ── -->
-      <div class="dash-featured-strip">
-        <div class="dash-featured-track" id="dash-featured-track">
+          <!-- Tool Picker -->
+          <div class="img-tool-picker" id="video-tool-picker">
+            <button class="img-tool-card active" data-video-tool="text">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <span>Text to Video</span>
+            </button>
+            <button class="img-tool-card" data-video-tool="image">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span>Image to Video</span>
+            </button>
+            <button class="img-tool-card" data-video-tool="upscale">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+              <span>Upscale</span>
+            </button>
+          </div>
 
-          <!-- Card 1: GPT Image 2 -->
-          <div class="dash-feat-card" role="button" tabindex="0" onclick="selectImageModel('openai/gpt-image-2');switchPanel('image')">
-            <div class="dash-feat-thumb dft-1">
-              <img class="dft-media" src="dashboard-showcase/top-showcase/gpt-image-2/image.png" alt="GPT Image 2 showcase" />
-              <div class="dft-provider">OpenAI</div>
-              <div class="dft-headline">GPT IMAGE<br>2.0</div>
-              <div class="dft-dot-grid"></div>
+          <!-- TEXT TO VIDEO panel -->
+          <div class="img-sidebar-panel active" id="vid-panel-text">
+
+            <div class="img-prompt-area">
+              <textarea id="video-prompt" class="img-prompt-input" placeholder="Describe your cinematic scene…" rows="3"></textarea>
+              <button class="img-prompt-plus-btn" title="Expand">+</button>
+            </div>
+
+            <div class="section-label" style="margin-top:4px;">Motion Presets</div>
+            <div class="motion-presets-grid" id="motion-presets-grid">
+              <button class="motion-preset-card" data-preset="A dramatic cinematic shot with slow sweeping camera movement, film grain, moody lighting and atmospheric depth">
+                <div class="mpreset-emoji">🎬</div><span>Cinematic</span>
+              </button>
+              <button class="motion-preset-card" data-preset="High energy action sequence with dynamic camera angles, fast explosive movement and intense visual impact">
+                <div class="mpreset-emoji">⚡</div><span>Action</span>
+              </button>
+              <button class="motion-preset-card" data-preset="Aerial drone footage smoothly gliding over a sweeping landscape with wide establishing shot from above">
+                <div class="mpreset-emoji">🚁</div><span>Drone</span>
+              </button>
+              <button class="motion-preset-card" data-preset="Beautiful nature scene with gentle movement, warm golden morning light and serene peaceful atmosphere">
+                <div class="mpreset-emoji">🌿</div><span>Nature</span>
+              </button>
+              <button class="motion-preset-card" data-preset="Time lapse video compressing hours into seconds with smooth motion and dramatic shifting sky and light">
+                <div class="mpreset-emoji">⏱</div><span>Time Lapse</span>
+              </button>
+              <button class="motion-preset-card" data-preset="Elegant slow motion footage with graceful fluid movement and dramatic visual impact capturing every detail">
+                <div class="mpreset-emoji">🎞</div><span>Slow Mo</span>
+              </button>
+              <button class="motion-preset-card" data-preset="Intimate close-up portrait with gentle parallax movement, beautiful shallow depth of field and soft bokeh">
+                <div class="mpreset-emoji">👤</div><span>Portrait</span>
+              </button>
+              <button class="motion-preset-card" data-preset="Abstract artistic visuals with flowing shapes, vibrant colors and surreal smooth transitions and morphing">
+                <div class="mpreset-emoji">🔮</div><span>Abstract</span>
+              </button>
+            </div>
+
+            <div class="section-label">Model &amp; Duration</div>
+            <div class="img-control-row">
+              <span class="img-ctrl-dot" style="background:var(--accent); border:1px solid var(--black);"></span>
+              <div class="custom-select-wrap" style="flex:1;">
+                <select id="video-model" class="img-ctrl-select">
+                  <option value="fal-ai/kling-video/v1/standard/text-to-video">Kling v1 Standard — 12⚡</option>
+                  <option value="fal-ai/kling-video/v1/pro/text-to-video">Kling v1 Pro — 20⚡</option>
+                  <option value="fal-ai/kling-video/v3/pro/text-to-video">Kling v3 Pro — 28⚡</option>
+                  <option value="fal-ai/wan/v2.7/text-to-video">WAN v2.7 — 15⚡</option>
+                  <option value="fal-ai/bytedance/seedance/v1.5/pro/text-to-video">Seedance 1.5 Pro — 20⚡</option>
+                  <option value="fal-ai/bytedance/seedance-2.0/text-to-video">Seedance 2.0 — 25⚡</option>
+                  <option value="fal-ai/sora-2/text-to-video">Sora 2 — 35⚡</option>
+                  <option value="fal-ai/veo3.1">Veo 3.1 — 30⚡</option>
+                  <option value="xai/grok-imagine-video/text-to-video">Grok Video — 22⚡</option>
+                  <option value="fal-ai/stable-video">Stable Video — 10⚡</option>
+                  <option value="fal-ai/seedvr/upscale/video">SeedVR Video Upscale — 18⚡</option>
+                </select>
+              </div>
+            </div>
+            <div class="img-control-row">
+              <span class="img-ctrl-label-icon">⏱</span>
+              <div class="custom-select-wrap" style="flex:1;">
+                <select id="video-duration" class="img-ctrl-select">
+                  <option value="5">5 seconds</option>
+                  <option value="10">10 seconds</option>
+                </select>
+              </div>
+            </div>
+
+            <button class="btn-generate-img btn-generate-vid" id="btn-generate-video">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+              Generate <span class="img-cost-badge" id="video-cost-label">12⚡</span>
+            </button>
+            <div class="gen-status hidden" id="video-status">
+              <div class="spinner"></div>
+              <span id="video-status-text">Generating…</span>
+            </div>
+
+          </div>
+
+          <!-- IMAGE TO VIDEO panel -->
+          <div class="img-sidebar-panel" id="vid-panel-image">
+
+            <div class="image-upload-zone" id="i2v-source-zone" style="padding:14px; margin-bottom:10px;">
+              <input type="file" id="i2v-source-input" accept="image/*" class="hidden" />
+              <label for="i2v-source-input" class="upload-label">Upload Source Image</label>
+              <img id="i2v-source-preview" class="upload-preview hidden" />
+            </div>
+
+            <div class="img-prompt-area">
+              <textarea id="i2v-prompt" class="img-prompt-input" rows="3" placeholder="Describe how this image should come to life…"></textarea>
+            </div>
+            <div class="section-label" style="margin-top:8px;">Model &amp; Duration</div>
+            <div class="img-control-row">
+              <span class="img-ctrl-dot" style="background:var(--accent); border:1px solid var(--black);"></span>
+              <div class="custom-select-wrap" style="flex:1;">
+                <select id="i2v-model" class="img-ctrl-select">
+                  <option value="fal-ai/kling-video/v1/standard/image-to-video">Kling Standard — 15⚡</option>
+                  <option value="fal-ai/kling-video/v1/pro/image-to-video">Kling Pro — 22⚡</option>
+                </select>
+              </div>
+            </div>
+            <div class="img-control-row">
+              <span class="img-ctrl-label-icon">⏱</span>
+              <div class="custom-select-wrap" style="flex:1;">
+                <select id="i2v-duration" class="img-ctrl-select">
+                  <option value="5">5 seconds</option>
+                  <option value="10">10 seconds</option>
+                </select>
+              </div>
+            </div>
+
+            <button class="btn-generate-img btn-generate-vid" id="btn-generate-i2v">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+              Generate <span class="img-cost-badge" id="i2v-cost-label">15⚡</span>
+            </button>
+            <div class="gen-status hidden" id="i2v-status">
+              <div class="spinner"></div>
+              <span id="i2v-status-text">Generating…</span>
+            </div>
+
+          </div>
+
+          <!-- VIDEO UPSCALE panel -->
+          <div class="img-sidebar-panel" id="vid-panel-upscale">
+
+            <!-- Upload card (initial state) -->
+            <div class="vup-upload-card" id="vup-upload-card">
+              <div class="video-tool-screen-head">
+                <span class="edit-tool-badge">VIDEO UPSCALE</span>
+                <h2>UPSCALE VIDEO</h2>
+                <p>Upload a video, choose SeedVR upscale settings, and export a sharper result.</p>
+                <div class="edit-tool-steps">
+                  <span>01 Upload video</span>
+                  <span>02 Pick factor</span>
+                  <span>03 Download result</span>
+                </div>
+              </div>
+              <input type="file" id="video-upscale-source-input" accept="video/*" class="hidden" />
+              <button type="button" class="upscale-upload-btn" id="btn-vid-upscale-upload">↥ Upload Video</button>
+            </div>
+
+            <!-- After-upload controls (shown when video is loaded) -->
+            <div class="vup-controls hidden" id="vup-controls">
+              <div class="upscale-detected-row">
+                <span id="video-upscale-detected">VIDEO READY</span>
+                <button type="button" id="btn-vid-upscale-replace">Replace</button>
+              </div>
+              <!-- hidden selects kept for JS compatibility -->
+              <select id="video-upscale-model" class="hidden">
+                <option value="fal-ai/seedvr/upscale/video">SeedVR Video Upscale — 18⚡</option>
+              </select>
+              <select id="video-upscale-mode" class="hidden">
+                <option value="factor">Factor</option>
+                <option value="target">Target Resolution</option>
+              </select>
+              <select id="video-upscale-resolution" class="hidden">
+                <option value="720p">720p</option>
+                <option value="1080p" selected>1080p</option>
+                <option value="1440p">1440p</option>
+                <option value="2160p">2160p</option>
+              </select>
+            </div>
+
+          </div>
+
+        </aside>
+
+        <!-- ── RIGHT MAIN: Canvas + Explainer ── -->
+        <div class="video-main">
+
+          <!-- Canvas: appears after generation -->
+          <div class="img-canvas-area" id="video-result-area">
+            <div class="img-canvas-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" width="64" height="64"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+              <p>Your generated video will appear here</p>
             </div>
           </div>
 
-          <!-- Card 2: Seedance 2.0 -->
-          <div class="dash-feat-card" role="button" tabindex="0" onclick="selectVideoModel('fal-ai/bytedance/seedance-2.0/text-to-video','text');switchPanel('video')">
-            <div class="dash-feat-thumb dft-2 dft-seedance-loop">
-              <video class="dft-media dft-video dft-seedance-slide" src="dashboard-showcase/top-showcase/seedance-explore/s-video1.mp4" autoplay muted loop playsinline preload="auto" aria-label="Seedance 2.0 preview video 1"></video>
-              <video class="dft-media dft-video dft-seedance-slide" src="dashboard-showcase/top-showcase/seedance-explore/s-video2.mp4" autoplay muted loop playsinline preload="auto" aria-label="Seedance 2.0 preview video 2"></video>
-              <video class="dft-media dft-video dft-seedance-slide" src="dashboard-showcase/top-showcase/seedance-explore/s-video3.mp4" autoplay muted loop playsinline preload="auto" aria-label="Seedance 2.0 preview video 3"></video>
-              <video class="dft-media dft-video dft-seedance-slide" src="dashboard-showcase/top-showcase/seedance-explore/s-video4.mp4" autoplay muted loop playsinline preload="auto" aria-label="Seedance 2.0 preview video 4"></video>
-              <video class="dft-media dft-video dft-seedance-slide" src="dashboard-showcase/top-showcase/seedance-explore/s-video5.mp4" autoplay muted loop playsinline preload="auto" aria-label="Seedance 2.0 preview video 5"></video>
-              <video class="dft-media dft-video dft-seedance-slide" src="dashboard-showcase/top-showcase/seedance-explore/s-video6.mp4" autoplay muted loop playsinline preload="auto" aria-label="Seedance 2.0 preview video 6"></video>
-              <video class="dft-media dft-video dft-seedance-slide" src="dashboard-showcase/top-showcase/seedance-explore/s-video7.mp4" autoplay muted loop playsinline preload="auto" aria-label="Seedance 2.0 preview video 7"></video>
-              <video class="dft-media dft-video dft-seedance-slide" src="dashboard-showcase/top-showcase/seedance-explore/s-video8.mp4" autoplay muted loop playsinline preload="auto" aria-label="Seedance 2.0 preview video 8"></video>
-              <video class="dft-media dft-video dft-seedance-slide" src="dashboard-showcase/top-showcase/seedance-explore/s-video9.mp4" autoplay muted loop playsinline preload="auto" aria-label="Seedance 2.0 preview video 9"></video>
-              <div class="dft-provider">Bytedance</div>
-              <div class="dft-headline">Seedance 2.0</div>
-              <div class="dft-subtitle">TEXT TO VIDEO</div>
-              <div class="dft-dot-grid"></div>
+          <!-- Video Upscale canvas: shown when upscale tab is active + video uploaded -->
+          <div class="vup-canvas hidden" id="vup-canvas">
+            <!-- Preview fills canvas -->
+            <div class="edit-canvas" id="vup-edit-canvas">
+              <div class="edit-source-zone" id="vup-source-zone">
+                <label class="edit-upload-card" id="vup-preview-card">
+                  <video id="video-upscale-source-preview" class="edit-source-img hidden" controls muted></video>
+                  <button type="button" class="edit-remove-btn hidden" id="btn-vup-remove" aria-label="Replace video">✕</button>
+                </label>
+              </div>
+              <!-- Result zone -->
+              <div class="edit-result-zone hidden" id="vup-result-zone">
+                <div class="edit-result-tag">UPSCALED VIDEO</div>
+                <div class="upscale-result-inner" id="video-upscale-result-area"></div>
+              </div>
+            </div>
+            <!-- Bottom bar -->
+            <div class="edit-bar" id="vup-bar">
+              <div class="edit-bar-inner upscale-bar-inner">
+                <!-- Factor buttons -->
+                <div class="upscale-bar-factor">
+                  <span class="upscale-bar-label">Factor</span>
+                  <div class="upscale-factor-buttons" id="vup-factor-buttons">
+                    <button type="button" class="upscale-factor-btn active" data-factor="2" title="2× upscale">2×</button>
+                    <button type="button" class="upscale-factor-btn" data-factor="3" title="3× upscale">3×</button>
+                    <button type="button" class="upscale-factor-btn" data-factor="4" title="4× upscale">4×</button>
+                  </div>
+                </div>
+                <!-- Format select -->
+                <div class="upscale-bar-format">
+                  <span class="upscale-bar-label">Format</span>
+                  <select id="video-upscale-format" class="img-ctrl-select upscale-bar-select">
+                    <option value="X264 (.mp4)">MP4 / X264</option>
+                    <option value="VP9 (.webm)">WEBM / VP9</option>
+                    <option value="PRORES4444 (.mov)">MOV / ProRes 4444</option>
+                    <option value="GIF (.gif)">GIF</option>
+                  </select>
+                </div>
+                <!-- Upscale button + status -->
+                <div class="edit-bar-right">
+                  <button class="btn-generate-img" id="btn-upscale-video">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M15 3h6v6h-2V6.4l-5.3 5.3-1.4-1.4L17.6 5H15V3zM9 21H3v-6h2v2.6l5.3-5.3 1.4 1.4L6.4 19H9v2z"/></svg>
+                    Upscale <span class="img-cost-badge" id="video-upscale-cost-label">18⚡</span>
+                  </button>
+                  <div class="gen-status hidden" id="video-upscale-status">
+                    <div class="spinner"></div>
+                    <span id="video-upscale-status-text">Upscaling…</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Card 3: Nano Banana Pro -->
-          <div class="dash-feat-card" role="button" tabindex="0" onclick="selectImageModel('fal-ai/nano-banana-pro');switchPanel('image')">
-            <div class="dash-feat-thumb dft-3">
-              <img class="dft-media" src="dashboard-showcase/top-showcase/nano-banana-pro/image.webp" alt="Nano Banana Pro showcase" />
-              <div class="dft-provider">Google</div>
-              <div class="dft-headline">NANO<br>BANANA PRO</div>
-              <div class="dft-dot-grid"></div>
+          <!-- Explainer: shown before any generation -->
+          <div class="video-explainer" id="video-explainer">
+
+            <div class="video-expl-hero">
+              <h2 class="video-expl-title">MAKE VIDEOS IN ONE CLICK</h2>
+              <p class="video-expl-sub">High-quality AI video · Cinematic presets · Text or image to video</p>
             </div>
-          </div>
 
-          <!-- Card 4: Seedream 4.5 -->
-          <div class="dash-feat-card" role="button" tabindex="0" onclick="selectImageModel('fal-ai/bytedance/seedream/v4.5/text-to-image');switchPanel('image')">
-            <div class="dash-feat-thumb dft-4">
-              <img class="dft-media" src="dashboard-showcase/top-showcase/seedream-45/image.jpg" alt="Seedream 4.5 showcase" />
-              <div class="dft-provider">Bytedance</div>
-              <div class="dft-headline">SEEDREAM<br>4.5</div>
-              <div class="dft-dot-grid"></div>
+            <!-- How It Works Steps -->
+            <div class="video-steps">
+
+              <div class="video-step">
+                <div class="video-step-thumb video-step-thumb-media">
+                  <video class="video-step-preview" src="dashboard-showcase/seedance20-explore/video1/s-video1.mp4" autoplay muted loop playsinline></video>
+                  <div class="video-step-overlay-label">TEXT TO VIDEO</div>
+                </div>
+                <div class="video-step-num">01</div>
+                <h3 class="video-step-title">WRITE YOUR PROMPT</h3>
+                <p class="video-step-desc">Describe the cinematic scene you want to create in detail</p>
+              </div>
+
+              <div class="video-step">
+                <div class="video-step-thumb video-step-thumb-presets">
+                  <div class="vsph-row"><span class="vsph-chip">🎬 Cinematic</span><span class="vsph-chip">⚡ Action</span></div>
+                  <div class="vsph-row"><span class="vsph-chip">🚁 Drone</span><span class="vsph-chip">🌿 Nature</span></div>
+                  <div class="vsph-row"><span class="vsph-chip">⏱ Time Lapse</span><span class="vsph-chip">🔮 Abstract</span></div>
+                </div>
+                <div class="video-step-num">02</div>
+                <h3 class="video-step-title">CHOOSE A PRESET</h3>
+                <p class="video-step-desc">Pick a motion style — Cinematic, Action, Drone, Nature and more</p>
+              </div>
+
+              <div class="video-step">
+                <div class="video-step-thumb video-step-thumb-media video-step-thumb-result">
+                  <video class="video-step-preview" src="dashboard-showcase/seedance20-explore/i-video9/s-video9.mp4" autoplay muted loop playsinline></video>
+                  <div class="video-step-overlay-label">IMAGE TO VIDEO</div>
+                </div>
+                <div class="video-step-num">03</div>
+                <h3 class="video-step-title">GET YOUR VIDEO</h3>
+                <p class="video-step-desc">Click Generate and receive your AI-created video in seconds</p>
+              </div>
+
             </div>
-          </div>
 
-          <!-- Card 5: Image Restyle -->
-          <div class="dash-feat-card" role="button" tabindex="0" onclick="switchPanel('restyler')">
-            <div class="dash-feat-thumb dft-2 dft-restyle-loop">
-              <img class="dft-media dft-restyle-slide" src="dashboard-showcase/top-showcase/image-restyle/anime_after.jpg" alt="Image Restyle showcase anime" />
-              <img class="dft-media dft-restyle-slide" src="dashboard-showcase/top-showcase/image-restyle/bw_studio_portrait_after.jpg" alt="Image Restyle showcase bw studio portrait" />
-              <img class="dft-media dft-restyle-slide" src="dashboard-showcase/top-showcase/image-restyle/cinematic_portrait_after.jpg" alt="Image Restyle showcase cinematic portrait" />
-              <img class="dft-media dft-restyle-slide" src="dashboard-showcase/top-showcase/image-restyle/ghostface_mirror_after.jpg" alt="Image Restyle showcase ghostface mirror" />
-              <img class="dft-media dft-restyle-slide" src="dashboard-showcase/top-showcase/image-restyle/hollywood_star_after.jpg" alt="Image Restyle showcase hollywood star" />
-              <img class="dft-media dft-restyle-slide" src="dashboard-showcase/top-showcase/image-restyle/moody_studio_portrait_after.jpg" alt="Image Restyle showcase moody studio portrait" />
-              <img class="dft-media dft-restyle-slide" src="dashboard-showcase/top-showcase/image-restyle/olympus_god_after.jpg" alt="Image Restyle showcase olympus god" />
-              <img class="dft-media dft-restyle-slide" src="dashboard-showcase/top-showcase/image-restyle/underwater_half_face_portrait_after.jpg" alt="Image Restyle showcase underwater half face portrait" />
-              <div class="dft-provider">Raiko Tools</div>
-              <div class="dft-headline">IMAGE<br>RESTYLE</div>
-              <div class="dft-dot-grid"></div>
+            <!-- Example Output Placeholders -->
+            <div class="video-examples-section">
+              <div class="video-examples-label">Example Outputs</div>
+              <div class="video-examples-grid">
+                <div class="video-example-card">
+                  <div class="vec-thumb">
+                    <video class="vec-video" src="dashboard-showcase/seedance20-explore/video2/s-video2.mp4" autoplay muted loop playsinline></video>
+                  </div>
+                  <div class="vec-meta"><span class="vec-tag">Cinematic Orbit</span><span class="vec-model">Seedance 2.0</span></div>
+                </div>
+                <div class="video-example-card">
+                  <div class="vec-thumb">
+                    <video class="vec-video" src="dashboard-showcase/seedance20-explore/video4/s-video4.mp4" autoplay muted loop playsinline></video>
+                  </div>
+                  <div class="vec-meta"><span class="vec-tag">Action Burst</span><span class="vec-model">Seedance 2.0</span></div>
+                </div>
+                <div class="video-example-card">
+                  <div class="vec-thumb">
+                    <video class="vec-video" src="dashboard-showcase/seedance20-explore/video6/s-video6.mp4" autoplay muted loop playsinline></video>
+                  </div>
+                  <div class="vec-meta"><span class="vec-tag">Aerial Flow</span><span class="vec-model">Seedance 2.0</span></div>
+                </div>
+                <div class="video-example-card">
+                  <div class="vec-thumb">
+                    <video class="vec-video" src="dashboard-showcase/seedance20-explore/i-video10/s-video10.mp4" autoplay muted loop playsinline></video>
+                  </div>
+                  <div class="vec-meta"><span class="vec-tag">Image Motion</span><span class="vec-model">Seedance 2.0</span></div>
+                </div>
+              </div>
             </div>
-          </div>
 
-        </div>
-        <div class="dash-featured-fade-left" id="dash-featured-fade-left" aria-hidden="true"></div>
-        <button
-          type="button"
-          class="dash-featured-prev"
-          id="dash-featured-prev"
-          aria-label="Scroll featured showcase left"
-        >&lt;</button>
-        <div class="dash-featured-fade-right" id="dash-featured-fade-right" aria-hidden="true"></div>
-        <button
-          type="button"
-          class="dash-featured-next"
-          id="dash-featured-next"
-          aria-label="Scroll featured showcase right"
-        >&gt;</button>
-      </div>
+          </div><!-- /video-explainer -->
+        </div><!-- /video-main -->
 
-      <!-- ── EXPLORE FEATURE TILES ── -->
-      <div class="dash-mid-row explore-feature-tiles" id="explore-feature-tiles">
-        <div class="dash-tiles-grid">
-          <button class="dash-tile dash-tile--image-bg" onclick="switchPanel('image')">
-            <div class="dt-icon dt-icon--img">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            </div>
-            <div class="dt-body">
-              <span class="dt-title">Generate Image</span>
-              <span class="dt-desc">Create stunning visuals in seconds</span>
-            </div>
-          </button>
-
-          <button class="dash-tile dash-tile--image-bg" onclick="selectImageModel('fal-ai/bytedance/seedream/v5/lite/text-to-image');switchPanel('image')">
-            <div class="dt-icon dt-icon--seed">🌱</div>
-            <div class="dt-body">
-              <span class="dt-title">Seedream 5</span>
-              <span class="dt-desc">Most advanced Bytedance image model</span>
-            </div>
-            <span class="dt-badge dt-badge--new">NEW</span>
-          </button>
-
-          <button class="dash-tile dash-tile--image-bg" onclick="switchPanel('restyler')">
-            <div class="dt-icon dt-icon--restyle">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z"/></svg>
-            </div>
-            <div class="dt-body">
-              <span class="dt-title">Image Restyle</span>
-              <span class="dt-desc">Apply portrait styles with one click</span>
-            </div>
-          </button>
-
-          <button class="dash-tile dash-tile--image-bg" onclick="selectImageModel('fal-ai/nano-banana-pro');switchPanel('image')">
-            <div class="dt-icon dt-icon--nb">🍌</div>
-            <div class="dt-body">
-              <span class="dt-title">Nano Banana Pro</span>
-              <span class="dt-desc">Generate high-quality visuals</span>
-            </div>
-            <span class="dt-badge dt-badge--unlimited">UNLIMITED</span>
-          </button>
-
-          <button class="dash-tile dash-tile--video-bg" onclick="switchPanel('video')">
-            <video class="dash-tile-video-bg" src="dashboard-showcase/bottom-tools/s-video1.mp4" autoplay muted loop playsinline preload="auto" aria-hidden="true"></video>
-            <div class="dt-icon dt-icon--vid">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-            </div>
-            <div class="dt-body">
-              <span class="dt-title">Generate Video</span>
-              <span class="dt-desc">Create high-quality videos in seconds</span>
-            </div>
-            <span class="dt-badge dt-badge--new">NEW</span>
-          </button>
-
-          <button class="dash-tile dash-tile--image-bg" onclick="switchPanel('image');switchImageTool('edit')">
-            <div class="dt-icon dt-icon--edit">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            </div>
-            <div class="dt-body">
-              <span class="dt-title">Image Edit</span>
-              <span class="dt-desc">Transform images with AI</span>
-            </div>
-          </button>
-
-          <button class="dash-tile dash-tile--image-bg" onclick="switchPanel('upscale')">
-            <div class="dt-icon dt-icon--upscale">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3h7v7"/><path d="M10 21H3v-7"/><path d="M21 3l-8 8"/><path d="M3 21l8-8"/></svg>
-            </div>
-            <div class="dt-body">
-              <span class="dt-title">Image Upscale</span>
-              <span class="dt-desc">Sharpen and enlarge images with AI</span>
-            </div>
-          </button>
-
-          <button class="dash-tile dash-tile--video-bg" onclick="switchPanel('video');switchVideoTool('upscale')">
-            <video class="dash-tile-video-bg" src="dashboard-showcase/bottom-tools/s-video1.mp4" autoplay muted loop playsinline preload="auto" aria-hidden="true"></video>
-            <div class="dt-icon dt-icon--vupscale">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/><path d="M8 9l4 3-4 3"/></svg>
-            </div>
-            <div class="dt-body">
-              <span class="dt-title">Video Upscale</span>
-              <span class="dt-desc">Boost video clarity with SeedVR</span>
-            </div>
-          </button>
-
-        </div>
-      </div>
-
-      <!-- ── SHOWCASE 1: GPT Image 2 ── -->
-      <div class="dash-showcase dash-showcase--image">
-        <div class="dash-sc-left">
-          <div class="dsc-eyebrow">NEW MODEL</div>
-          <h2 class="dsc-title">Meet GPT Image 2</h2>
-          <p class="dsc-desc">4K images with near-perfect text rendering. Ideal for design, marketing, and creative work.</p>
-          <button class="dsc-btn" onclick="selectImageModel('openai/gpt-image-2');switchPanel('image')">+ Try Model</button>
-        </div>
-        <div class="dash-sc-right dash-sc-right--gp2">
-          <button class="dsc-view-all dsc-view-all--floating" onclick="openModelGalleryPage('gp2')">View all</button>
-          <div class="gp2-grid" id="gp2-grid"></div>
-        </div>
-      </div>
-
-      <!-- ── SHOWCASE 2: Seedance 2.0 ── -->
-      <div class="dash-showcase dash-showcase--video">
-        <div class="dash-sc-left">
-          <div class="dsc-eyebrow">FEATURED MODEL</div>
-          <h2 class="dsc-title">Seedance 2.0</h2>
-          <p class="dsc-desc">Bytedance Seedance 2.0 for cinematic text-to-video and image-to-video generation with strong motion quality and prompt fidelity.</p>
-          <button class="dsc-btn" onclick="selectVideoModel('fal-ai/bytedance/seedance-2.0/text-to-video','text');switchPanel('video')">+ Try Model</button>
-        </div>
-        <div class="dash-sc-right dash-sc-right--gp2">
-          <button class="dsc-view-all dsc-view-all--floating" onclick="openModelGalleryPage('seedance20')">View all</button>
-          <div class="gp2-grid gp2-grid--video" id="seedance20-grid"></div>
-        </div>
-      </div>
-
-      <!-- ── SHOWCASE 3: Nano Banana Pro ── -->
-      <div class="dash-showcase dash-showcase--alt dash-showcase--image">
-        <div class="dash-sc-left">
-          <div class="dsc-eyebrow">FEATURED MODEL</div>
-          <h2 class="dsc-title">Nano Banana Pro<br></h2>
-          <p class="dsc-desc">Gemini 3 Pro image generation for cinematic realism, detailed text, rich styles, and precise prompt following.</p>
-          <button class="dsc-btn" onclick="selectImageModel('fal-ai/nano-banana-pro');switchPanel('image')">+ Try Model</button>
-        </div>
-        <div class="dash-sc-right dash-sc-right--gp2">
-          <button class="dsc-view-all dsc-view-all--floating" onclick="openModelGalleryPage('nbp')">View all</button>
-          <div class="gp2-grid" id="nbp-grid"></div>
-        </div>
-      </div>
-
-      <!-- ── SHOWCASE 4: Seedream 4.5 ── -->
-      <div class="dash-showcase dash-showcase--image">
-        <div class="dash-sc-left">
-          <div class="dsc-eyebrow">FEATURED MODEL</div>
-          <h2 class="dsc-title">Seedream 4.5</h2>
-          <p class="dsc-desc">Bytedance Seedream 4.5 for stylized and photoreal image generation with strong prompt fidelity and rich visual detail.</p>
-          <button class="dsc-btn" onclick="selectImageModel('fal-ai/bytedance/seedream/v4.5/text-to-image');switchPanel('image')">+ Try Model</button>
-        </div>
-        <div class="dash-sc-right dash-sc-right--gp2">
-          <button class="dsc-view-all dsc-view-all--floating" onclick="openModelGalleryPage('sd45')">View all</button>
-          <div class="gp2-grid" id="sd45-grid"></div>
-        </div>
-      </div>
-
-      <footer class="site-footer explore-footer" aria-label="Raiko footer">
-        <div class="footer-brand-block">
-          <img src="raiko-logo-trans-w.png" alt="Raiko" class="footer-logo" />
-        </div>
-        <nav class="footer-links" aria-label="Footer links">
-          <div class="footer-col">
-            <h3>PRODUCTS</h3>
-            <button type="button" onclick="switchPanel('image')">Generate Art</button>
-            <button type="button" onclick="switchPanel('edit')">Restyle Image</button>
-            <button type="button" onclick="switchPanel('edit');selectEditModel('fal-ai/bria/background/remove', true)">AI Background Remover</button>
-            <button type="button" onclick="switchPanel('video')">Generate Video</button>
-          </div>
-          <div class="footer-col">
-            <h3>LEGAL LINKS</h3>
-            <button type="button">Privacy Policy</button>
-            <button type="button">Refund Policy</button>
-            <button type="button">Terms of Service</button>
-          </div>
-          <div class="footer-col">
-            <h3>COMPANY</h3>
-            <button type="button" onclick="switchPanel('dashboard')">Home</button>
-            <button type="button" class="footer-pricing-trigger">Pricing</button>
-          </div>
-        </nav>
-      </footer>
-
+      </div><!-- /video-layout -->
     </section>
-
-    <footer class="site-footer" id="site-footer" aria-label="Raiko footer">
-      <div class="footer-brand-block">
-        <img src="raiko-logo-trans-w.png" alt="Raiko" class="footer-logo" />
-      </div>
-      <nav class="footer-links" aria-label="Footer links">
-        <div class="footer-col">
-          <h3>PRODUCTS</h3>
-          <button type="button" onclick="switchPanel('image')">Generate Art</button>
-          <button type="button" onclick="switchPanel('edit')">Restyle Image</button>
-          <button type="button" onclick="switchPanel('edit');selectEditModel('fal-ai/bria/background/remove', true)">AI Background Remover</button>
-          <button type="button" onclick="switchPanel('video')">Generate Video</button>
-        </div>
-        <div class="footer-col">
-          <h3>LEGAL LINKS</h3>
-          <button type="button">Privacy Policy</button>
-          <button type="button">Refund Policy</button>
-          <button type="button">Terms of Service</button>
-        </div>
-        <div class="footer-col">
-          <h3>COMPANY</h3>
-          <button type="button" onclick="switchPanel('dashboard')">Home</button>
-          <button type="button" id="footer-pricing-btn" class="footer-pricing-trigger">Pricing</button>
-        </div>
-      </nav>
-    </footer>
 
   </main>
 </div>

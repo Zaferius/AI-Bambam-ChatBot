@@ -1,0 +1,78 @@
+/*
+  Raiko — Black & Yellow Brutalist
+*/
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box; margin: 0; padding: 0;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+:root {
+  --sidebar-w: 256px;
+
+  /* Core palette */
+  --black:     #0A0A0A;
+  --white:     #FAFAF8;
+  --yellow:    #FFE400;
+  --yellow-dk: #E6CE00;
+  --gray-100:  #F0EFEC;
+  --gray-200:  #E0DFDB;
+  --gray-300:  #C0BEB8;
+  --gray-500:  #7A7870;
+  --gray-700:  #3A3835;
+
+  /* Aliases */
+  --bg:            var(--white);
+  --sidebar-bg:    var(--black);
+  --surface:       #FFFFFF;
+  --surface-alt:   var(--gray-100);
+  --surface-hover: #F5F4F0;
+  --border:        var(--black);
+  --border-light:  var(--gray-200);
+  --accent:        var(--yellow);
+  --accent-hover:  var(--yellow-dk);
+  --accent-light:  #FFFBE0;
+  --text-main:     var(--black);
+  --text-muted:    var(--gray-700);
+  --text-light:    var(--gray-500);
+  --text-on-dark:  var(--white);
+
+  /* Hard shadows — no blur, offset only */
+  --shadow-xs:  3px 3px 0 var(--black);
+  --shadow-sm:  4px 4px 0 var(--black);
+  --shadow-md:  5px 5px 0 var(--black);
+  --shadow-lg:  6px 6px 0 var(--black);
+
+  /* Radius — minimal */
+  --radius-sm:   2px;
+  --radius-md:   4px;
+  --radius-lg:   4px;
+  --radius-xl:   4px;
+  --radius-2xl:  4px;
+  --radius-pill: 4px;
+
+  /* Gradients replaced with flat */
+  --gradient-1:    var(--yellow);
+  --gradient-2:    var(--yellow);
+  --gradient-chat: var(--black);
+  --gradient-img:  var(--yellow);
+  --gradient-vid:  var(--black);
+}
+
+html, body {
+  height: 100%; overflow: hidden;
+  background: var(--bg);
+  color: var(--text-main);
+  font-size: 14px; line-height: 1.5;
+}
+
+body { background: var(--bg); }
+
+.hidden { display: none !important; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--gray-100); }
+::-webkit-scrollbar-thumb { background: var(--black); border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: var(--gray-700); }

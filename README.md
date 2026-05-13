@@ -2,13 +2,13 @@
 
 This README is the **source of truth for the current product behavior** so the next AI agent can continue work safely.
 
-Last updated: **2026-05-05 (Seedance 2.0 Explore showcase + new Image Tools suite: Expand, Angles, Shots)**
+Last updated: **2026-05-13 (CSS modularization started + static asset routing hotfix + Explore showcase recovery)**
 
 ---
 
 ## 1) Product Overview
 
-Raiko is a FastAPI + Vanilla JS single-page app for:
+Raiko is a FastAPI + Vanilla JS **multi-page app in transition from the old monolithic SPA** for:
 
 - AI image generation
 - AI video generation (text-to-video + image-to-video)
@@ -192,6 +192,35 @@ These were intentionally changed and should stay as-is unless explicitly request
     - No dedicated new backend tool endpoints were added in this iteration.
 49. **Shared Image Tools suite UI added**:
     - New brutalist workspace components support upload-first sidebars, result stages, reusable chip selectors, and shared result-card rendering.
+50. **Frontend is now multi-page, not single-file SPA-only**:
+    - Dedicated page entries now exist for [`frontend/index.html`](frontend/index.html), [`frontend/explore-gallery.html`](frontend/explore-gallery.html), [`frontend/image.html`](frontend/image.html), [`frontend/video.html`](frontend/video.html), [`frontend/edit.html`](frontend/edit.html), [`frontend/restyler.html`](frontend/restyler.html), [`frontend/content-machine.html`](frontend/content-machine.html), [`frontend/upscale.html`](frontend/upscale.html), [`frontend/expand.html`](frontend/expand.html), [`frontend/angles.html`](frontend/angles.html), [`frontend/shots.html`](frontend/shots.html), [`frontend/media.html`](frontend/media.html), and [`frontend/login.html`](frontend/login.html).
+    - [`frontend/index.html`](frontend/index.html) is now Explore-only; tool panels were removed from it.
+51. **Shared frontend shell sync flow added**:
+    - Shared navbar/footer/modal shell markup is edited from [`frontend/index.html`](frontend/index.html) and propagated to other pages via [`tools/sync_frontend_shell.py`](tools/sync_frontend_shell.py).
+    - `SHARED-SHELL:START/END` markers in page HTML are intentional and should be preserved.
+52. **Frontend JS modularization checkpoint reached**:
+    - Shared route config now lives in [`frontend/routes.js`](frontend/routes.js).
+    - Shared navbar/dropdown/pricing shell behavior now lives in [`frontend/shell.js`](frontend/shell.js).
+    - Page binders/business logic are being moved out of [`frontend/app.js`](frontend/app.js) into page scripts:
+      - [`frontend/page-dashboard.js`](frontend/page-dashboard.js)
+      - [`frontend/page-image.js`](frontend/page-image.js)
+      - [`frontend/page-video.js`](frontend/page-video.js)
+      - [`frontend/page-edit.js`](frontend/page-edit.js)
+      - [`frontend/page-upscale.js`](frontend/page-upscale.js)
+      - [`frontend/page-content-machine.js`](frontend/page-content-machine.js)
+      - [`frontend/page-restyler.js`](frontend/page-restyler.js)
+      - [`frontend/page-media.js`](frontend/page-media.js)
+53. **CSS modularization started**:
+    - Primary stylesheet entry is now [`frontend/css/main.css`](frontend/css/main.css).
+    - [`frontend/styles.css`](frontend/styles.css) is kept only as a legacy compatibility shim that imports the modular entry.
+    - Current CSS modules live under [`frontend/css/`](frontend/css/) and preserve import order from the former monolith to avoid visual regressions.
+54. **Frontend static asset routing fallback hardened**:
+    - Clean page alias handling in [`backend/main.py`](backend/main.py) now falls back to serving real frontend/root static files when the request is not a known panel alias.
+    - This prevents false 404s for root-level frontend assets like [`frontend/api.js`](frontend/api.js), [`frontend/routes.js`](frontend/routes.js), [`frontend/shell.js`](frontend/shell.js), [`frontend/explore-data.js`](frontend/explore-data.js), [`frontend/app.js`](frontend/app.js), [`frontend/raiko-logo-trans.png`](frontend/raiko-logo-trans.png), [`frontend/raiko-logo-trans-w.png`](frontend/raiko-logo-trans-w.png), and root favicon/manifest assets.
+55. **Explore showcase recovery after modularization**:
+    - Homepage showcase strips for GPT Image 2, Seedance 2.0, Nano Banana Pro, and Seedream 4.5 remain data-driven from [`frontend/explore-data.js`](frontend/explore-data.js) and rendered by [`frontend/app.js`](frontend/app.js).
+    - Showcase sections in [`frontend/index.html`](frontend/index.html) now explicitly distinguish image vs video variants with `.dash-showcase--image` and `.dash-showcase--video` so split CSS keeps the correct height.
+    - Explore featured strip arrows and showcase initialization depend on app boot completing successfully; the global keyboard shortcut binder must remain defined during bootstrap.
 
 If you reintroduce gradients, soft shadows, pill-shaped buttons, lavender/purple colors, or standalone info "ⓘ" icons, you are regressing the product.
 
@@ -199,7 +228,7 @@ If you reintroduce gradients, soft shadows, pill-shaped buttons, lavender/purple
 
 ## 3) Current Frontend UX Map
 
-Main UI file: `frontend/index.html`
+Main entry pages now include `frontend/index.html`, `frontend/image.html`, `frontend/video.html`, `frontend/edit.html`, `frontend/restyler.html`, `frontend/content-machine.html`, `frontend/upscale.html`, `frontend/expand.html`, `frontend/angles.html`, `frontend/shots.html`, `frontend/media.html`, `frontend/explore-gallery.html`, and `frontend/login.html`.
 
 ### Top Navbar
 
@@ -232,6 +261,7 @@ Full-width showcase/discovery page — scrollable, no fixed columns. Four sectio
 - Horizontal row of 5 oversized cards, horizontal scroll, scroll snap, left/right fade masks, and explicit `<` / `>` scroll buttons.
 - The `<` button and left fade hide at the left edge; the `>` button and right fade hide at the right edge.
 - Scroll buttons are initialized by `initFeaturedStripNav()` and move by one card width via `scrollFeaturedStrip(direction)`.
+- Arrow behavior is JS-driven and can silently break if early app bootstrap throws before [`initFeaturedStripNav()`](frontend/app.js) runs.
 - Card 1 (GPT Image 2) → `selectImageModel('openai/gpt-image-2')` + `switchPanel('image')`
 - Card 2 (Seedance 2.0 / Video) → `selectVideoModel('fal-ai/bytedance/seedance-2.0/text-to-video','text')` + `switchPanel('video')`
 - Card 3 (Nano Banana Pro) → `selectImageModel('fal-ai/nano-banana-pro')` + `switchPanel('image')`
@@ -257,6 +287,7 @@ Full-width showcase/discovery page — scrollable, no fixed columns. Four sectio
 - Showcase 3: "Nano Banana Pro Image Generator" → real images from `dashboard-showcase/nano-banana-pro-explore/`, custom `.gp2-grid` two-row layout rendered from external data (`frontend/explore-data.js`) into `#nbp-grid`; every gallery item includes its prompt and uses Nano Banana Pro when "Use This Prompt" is clicked
 - Showcase 4: "Seedream 4.5" → real images from `dashboard-showcase/seedream-explore/`, rendered into `#sd45-grid`
 - Each showcase now has an in-card floating **View all** button that routes to the dedicated Explore Gallery panel.
+- [`frontend/index.html`](frontend/index.html) uses `.dash-showcase--image` for image showcases and `.dash-showcase--video` for the Seedance section so CSS split keeps the right min-height.
 
 **Explore Gallery Panel** (`#panel-explore-gallery`):
 - Opened from showcase `View all` buttons through `openModelGalleryPage(key)`.
@@ -500,7 +531,7 @@ Two-column split layout: left (form, yellow dot-grid overlay) + right (`beer-cat
 
 ## 4) Frontend Logic Summary
 
-Main logic: `frontend/app.js` | Explore showcase data: `frontend/explore-data.js` | API wrapper: `frontend/api.js` | Styles: `frontend/styles.css`
+Current shared bootstrap/orchestration: `frontend/app.js` | Shared route config: `frontend/routes.js` | Shared shell behavior: `frontend/shell.js` | Explore showcase data: `frontend/explore-data.js` | API wrapper: `frontend/api.js` | Styles entry: `frontend/css/main.css` | Legacy CSS shim: `frontend/styles.css`
 
 ### Key State (`State` object)
 
@@ -537,17 +568,43 @@ Main logic: `frontend/app.js` | Explore showcase data: `frontend/explore-data.js
 
 ### Key Functions
 
+**Modular frontend note:** many page-local bindings and business-logic flows were moved out of `frontend/app.js` into page scripts, but global compatibility function names are still intentionally preserved.
+
+**Shared files now in active use:**
+- `frontend/routes.js` — route maps, clean URLs, active-nav metadata, shared `window.RAIKO_NAV`
+- `frontend/shell.js` — shared navbar / dropdown / pricing / modal binding via `window.RAIKO_SHELL`
+- `frontend/page-dashboard.js`
+- `frontend/page-image.js`
+- `frontend/page-video.js`
+- `frontend/page-edit.js`
+- `frontend/page-upscale.js`
+- `frontend/page-content-machine.js`
+- `frontend/page-restyler.js`
+- `frontend/page-media.js`
+
+**Recent bootstrap hardening:**
+- [`frontend/app.js`](frontend/app.js) must keep a globally callable `bindGlobalKeyboardShortcuts()` during boot.
+- If `bindEvents()` throws before `initializePageModules()` finishes, Explore showcase grids and featured-strip arrow navigation may appear broken even when their markup/data are correct.
+
+**CSS modularization checkpoint:**
+- [`frontend/css/main.css`](frontend/css/main.css) imports the split CSS modules in the preserved former-monolith cascade order.
+- [`frontend/styles.css`](frontend/styles.css) remains as a legacy shim only.
+- Current modules include base/shell/shared UI plus page/workflow groups such as explore, image, video, edit/upscale, restyler, content machine, media, gallery modal, and image tools.
+- Next CSS cleanup should further refine module boundaries, remove legacy chat/sidebar/theme CSS only after verifying no page still depends on it, and keep the black/yellow brutalist design constraints intact.
+
 **Global (called from inline `onclick` — must not be renamed or made non-global):**
 `selectImageModel(modelId)`, `selectVideoModel(modelId, tool)`, `selectEditModel(modelId)`, `switchPanel(panelId)`, `startNewChat()`, `switchImageTool(toolId)`, `switchVideoTool(toolId)`, `showGenPlaceholder(containerId)`, `clearGenPlaceholder(containerId)`, `saveMediaItem(type, url, prompt, model)`, `loadMediaPanel()`, `openGalleryPreview(el)`, `closeGalleryPreview()`, `openGallerySourcePreview()`, `closeGallerySourcePreview()`, `useGalleryPrompt()`, `syncFeaturedStripNav()`, `scrollFeaturedStrip(direction)`, `initFeaturedStripNav()`
 
 **Core flows:**
 - `switchPanel(panelId)` — switches active nav + panel; loads media/dashboard on enter
+- `bindEvents()` → shared shell binders + `bindPageEvents(pagePanel)`; this must not throw during startup.
 - `selectEditModel(modelId)` — updates Edit panel trigger label/cost, toggles prompt section for BG Remove, stores to `State.currentEditModel`
 - `runEditPanel()` → `API.ai.editImage(model, prompt, imageUrl, strength)` → `renderEditPanelResults()`
 - `renderEditPanelResults(urls)` — unhides `#edit-result-zone`, fills `#edit-result-area`
 - `generateImage()` → `API.ai.generateImage()` → `renderImageResults()` + `saveMediaItem()`
 - `renderMediaDrawer(activePlaceholder, forceOpen)` / `openMediaDrawer(activePlaceholder)` — controls the right-side My Media drawer opened from the avatar dropdown or during image generation
 - `syncFeaturedStripNav()` / `scrollFeaturedStrip(direction)` / `initFeaturedStripNav()` — control Explore featured strip button visibility and one-card scroll navigation
+- `renderExploreShowcaseGrid(grid, rows, fallbackModel)` — shared Explore showcase renderer for GPT Image 2 / Seedance 2.0 / Nano Banana Pro / Seedream 4.5 homepage sections.
 - `renderSeedance20Showcase()` — renders the Seedance 2.0 Explore video showcase from `frontend/explore-data.js`
 - `initNewImageTools()` — wires uploads, chips, counts, and actions for Expand Image / Angles 2.0 / Shots
 - `runExpandImage()` — runs Expand Image using `openai/gpt-image-2/edit`
@@ -803,3 +860,8 @@ Open: `http://localhost:8000`
 9. Edit panel: `fal-ai/bria/background/remove` result field may vary by API version (`image` vs `images`). `fal_client.remove_background()` handles both.
 10. Explore GPT and Nano Banana Pro showcases now use frontend data file + runtime render (`frontend/explore-data.js` + `renderGp2Showcase()` / `renderNanoBananaProShowcase()` in `frontend/app.js`); keep data/schema aligned when adding cards.
 11. Watch for accidental leading characters in `frontend/app.js` (e.g., stray `e` before the file header comment) — this causes immediate runtime boot errors like `ReferenceError` before app initialization.
+12. The frontend is mid-refactor from old monolithic SPA to modular multi-page architecture. Do **not** collapse everything back into one `frontend/app.js` or one `frontend/index.html`.
+13. Before editing shared shell markup, update `frontend/index.html` first, then re-run `tools/sync_frontend_shell.py` so the shell stays aligned across pages.
+14. CSS modularization has started, but module boundaries are still coarse. [`frontend/css/legacy-chat.css`](frontend/css/legacy-chat.css) still carries major Explore showcase/layout rules and should be split more cleanly later.
+15. Multi-page static asset serving depends on the fallback logic in [`backend/main.py`](backend/main.py); do not simplify the clean page alias route in a way that re-breaks direct asset requests.
+16. Explore homepage failures can be cascading symptoms from early JS boot errors; check console for first thrown exception before assuming data/CSS regressions.

@@ -55,6 +55,158 @@ const State = {
 
 let speechRecognition = null;
 
+const PAGE_PANEL_ROUTES = window.RAIKO_ROUTES?.PAGE_PANEL_ROUTES || {
+  dashboard: '/index.html',
+  image: '/image.html',
+  video: '/video.html',
+  edit: '/edit.html',
+  restyler: '/restyler.html',
+  content: '/content-machine.html',
+  upscale: '/upscale.html',
+  expand: '/expand.html',
+  angles: '/angles.html',
+  shots: '/shots.html',
+  media: '/media.html',
+  'explore-gallery': '/explore-gallery.html',
+};
+
+const PANEL_CLEAN_ROUTES = window.RAIKO_ROUTES?.PANEL_CLEAN_ROUTES || {
+  dashboard: '/',
+  image: '/image',
+  video: '/video',
+  edit: '/edit',
+  restyler: '/restyler',
+  content: '/content-machine',
+  upscale: '/upscale',
+  expand: '/expand',
+  angles: '/angles',
+  shots: '/shots',
+  media: '/media',
+  'explore-gallery': '/explore-gallery',
+};
+
+const PANEL_ALIASES = window.RAIKO_ROUTES?.PANEL_ALIASES || {
+  content: 'content',
+  dashboard: 'dashboard',
+};
+
+const NAV_ACTIVE_PANELS = window.RAIKO_ROUTES?.NAV_ACTIVE_PANELS || {
+  dashboard: 'dashboard',
+  'explore-gallery': 'dashboard',
+  image: 'image',
+  expand: 'image',
+  angles: 'image',
+  shots: 'image',
+  restyler: 'restyler',
+  video: 'video',
+  edit: 'edit',
+  upscale: 'edit',
+  content: 'content',
+  media: '',
+};
+
+const PAGE_PATH_PANELS = Object.fromEntries(
+  [
+    ...Object.entries(PAGE_PANEL_ROUTES),
+    ...Object.entries(PANEL_CLEAN_ROUTES),
+  ].map(([panel, route]) => [route, panel])
+);
+
+function getPagePanel() {
+  if (window.RAIKO_NAV?.getPagePanel) return window.RAIKO_NAV.getPagePanel();
+  const path = window.location.pathname;
+  if (path === '/' || path.endsWith('/')) return 'dashboard';
+  return PAGE_PATH_PANELS[path] || window.RAIKO_INITIAL_PANEL || 'dashboard';
+}
+
+function navigateToPanelPage(panelId, params = {}) {
+  if (window.RAIKO_NAV?.navigateToPanelPage) {
+    window.RAIKO_NAV.navigateToPanelPage(panelId, params);
+    return;
+  }
+  const normalizedPanel = PANEL_ALIASES[panelId] || panelId;
+  const route = PANEL_CLEAN_ROUTES[normalizedPanel] || PAGE_PANEL_ROUTES[normalizedPanel] || PANEL_CLEAN_ROUTES.dashboard;
+  const url = new URL(route, window.location.origin);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, value);
+  });
+  window.location.href = url.pathname + url.search;
+}
+
+function samePanelPage(panelId) {
+  if (window.RAIKO_NAV?.samePanelPage) return window.RAIKO_NAV.samePanelPage(panelId);
+  return getPagePanel() === (PANEL_ALIASES[panelId] || panelId);
+}
+
+function makePanelHref(panelId, params = {}) {
+  if (window.RAIKO_NAV?.makePanelHref) return window.RAIKO_NAV.makePanelHref(panelId, params);
+  const normalizedPanel = PANEL_ALIASES[panelId] || panelId;
+  const route = PANEL_CLEAN_ROUTES[normalizedPanel] || PAGE_PANEL_ROUTES[normalizedPanel] || PANEL_CLEAN_ROUTES.dashboard;
+  const url = new URL(route, window.location.origin);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, value);
+  });
+  return url.pathname + url.search;
+}
+
+function getActiveNavPanel(panelId) {
+  if (window.RAIKO_NAV?.getActiveNavPanel) return window.RAIKO_NAV.getActiveNavPanel(panelId);
+  const normalizedPanel = PANEL_ALIASES[panelId] || panelId;
+  return NAV_ACTIVE_PANELS[normalizedPanel] ?? normalizedPanel;
+}
+
+function storePageHandoff(key, value) {
+  try { sessionStorage.setItem(key, JSON.stringify(value)); } catch (_) {}
+}
+
+function readPageHandoff(key) {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    sessionStorage.removeItem(key);
+    return JSON.parse(raw);
+  } catch (_) {
+    return null;
+  }
+}
+
+function shouldInitExplore(pagePanel) {
+  return ['dashboard', 'explore-gallery'].includes(pagePanel);
+}
+
+function shouldInitImageTools(pagePanel) {
+  return ['expand', 'angles', 'shots'].includes(pagePanel);
+}
+
+function shouldInitContentMachine(pagePanel) {
+  return pagePanel === 'content';
+}
+
+function shouldInitRestyler(pagePanel) {
+  return pagePanel === 'restyler';
+}
+
+function shouldInitChat(pagePanel) {
+  return pagePanel === 'dashboard' && document.getElementById('chat-textarea');
+}
+
+function initializePageModules(pagePanel) {
+  if (shouldInitExplore(pagePanel)) {
+    renderGp2Showcase();
+    renderNanoBananaProShowcase();
+    renderSeedream45Showcase();
+    renderSeedance20Showcase();
+    initFeaturedStripNav();
+  }
+
+  if (shouldInitImageTools(pagePanel)) initNewImageTools();
+  if (shouldInitContentMachine(pagePanel)) {
+    loadContentMachinePrefs();
+    initContentMachineUI();
+  }
+  if (shouldInitRestyler(pagePanel)) initRestylerPanel();
+}
+
 /* ══════════════════════════════════════════════════════════
    TOAST
 ══════════════════════════════════════════════════════════ */
@@ -514,7 +666,11 @@ function selectImageModel(modelId) {
   }
   const dropdown = document.getElementById('img-model-dropdown');
   const sel = document.getElementById('image-model');
-  if (!dropdown || !sel) return;
+  if (!dropdown || !sel) {
+    storePageHandoff('raiko:image-model', { modelId });
+    navigateToPanelPage('image', { model: modelId });
+    return;
+  }
   const item = dropdown.querySelector(`.imd-item[data-model="${modelId}"]`);
   if (!item) return;
   dropdown.querySelectorAll('.imd-item').forEach(i => i.classList.remove('active'));
@@ -534,6 +690,10 @@ function selectVideoModel(modelId, tool = 'text') {
   const selId = tool === 'image' ? 'i2v-model' : (tool === 'upscale' ? 'video-upscale-model' : 'video-model');
   const sel = document.getElementById(selId);
   if (sel) { sel.value = modelId; sel.dispatchEvent(new Event('change')); }
+  else {
+    storePageHandoff('raiko:video-model', { modelId, tool });
+    navigateToPanelPage('video', { model: modelId, tool });
+  }
 }
 
 function openUpscaler(entryType = 'auto') {
@@ -551,7 +711,11 @@ function openUpscaler(entryType = 'auto') {
 
 function selectEditModel(modelId, resetWorkspace = false) {
   const dropdown = document.getElementById('edit-model-dropdown');
-  if (!dropdown) return;
+  if (!dropdown) {
+    storePageHandoff('raiko:edit-model', { modelId, resetWorkspace });
+    navigateToPanelPage('edit', { model: modelId });
+    return;
+  }
   const item = dropdown.querySelector(`.imd-item[data-model="${modelId}"]`);
   if (!item) return;
   dropdown.querySelectorAll('.imd-item').forEach(i => i.classList.remove('active'));
@@ -894,9 +1058,22 @@ function resetRestylerWorkspace() {
 function switchPanel(panelId) {
   const panel = document.getElementById(`panel-${panelId}`);
 
+  if (!panel) {
+    navigateToPanelPage(panelId);
+    return;
+  }
+
+  const currentPagePanel = getPagePanel();
+  const normalizedPanel = PANEL_ALIASES[panelId] || panelId;
+  if (currentPagePanel !== normalizedPanel && PAGE_PANEL_ROUTES[normalizedPanel]) {
+    navigateToPanelPage(normalizedPanel);
+    return;
+  }
+
   // Update nav items
+  const activeNavPanel = getActiveNavPanel(panelId);
   document.querySelectorAll('.nav-item').forEach(b => {
-    b.classList.toggle('active', b.dataset.panel === panelId);
+    b.classList.toggle('active', b.dataset.panel === activeNavPanel);
   });
 
   // Update panels
@@ -905,9 +1082,9 @@ function switchPanel(panelId) {
   });
 
   State.currentPanel = panelId;
-  if (panelId === 'dashboard') loadDashboardChats();
-  if (panelId === 'media') loadMediaPanel();
-  if (panelId === 'restyler') initRestylerPanel();
+  if (panelId === 'dashboard' && document.getElementById('dash-chat-list')) loadDashboardChats();
+  if (panelId === 'media') window.RAIKO_PAGE_BINDERS?.media?.refresh?.();
+  if (panelId === 'restyler' && document.getElementById('restyler-style-grid')) window.RAIKO_PAGE_BINDERS?.restyler?.init?.();
   panel?.scrollTo?.({ top: 0, behavior: 'instant' });
 }
 
@@ -3121,6 +3298,10 @@ let _galleryCurrentPrompt = '';
 let _galleryCurrentModelId = '';
 
 function openModelGalleryPage(key) {
+  if (!samePanelPage('explore-gallery')) {
+    navigateToPanelPage('explore-gallery', { gallery: key });
+    return;
+  }
   const galleries = window.EXPLORE_MODEL_GALLERIES || {};
   const gallery = galleries[key];
   const titleEl = document.getElementById('explore-model-gallery-title');
@@ -3587,485 +3768,28 @@ function setupUserUI() {
    EVENT LISTENERS
 ══════════════════════════════════════════════════════════ */
 function bindEvents() {
-  // Sidebar nav
-  document.getElementById('sidebar-nav').addEventListener('click', (e) => {
-    const btn = e.target.closest('.nav-item');
-    if (btn) switchPanel(btn.dataset.panel);
-  });
+  const pagePanel = getPagePanel();
+  window.RAIKO_SHELL?.bindShellNavigationEvents?.();
+  window.RAIKO_SHELL?.bindMegaNavigationEvents?.();
+  window.RAIKO_SHELL?.bindSharedModalEvents?.();
+  bindPageEvents(pagePanel);
+}
 
-  // User dropdown toggle
-  const userTrigger = document.getElementById('navbar-user-trigger');
-  const userDropdown = document.getElementById('user-dropdown');
-  if (userTrigger && userDropdown) {
-    userTrigger.addEventListener('click', (e) => {
-      if (State.isGuest) {
-        window.location.href = '/login.html';
-        return;
-      }
-      e.stopPropagation();
-      const isOpen = !userDropdown.classList.contains('hidden');
-      userDropdown.classList.toggle('hidden', isOpen);
-      userTrigger.setAttribute('aria-expanded', String(!isOpen));
-    });
-    document.addEventListener('click', (e) => {
-      if (!document.getElementById('navbar-user-wrap')?.contains(e.target)) {
-        userDropdown.classList.add('hidden');
-        userTrigger.setAttribute('aria-expanded', 'false');
-      }
-    });
-  }
+function bindPageEvents(pagePanel) {
+  window.RAIKO_PAGE_BINDERS?.dashboard?.(pagePanel);
+  if (pagePanel === 'content') window.RAIKO_PAGE_BINDERS?.content?.();
+  if (pagePanel === 'restyler') window.RAIKO_PAGE_BINDERS?.restyler?.();
+  if (pagePanel === 'image') window.RAIKO_PAGE_BINDERS?.image?.();
+  if (pagePanel === 'video') window.RAIKO_PAGE_BINDERS?.video?.();
+  if (pagePanel === 'edit') window.RAIKO_PAGE_BINDERS?.edit?.();
+  if (pagePanel === 'upscale') window.RAIKO_PAGE_BINDERS?.upscale?.();
+  if (pagePanel === 'media') window.RAIKO_PAGE_BINDERS?.media?.();
+  bindGlobalKeyboardShortcuts();
+}
 
-  // Dropdown — My Media
-  document.getElementById('udrop-my-media')?.addEventListener('click', () => {
-    userDropdown?.classList.add('hidden');
-    userTrigger?.setAttribute('aria-expanded', 'false');
-    openMediaDrawer(false);
-  });
-
-  // Dropdown — premium (opens credits modal)
-  document.getElementById('udrop-premium-btn')?.addEventListener('click', () => {
-    userDropdown?.classList.add('hidden');
-    userTrigger?.setAttribute('aria-expanded', 'false');
-    document.getElementById('credits-modal')?.classList.remove('hidden');
-  });
-
-  // New chat (navbar button)
-  document.getElementById('btn-new-chat-sidebar')?.addEventListener('click', () => {
-    switchPanel('chat');
-    startNewChat();
-  });
-
-  // New chat (chat panel inner button)
-  document.getElementById('btn-new-chat-inner')?.addEventListener('click', () => {
-    startNewChat();
-  });
-
-  // Model selector
-  document.getElementById('model-selector-btn')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const dd = document.getElementById('model-dropdown');
-    dd.classList.contains('hidden') ? openModelDropdown() : closeModelDropdown();
-  });
-  document.getElementById('model-search-input')?.addEventListener('input', (e) => {
-    renderModelList(e.target.value);
-  });
-  document.addEventListener('click', (e) => {
-    if (!document.getElementById('model-selector-wrap')?.contains(e.target)) {
-      closeModelDropdown();
-    }
-  });
-
-  bindChatInputEvents();
-
-  // File attach inputs
-  bindFileInput('chat-file-input');
-  bindFileInput('hero-file-input');
-  bindVoiceButtons();
-  bindModeButtons();
-  updateSendButtonsState();
-
-  // Welcome chips (delegated)
-  bindChipEvents();
-
-  // Logout
-  document.getElementById('logout-btn')?.addEventListener('click', () => {
-    Auth.clearToken();
-    Auth.clearUser();
-    window.location.href = '/login.html';
-  });
-
-  // Navbar mega-dropdown hover (position: fixed, JS-positioned)
-  document.querySelectorAll('.nav-mega-wrap').forEach(wrap => {
-    const drop = wrap.querySelector('.nav-mega-drop');
-    if (!drop) return;
-    let closeTimer;
-
-    function openDrop() {
-      clearTimeout(closeTimer);
-      const rect = wrap.getBoundingClientRect();
-      drop.style.top  = rect.bottom + 'px';
-      drop.style.left = rect.left + 'px';
-      drop.classList.add('open');
-    }
-    function scheduleDrop() {
-      closeTimer = setTimeout(() => drop.classList.remove('open'), 120);
-    }
-
-    wrap.addEventListener('mouseenter', openDrop);
-    wrap.addEventListener('mouseleave', scheduleDrop);
-    drop.addEventListener('mouseenter', () => clearTimeout(closeTimer));
-    drop.addEventListener('mouseleave', scheduleDrop);
-  });
-
-  // Navbar mega-dropdown model items
-  document.querySelectorAll('.nmd-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const modelId = item.dataset.model;
-      const panelId = item.dataset.panel;
-      const imageTool = item.dataset.imageTool || '';
-      const videoTool = item.dataset.videoTool || 'text';
-
-      if (panelId === 'image') {
-        if (modelId) selectImageModel(modelId);
-        // For tool-only entries (Create/Upscale), just open image workspace for now
-        switchPanel('image');
-      } else if (panelId === 'video') {
-        switchPanel('video');
-        // Always force the requested video generator tab first
-        switchVideoTool(videoTool);
-        // Tool-only items can switch workspace tab without forcing a model
-        if (modelId) {
-          setTimeout(() => selectVideoModel(modelId, videoTool), 50);
-        }
-      } else if (panelId === 'edit') {
-        switchPanel('edit');
-        const editTool = item.dataset.editTool || '';
-        if (modelId) {
-          setTimeout(() => selectEditModel(modelId, true), 50);
-        } else if (editTool) {
-          setTimeout(() => { setEditToolScreen(editTool); resetEditPanelWorkspace(); }, 50);
-        }
-      } else if (panelId === 'upscale') {
-        openUpscaler(item.dataset.upscaleEntry || 'auto');
-      } else if (panelId === 'restyler') {
-        switchPanel('restyler');
-      } else if (['expand', 'angles', 'shots'].includes(panelId)) {
-        switchPanel(panelId);
-      }
-    });
-  });
-
-  // Dashboard Quick Create
-  document.getElementById('qc-new-chat')?.addEventListener('click', () => {
-    switchPanel('chat');
-    startNewChat();
-  });
-  document.getElementById('qc-new-chat-2')?.addEventListener('click', () => {
-    switchPanel('chat');
-    startNewChat();
-  });
-  document.getElementById('qc-new-image')?.addEventListener('click', () => {
-    switchPanel('image');
-  });
-  document.getElementById('qc-new-video')?.addEventListener('click', () => {
-    switchPanel('video');
-  });
-
-  loadContentMachinePrefs();
-  initContentMachineUI();
-  initRestylerPanel();
-  document.getElementById('btn-generate-content-pack')?.addEventListener('click', () => generateContentPack());
-  document.getElementById('btn-copy-content-json')?.addEventListener('click', copyContentPacksJson);
-
-  document.getElementById('btn-restyler-upload')?.addEventListener('click', () => document.getElementById('restyler-source-input')?.click());
-  document.getElementById('btn-restyler-replace')?.addEventListener('click', () => document.getElementById('restyler-source-input')?.click());
-  document.getElementById('restyler-source-input')?.addEventListener('change', async (e) => handleRestylerUpload(e.target.files?.[0]));
-  document.getElementById('restyler-remove-btn')?.addEventListener('click', (e) => { e.preventDefault(); resetRestylerWorkspace(); });
-  document.getElementById('restyler-style-grid')?.addEventListener('click', (e) => {
-    const card = e.target.closest('.restyler-style-card');
-    if (card) selectRestylerStyle(card.dataset.style);
-  });
-  document.getElementById('btn-run-restyler')?.addEventListener('click', runImageRestyler);
-
-  // Image generate
-  document.getElementById('btn-generate-image')?.addEventListener('click', generateImage);
-  document.getElementById('image-model')?.addEventListener('change', updateImageCostLabel);
-  document.getElementById('image-count')?.addEventListener('change', updateImageCostLabel);
-  ['image-quality-select', 'image-resolution-select', 'image-aspect-select', 'image-batch-select'].forEach(id => {
-    document.getElementById(id)?.addEventListener('change', syncImageQuickControls);
-  });
-  document.querySelectorAll('.image-setting-trigger').forEach(trigger => {
-    trigger.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const setting = trigger.dataset.settingTrigger;
-      const menu = document.querySelector(`.image-setting-menu[data-setting-menu="${setting}"]`);
-      if (!menu) return;
-      const willOpen = menu.classList.contains('hidden');
-      closeImageSettingMenus(setting);
-      menu.classList.toggle('hidden', !willOpen);
-    });
-  });
-  document.querySelectorAll('.image-setting-menu').forEach(menu => {
-    menu.addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-value]');
-      if (!btn) return;
-      const setting = menu.dataset.settingMenu;
-      const selectIdMap = {
-        quality: 'image-quality-select',
-        resolution: 'image-resolution-select',
-        aspect: 'image-aspect-select',
-        batch: 'image-batch-select',
-      };
-      const selectEl = document.getElementById(selectIdMap[setting]);
-      if (!selectEl) return;
-      selectEl.value = btn.dataset.value;
-      selectEl.dispatchEvent(new Event('change'));
-      closeImageSettingMenus();
-    });
-  });
-  document.addEventListener('click', () => closeImageSettingMenus());
-  syncImageQuickControls();
-  document.getElementById('media-drawer-filters')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-filter]');
-    if (!btn) return;
-    document.querySelectorAll('#media-drawer-filters button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    State.mediaFilter = btn.dataset.filter;
-    renderMediaDrawer(document.getElementById('media-drawer')?.classList.contains('open'));
-  });
-  document.getElementById('media-drawer-close')?.addEventListener('click', closeMediaDrawer);
-  document.getElementById('media-drawer-fullview')?.addEventListener('click', () => {
-    closeMediaDrawer();
-    switchPanel('media');
-  });
-  document.querySelectorAll('.footer-pricing-trigger').forEach(btn => {
-    btn.addEventListener('click', () => document.getElementById('btn-buy-credits')?.click());
-  });
-
-  const imageRefInput = document.getElementById('image-reference-input');
-  document.getElementById('img-reference-plus-btn')?.addEventListener('click', () => imageRefInput?.click());
-  imageRefInput?.addEventListener('change', async (e) => {
-    await addImageReferenceFiles(e.target.files);
-    e.target.value = '';
-  });
-
-  // Image size select → update hidden width/height inputs
-  document.getElementById('image-size-select')?.addEventListener('change', (e) => {
-    const parts = e.target.value.split('x');
-    const w = parseInt(parts[0]) || 1024;
-    const h = parseInt(parts[1]) || 1024;
-    const wEl = document.getElementById('image-width');
-    const hEl = document.getElementById('image-height');
-    if (wEl) wEl.value = w;
-    if (hEl) hEl.value = h;
-    const aspectEl = document.getElementById('image-aspect-select');
-    const resolutionEl = document.getElementById('image-resolution-select');
-    if (aspectEl) aspectEl.value = findClosestImageAspect(w, h);
-    if (resolutionEl) resolutionEl.value = Math.max(w, h) > 1536 ? '2k' : '1k';
-  });
-
-  // Image style select → update State.stylePreset
-  document.getElementById('image-style-select')?.addEventListener('change', (e) => {
-    State.stylePreset = e.target.value;
-  });
-
-  // Image model picker dropdown
-  const imgModelTrigger = document.getElementById('img-model-trigger');
-  const imgModelDropdown = document.getElementById('img-model-dropdown');
-  if (imgModelTrigger && imgModelDropdown) {
-    imgModelTrigger.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const open = !imgModelDropdown.classList.contains('hidden');
-      imgModelDropdown.classList.toggle('hidden', open);
-      imgModelTrigger.setAttribute('aria-expanded', String(!open));
-    });
-    imgModelDropdown.addEventListener('click', (e) => {
-      const item = e.target.closest('.imd-item');
-      if (!item) return;
-      if (item.dataset.model === 'fal-ai/seedvr/upscale/image') {
-        imgModelDropdown.classList.add('hidden');
-        imgModelTrigger.setAttribute('aria-expanded', 'false');
-        selectEditModel(item.dataset.model, true);
-        switchPanel('edit');
-        return;
-      }
-      // Update active state
-      imgModelDropdown.querySelectorAll('.imd-item').forEach(i => i.classList.remove('active'));
-      item.classList.add('active');
-      // Update trigger label
-      document.getElementById('imt-icon').textContent = item.dataset.icon || '';
-      document.getElementById('imt-name').textContent = item.querySelector('.imd-name').textContent;
-      document.getElementById('imt-cost').textContent = item.dataset.cost + '⚡';
-      // Sync hidden select
-      const sel = document.getElementById('image-model');
-      if (sel) { sel.value = item.dataset.model; sel.dispatchEvent(new Event('change')); }
-      // Close dropdown
-      imgModelDropdown.classList.add('hidden');
-      imgModelTrigger.setAttribute('aria-expanded', 'false');
-    });
-    document.addEventListener('click', (e) => {
-      if (!document.getElementById('img-model-picker-wrap')?.contains(e.target)) {
-        imgModelDropdown.classList.add('hidden');
-        imgModelTrigger.setAttribute('aria-expanded', 'false');
-      }
-    });
-  }
-
-  // Aspect ratio picker → sync hidden width/height inputs
-  document.getElementById('ratio-picker')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('.ratio-btn');
-    if (!btn) return;
-    document.querySelectorAll('#ratio-picker .ratio-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const [w, h] = btn.dataset.size.split('x').map(Number);
-    const wEl = document.getElementById('image-width');
-    const hEl = document.getElementById('image-height');
-    const sizeEl = document.getElementById('image-size-select');
-    if (wEl) wEl.value = w;
-    if (hEl) hEl.value = h;
-    if (sizeEl) sizeEl.value = btn.dataset.size;
-    const aspectEl = document.getElementById('image-aspect-select');
-    const resolutionEl = document.getElementById('image-resolution-select');
-    const aspect = findClosestImageAspect(w, h);
-    if (aspectEl) aspectEl.value = aspect;
-    if (resolutionEl) resolutionEl.value = Math.max(w, h) > 1536 ? '2k' : '1k';
-  });
-
-  // Style chips → sync hidden select + State.stylePreset
-  document.getElementById('style-chips')?.addEventListener('click', (e) => {
-    const chip = e.target.closest('.style-chip');
-    if (!chip) return;
-    document.querySelectorAll('#style-chips .style-chip').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    const sel = document.getElementById('image-style-select');
-    if (sel) { sel.value = chip.dataset.style; sel.dispatchEvent(new Event('change')); }
-  });
-
-  // Motion preset cards → visual selection only
-  document.getElementById('motion-presets-grid')?.addEventListener('click', (e) => {
-    const card = e.target.closest('.motion-preset-card');
-    if (!card) return;
-    document.querySelectorAll('#motion-presets-grid .motion-preset-card').forEach(c => c.classList.remove('active'));
-    card.classList.add('active');
-  });
-
-  // Edit panel model picker dropdown
-  const editModelTrigger = document.getElementById('edit-model-trigger');
-  const editModelDropdown = document.getElementById('edit-model-dropdown');
-  if (editModelTrigger && editModelDropdown) {
-    editModelTrigger.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const open = !editModelDropdown.classList.contains('hidden');
-      editModelDropdown.classList.toggle('hidden', open);
-      editModelTrigger.setAttribute('aria-expanded', String(!open));
-    });
-    editModelDropdown.addEventListener('click', (e) => {
-      const item = e.target.closest('.imd-item');
-      if (!item) return;
-      selectEditModel(item.dataset.model);
-      editModelTrigger.setAttribute('aria-expanded', 'false');
-    });
-    document.addEventListener('click', (e) => {
-      if (!document.getElementById('edit-model-picker-wrap')?.contains(e.target)) {
-        editModelDropdown.classList.add('hidden');
-        editModelTrigger.setAttribute('aria-expanded', 'false');
-      }
-    });
-  }
-
-  // Edit panel image upload — hide dotted placeholder when image is loaded
-  setupImageUpload('edit-panel-source-input', 'edit-panel-source-preview', 'editPanelSourceUrl');
-  document.getElementById('edit-panel-source-input')?.addEventListener('change', () => {
-    const inner = document.getElementById('edit-upload-inner');
-    const removeBtn = document.getElementById('edit-panel-remove-btn');
-    const uploadCard = document.querySelector('.edit-upload-card');
-    const editBar = document.getElementById('edit-bar');
-    const panel = document.getElementById('panel-edit');
-    if (inner) inner.style.display = 'none';
-    if (removeBtn) removeBtn.classList.remove('hidden');
-    if (uploadCard) uploadCard.classList.add('has-image');
-    if (editBar) editBar.classList.remove('hidden');
-    if (panel) panel.classList.add('has-source');
-  });
-
-  // Edit panel remove uploaded image (top-right X)
-  document.getElementById('edit-panel-remove-btn')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    resetEditPanelWorkspace();
-  });
-
-  // Edit panel generate button
-  document.getElementById('btn-run-edit-panel')?.addEventListener('click', runEditPanel);
-
-  // Video
-  document.getElementById('btn-generate-video')?.addEventListener('click', generateVideo);
-  document.getElementById('video-model')?.addEventListener('change', updateVideoCostLabel);
-  document.getElementById('btn-generate-i2v')?.addEventListener('click', generateVideoFromImage);
-  document.getElementById('i2v-model')?.addEventListener('change', updateI2VCostLabel);
-  document.getElementById('btn-upscale-video')?.addEventListener('click', upscaleVideo);
-  document.getElementById('video-upscale-model')?.addEventListener('change', updateVideoUpscaleCostLabel);
-
-  const sharedUpscaleInput = document.getElementById('upscale-source-input');
-  sharedUpscaleInput?.addEventListener('change', async (e) => {
-    await handleUpscalerFile(e.target.files?.[0]);
-  });
-  // ✕ remove btn on the preview card stops propagation so it doesn't re-open file picker
-  document.getElementById('upscale-reset-btn')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    resetUpscaler(true);
-  });
-  document.getElementById('btn-run-upscale')?.addEventListener('click', runSharedUpscaler);
-  initUpscaleFactorButtons();
-
-  // Video tool picker
-  document.getElementById('video-tool-picker')?.addEventListener('click', (e) => {
-    const card = e.target.closest('.img-tool-card');
-    if (card && card.dataset.videoTool) switchVideoTool(card.dataset.videoTool);
-  });
-
-  // I2V image upload
-  setupImageUpload('i2v-source-input', 'i2v-source-preview', 'i2vSourceUrl');
-
-  // Video upscale tab — new edit-style layout
-  initVideoUpscaleTab();
-
-  // Image tools
-  document.getElementById('img-tool-picker')?.addEventListener('click', (e) => {
-    const card = e.target.closest('.img-tool-card');
-    if (card && card.dataset.imageTool) switchImageTool(card.dataset.imageTool);
-  });
-
-  // Media filter tabs
-  document.getElementById('media-filter-tabs')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('.media-filter-btn');
-    if (!btn) return;
-    document.querySelectorAll('.media-filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    State.mediaFilter = btn.dataset.filter;
-    loadMediaPanel();
-  });
-
-  // Tool buttons
-  document.getElementById('btn-edit-image')?.addEventListener('click', runEditImage);
-
-  // Tool image uploads
-  setupImageUpload('edit-source-input', 'edit-source-preview', 'editSourceUrl');
-
-  // Edit strength slider
-  document.getElementById('edit-strength')?.addEventListener('input', (e) => {
-    document.getElementById('edit-strength-val').textContent = e.target.value;
-  });
-
-  // Credits modal
-  document.getElementById('btn-buy-credits')?.addEventListener('click', openCreditsModal);
-  document.getElementById('credits-modal-close')?.addEventListener('click', closeCreditsModal);
-  document.getElementById('credits-modal')?.addEventListener('click', (e) => {
-    if (e.target.id === 'credits-modal') closeCreditsModal();
-  });
-  
-  // Lightbox
-  document.getElementById('lightbox-close')?.addEventListener('click', closeLightbox);
-  document.getElementById('lightbox-modal')?.addEventListener('click', (e) => {
-    if (e.target.id === 'lightbox-modal') closeLightbox();
-  });
-  document.getElementById('credit-packs')?.addEventListener('click', (e) => {
-    const pack = e.target.closest('.credit-pack');
-    if (pack) purchasePack(pack.dataset.pack);
-  });
-  document.getElementById('subscription-plan-grid')?.addEventListener('click', (e) => {
-    const plan = e.target.closest('.subscription-plan');
-    if (plan) subscribePlan(plan.dataset.plan, plan.dataset.billing || 'monthly');
-  });
-  document.querySelectorAll('.pricing-toggle-btn').forEach(btn => {
-    btn.addEventListener('click', () => switchPricingView(btn.dataset.pricingView));
-  });
-  document.querySelectorAll('.pricing-billing-btn').forEach(btn => {
-    btn.addEventListener('click', () => switchPricingBilling(btn.dataset.billing));
-  });
-  switchPricingBilling(State.pricingBilling);
+function bindGlobalKeyboardShortcuts() {
+  if (window.__raikoGlobalKeyboardShortcutsBound) return;
+  window.__raikoGlobalKeyboardShortcutsBound = true;
 
   document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {
@@ -4238,15 +3962,11 @@ function bindFileInput(inputId) {
    BOOTSTRAP
 ══════════════════════════════════════════════════════════ */
 async function init() {
+  const pagePanel = getPagePanel();
+  State.currentPanel = pagePanel;
   speechRecognition = initSpeechRecognition();
   applyTheme('thunder');
-  setChatMode('chat');
-  renderGp2Showcase();
-  renderNanoBananaProShowcase();
-  renderSeedream45Showcase();
-  renderSeedance20Showcase();
-
-  initFeaturedStripNav();
+  if (shouldInitChat(pagePanel)) setChatMode('chat');
 
   const authed = await checkAuth();
 
@@ -4254,16 +3974,41 @@ async function init() {
   document.getElementById('app').classList.remove('hidden');
   setupUserUI();
   bindEvents();
-  initNewImageTools();
+  initializePageModules(pagePanel);
+  switchPanel(pagePanel);
+
+  const params = new URLSearchParams(window.location.search);
+  const imageModel = params.get('model') || readPageHandoff('raiko:image-model')?.modelId;
+  if (pagePanel === 'image' && imageModel) selectImageModel(imageModel);
+  const videoHandoff = readPageHandoff('raiko:video-model');
+  if (pagePanel === 'video') {
+    const videoTool = params.get('tool') || videoHandoff?.tool || 'text';
+    const videoModel = params.get('model') || videoHandoff?.modelId;
+    switchVideoTool(videoTool);
+    if (videoModel) selectVideoModel(videoModel, videoTool);
+  }
+  const editHandoff = readPageHandoff('raiko:edit-model');
+  if (pagePanel === 'edit') {
+    const editModel = params.get('model') || editHandoff?.modelId;
+    if (editModel) selectEditModel(editModel, editHandoff?.resetWorkspace ?? true);
+  }
+  if (pagePanel === 'upscale') {
+    const type = params.get('type');
+    if (type) openUpscaler(type);
+  }
+  if (pagePanel === 'explore-gallery') {
+    const galleryKey = params.get('gallery');
+    if (galleryKey) openModelGalleryPage(galleryKey);
+  }
 
   if (authed) {
     await Promise.all([
       loadModels(),
       refreshCredits(),
-      loadChatHistory(),
-      loadDashboardChats(),
+      shouldInitChat(pagePanel) ? loadChatHistory() : Promise.resolve(),
+      pagePanel === 'dashboard' ? loadDashboardChats() : Promise.resolve(),
     ]);
-    selectModel(State.currentModel, State.currentModelName);
+    if (shouldInitChat(pagePanel)) selectModel(State.currentModel, State.currentModelName);
     setInterval(refreshCredits, 60000);
   } else {
     loadModels().catch(() => {});

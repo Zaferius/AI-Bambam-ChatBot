@@ -909,6 +909,20 @@ from fastapi.responses import FileResponse
 import pathlib
 
 FRONTEND_DIR = pathlib.Path(__file__).parent.parent / "frontend"
+FRONTEND_PAGE_ALIASES = {
+    "explore": "index.html",
+    "image": "image.html",
+    "video": "video.html",
+    "edit": "edit.html",
+    "restyler": "restyler.html",
+    "content-machine": "content-machine.html",
+    "upscale": "upscale.html",
+    "expand": "expand.html",
+    "angles": "angles.html",
+    "shots": "shots.html",
+    "media": "media.html",
+    "explore-gallery": "explore-gallery.html",
+}
 
 
 @app.get("/")
@@ -921,6 +935,23 @@ async def serve_html(filename: str):
     filepath = FRONTEND_DIR / f"{filename}.html"
     if filepath.exists():
         return FileResponse(filepath)
+    return JSONResponse({"error": "Not found"}, status_code=404)
+
+
+@app.get("/{page_name}")
+async def serve_frontend_page_alias(page_name: str):
+    html_file = FRONTEND_PAGE_ALIASES.get(page_name)
+    if html_file:
+        return FileResponse(FRONTEND_DIR / html_file)
+
+    static_file = FRONTEND_DIR / page_name
+    if static_file.is_file():
+        return FileResponse(static_file)
+
+    root_static_file = FRONTEND_DIR.parent / page_name
+    if root_static_file.is_file():
+        return FileResponse(root_static_file)
+
     return JSONResponse({"error": "Not found"}, status_code=404)
 
 

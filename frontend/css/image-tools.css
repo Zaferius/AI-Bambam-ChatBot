@@ -1,0 +1,102 @@
+/* Right: info */
+.gp-info {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 28px 24px 24px;
+  overflow-y: auto;
+}
+.gp-info-top {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.gp-badge-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.gp-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 10px;
+  border: 2px solid;
+  border-radius: 2px;
+}
+.gp-badge--model {
+  background: var(--yellow);
+  color: var(--black);
+  border-color: var(--yellow);
+}
+.gp-badge--res {
+  background: transparent;
+  color: var(--gray-lt, #C0BEB8);
+  border-color: #333;
+}
+.gp-section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #555;
+}
+.gp-prompt {
+  font-size: 13px;
+  line-height: 1.65;
+  color: #D0CEC8;
+  font-family: 'Space Grotesk', sans-serif;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 6px;
+  word-break: break-word;
+}
+.gp-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 24px;
+}
+.gp-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 11px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'Space Grotesk', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-radius: 2px;
+  border: 2px solid;
+  cursor: pointer;
+  text-decoration: none;
+  transition: box-shadow 0.12s, transform 0.12s;
+}
+.gp-action-btn--primary {
+  background: var(--yellow);
+  color: var(--black);
+  border-color: var(--yellow);
+  box-shadow: 3px 3px 0 var(--black);
+}
+.gp-action-btn--primary:hover {
+  transform: translate(-1px,-1px);
+  box-shadow: 5px 5px 0 var(--black);
+}
+.gp-action-btn--secondary {
+  background: transparent;
+  color: #D0CEC8;
+  border-color: #333;
+  box-shadow: 3px 3px 0 #222;
+}
+.gp-action-btn--secondary:hover {
+  border-color: #555;
+  transform: translate(-1px,-1px);
+  box-shadow: 5px 5px 0 #222;
+}
