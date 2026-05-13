@@ -3922,14 +3922,12 @@ function bindEvents() {
     if (sel) { sel.value = chip.dataset.style; sel.dispatchEvent(new Event('change')); }
   });
 
-  // Motion preset cards → fill video prompt
+  // Motion preset cards → visual selection only
   document.getElementById('motion-presets-grid')?.addEventListener('click', (e) => {
     const card = e.target.closest('.motion-preset-card');
     if (!card) return;
     document.querySelectorAll('#motion-presets-grid .motion-preset-card').forEach(c => c.classList.remove('active'));
     card.classList.add('active');
-    const promptEl = document.getElementById('video-prompt');
-    if (promptEl && card.dataset.preset) promptEl.value = card.dataset.preset;
   });
 
   // Edit panel model picker dropdown

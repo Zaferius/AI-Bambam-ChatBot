@@ -963,12 +963,12 @@ body { background: var(--bg); }
   transform: translate(-1px, -1px);
 }
 
-.navbar-user-trigger--guest .user-name {
+.navbar-user-trigger.navbar-user-trigger--guest .user-name {
   color: var(--black);
   font-weight: 800;
 }
 
-.navbar-user-trigger--guest .user-avatar {
+.navbar-user-trigger.navbar-user-trigger--guest .user-avatar {
   background: var(--black);
   color: var(--yellow);
 }
