@@ -113,6 +113,12 @@
           else navigateToPanelPage('upscale', { type: item.dataset.upscaleEntry || 'auto' });
         } else if (panelId === 'restyler') {
           switchPanel('restyler');
+        } else if (panelId === 'audio') {
+          if (!samePanelPage('audio')) {
+            navigateToPanelPage('audio');
+            return;
+          }
+          switchPanel('audio');
         } else if (['expand', 'angles', 'shots'].includes(panelId)) {
           switchPanel(panelId);
         }

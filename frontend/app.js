@@ -186,6 +186,10 @@ function shouldInitRestyler(pagePanel) {
   return pagePanel === 'restyler';
 }
 
+function shouldInitAudio(pagePanel) {
+  return pagePanel === 'audio';
+}
+
 function shouldInitChat(pagePanel) {
   return pagePanel === 'dashboard' && document.getElementById('chat-textarea');
 }
@@ -205,6 +209,7 @@ function initializePageModules(pagePanel) {
     initContentMachineUI();
   }
   if (shouldInitRestyler(pagePanel)) initRestylerPanel();
+  if (shouldInitAudio(pagePanel)) window.RAIKO_PAGE_BINDERS?.audio?.init?.();
 }
 
 /* ══════════════════════════════════════════════════════════

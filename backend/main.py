@@ -913,6 +913,7 @@ FRONTEND_PAGE_ALIASES = {
     "explore": "index.html",
     "image": "image.html",
     "video": "video.html",
+    "audio": "audio.html",
     "edit": "edit.html",
     "restyler": "restyler.html",
     "content-machine": "content-machine.html",

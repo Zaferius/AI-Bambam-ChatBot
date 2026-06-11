@@ -207,6 +207,18 @@ const API = {
         }),
       }),
 
+    generateAudio: (model, prompt, duration = '30', options = {}) =>
+      apiFetch('/ai/generate', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'audio',
+          model,
+          prompt,
+          duration,
+          options: options.extra || {},
+        }),
+      }),
+
   },
 
   // ── One Click Content Machine ────────────────────────────────────────────

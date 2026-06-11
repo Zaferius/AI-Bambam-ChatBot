@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Raiko AI: Professional Audio Generation</title>
+  <meta name="description" content="Raiko AI audio workspace for prompt-based music and audio generation." />
+  <meta name="theme-color" content="#0A0A0A" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png" />
+  <link rel="shortcut icon" href="favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+  <link rel="manifest" href="site.webmanifest" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/main.css?v=20260514a" />
+</head>
+<body data-page="audio">
+
+<div id="auth-gate" class="auth-gate hidden">
+  <div class="auth-gate-content">
+    <div class="auth-logo">
+      <div class="logo-orb">
+        <img src="raiko-logo-trans.png" alt="Raiko" class="logo-img-inner" />
+      </div>
+      <span>Raiko</span>
+    </div>
+    <p class="auth-gate-sub">Please <a href="login.html">sign in</a> to continue.</p>
+  </div>
+</div>
+
+<div id="app" class="app-shell hidden">
+
+  <!-- SHARED-SHELL:START navbar — edit here, then run tools/sync_frontend_shell.py -->
+  <nav class="top-navbar" id="top-navbar">
+    <div class="navbar-brand">
+      <div class="logo-orb navbar-orb">
+        <img src="raiko-logo-trans.png" alt="Raiko" class="logo-img-inner" />
+      </div>
+    </div>
+
+    <div class="navbar-vdivider"></div>
+
+    <div class="navbar-nav" id="sidebar-nav">
+      <button class="nav-item" data-panel="dashboard" id="nav-dashboard">Explore</button>
+
+      <div class="nav-mega-wrap">
+        <button class="nav-item" data-panel="image" id="nav-image">Image</button>
+        <div class="nav-mega-drop">
+          <div class="nmd-col">
+            <div class="nmd-group-label">Tools</div>
+            <button class="nmd-item" data-panel="image" data-image-tool="create">
+              <span class="nmd-icon">✦</span>
+              <div class="nmd-body"><span class="nmd-name">Create Image</span><span class="nmd-desc">Open image generation workspace</span></div>
+            </button>
+            <button class="nmd-item" data-panel="expand">
+              <span class="nmd-icon">↔</span>
+              <div class="nmd-body"><span class="nmd-name">Expand Image</span><span class="nmd-desc">Extend composition by aspect ratio</span></div>
+            </button>
+            <button class="nmd-item" data-panel="angles">
+              <span class="nmd-icon">◢</span>
+              <div class="nmd-body"><span class="nmd-name">Angles 2.0</span><span class="nmd-desc">Generate alternate camera viewpoints</span></div>
+            </button>
+            <button class="nmd-item" data-panel="shots">
+              <span class="nmd-icon">▣</span>
+              <div class="nmd-body"><span class="nmd-name">Shots</span><span class="nmd-desc">Build multi-shot image packs</span></div>
+            </button>
+            <button class="nmd-item" data-panel="restyler">
+              <span class="nmd-icon">🪄</span>
+              <div class="nmd-body"><span class="nmd-name">Restyler</span><span class="nmd-desc">Open portrait restyler catalog</span></div>
+            </button>
+            <button class="nmd-item" data-panel="upscale" data-upscale-entry="image">
+              <span class="nmd-icon">⬈</span>
+              <div class="nmd-body"><span class="nmd-name">Image Upscale</span><span class="nmd-desc">SeedVR · AI image upscaler · 8⚡</span></div>
+            </button>
+          </div>
+          <div class="nmd-col">
+            <div class="nmd-group-label">Models</div>
+            <button class="nmd-item" data-model="fal-ai/flux/schnell" data-panel="image"><span class="nmd-icon">⚡</span><div class="nmd-body"><span class="nmd-name">Flux Schnell</span><span class="nmd-desc">Fast generation</span></div></button>
+            <button class="nmd-item" data-model="fal-ai/flux/dev" data-panel="image"><span class="nmd-icon">✦</span><div class="nmd-body"><span class="nmd-name">Flux Dev</span><span class="nmd-desc">High quality output</span></div></button>
+            <button class="nmd-item" data-model="fal-ai/flux-pro" data-panel="image"><span class="nmd-icon">★</span><div class="nmd-body"><span class="nmd-name">Flux Pro</span><span class="nmd-desc">Best results</span></div></button>
+            <button class="nmd-item" data-model="fal-ai/flux-2-pro" data-panel="image"><span class="nmd-icon">★★</span><div class="nmd-body"><span class="nmd-name">Flux 2 Pro</span><span class="nmd-desc">Latest generation</span></div></button>
+            <div class="nmd-group-label">OpenAI</div>
+            <button class="nmd-item" data-model="openai/gpt-image-2" data-panel="image"><span class="nmd-icon">◈</span><div class="nmd-body"><span class="nmd-name">GPT Image 2</span><span class="nmd-desc">4K near-perfect text</span></div></button>
+            <button class="nmd-item" data-model="fal-ai/nano-banana" data-panel="image"><span class="nmd-icon">🍌</span><div class="nmd-body"><span class="nmd-name">Nano Banana Flash</span><span class="nmd-desc">Gemini 2.5 Flash</span></div></button>
+            <button class="nmd-item" data-model="fal-ai/nano-banana-2" data-panel="image"><span class="nmd-icon">🍌</span><div class="nmd-body"><span class="nmd-name">Nano Banana 2</span><span class="nmd-desc">Gemini 3.1 Flash</span></div></button>
+            <button class="nmd-item" data-model="fal-ai/nano-banana-pro" data-panel="image"><span class="nmd-icon">🍌</span><div class="nmd-body"><span class="nmd-name">Nano Banana Pro</span><span class="nmd-desc">Gemini 3 Pro</span></div></button>
+            <div class="nmd-group-label">Seedream (Bytedance)</div>
+            <button class="nmd-item" data-model="fal-ai/bytedance/seedream/v4/text-to-image" data-panel="image"><span class="nmd-icon">🌱</span><div class="nmd-body"><span class="nmd-name">Seedream 4</span><span class="nmd-desc">Bytedance · 4K quality</span></div></button>
+            <button class="nmd-item" data-model="fal-ai/bytedance/seedream/v4.5/text-to-image" data-panel="image"><span class="nmd-icon">🌱</span><div class="nmd-body"><span class="nmd-name">Seedream 4.5</span><span class="nmd-desc">Bytedance · 4K quality</span></div></button>
+            <button class="nmd-item" data-model="fal-ai/bytedance/seedream/v5/lite/text-to-image" data-panel="image"><span class="nmd-icon">🌱</span><div class="nmd-body"><span class="nmd-name">Seedream 5 Lite</span><span class="nmd-desc">Bytedance · 2-3K</span></div></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-mega-wrap">
+        <button class="nav-item" data-panel="video" id="nav-video">Video</button>
+        <div class="nav-mega-drop">
+          <div class="nmd-col">
+            <div class="nmd-group-label">Tools</div>
+            <div class="nmd-subgroup-label">Create Video</div>
+            <button class="nmd-item" data-panel="video" data-video-tool="text" data-video-action="create"><span class="nmd-icon">🎬</span><div class="nmd-body"><span class="nmd-name">Text to Video</span><span class="nmd-desc">Switch to text-to-video generator</span></div></button>
+            <button class="nmd-item" data-panel="video" data-video-tool="image" data-video-action="upscale"><span class="nmd-icon">🖼</span><div class="nmd-body"><span class="nmd-name">Image to Video</span><span class="nmd-desc">Switch to image-to-video generator</span></div></button>
+            <button class="nmd-item" data-panel="upscale" data-upscale-entry="video"><span class="nmd-icon">⤢</span><div class="nmd-body"><span class="nmd-name">Video Upscale</span><span class="nmd-desc">SeedVR · AI video upscaler · 18⚡</span></div></button>
+          </div>
+          <div class="nmd-col">
+            <div class="nmd-group-label">Models</div>
+            <button class="nmd-item" data-model="fal-ai/kling-video/v1/standard/text-to-video" data-panel="video" data-video-tool="text"><span class="nmd-icon">🎬</span><div class="nmd-body"><span class="nmd-name">Kling v1 Standard</span><span class="nmd-desc">Cinematic</span></div></button>
+            <button class="nmd-item" data-model="fal-ai/kling-video/v1/pro/text-to-video" data-panel="video" data-video-tool="text"><span class="nmd-icon">🎬</span><div class="nmd-body"><span class="nmd-name">Kling v1 Pro</span><span class="nmd-desc">Professional</span></div></button>
+            <button class="nmd-item" data-model="fal-ai/kling-video/v3/pro/text-to-video" data-panel="video" data-video-tool="text"><span class="nmd-icon">🎬</span><div class="nmd-body"><span class="nmd-name">Kling v3 Pro</span><span class="nmd-desc">Latest · 4K</span></div></button>
+            <div class="nmd-group-label">Seedance (Bytedance)</div>
+            <button class="nmd-item" data-model="fal-ai/bytedance/seedance/v1.5/pro/text-to-video" data-panel="video" data-video-tool="text"><span class="nmd-icon">🌱</span><div class="nmd-body"><span class="nmd-name">Seedance 1.5 Pro</span><span class="nmd-desc">Bytedance</span></div></button>
+            <button class="nmd-item" data-model="fal-ai/bytedance/seedance-2.0/text-to-video" data-panel="video" data-video-tool="text"><span class="nmd-icon">🌱</span><div class="nmd-body"><span class="nmd-name">Seedance 2.0</span><span class="nmd-desc">Bytedance · latest</span></div></button>
+            <button class="nmd-item" data-model="fal-ai/sora-2/text-to-video" data-panel="video" data-video-tool="text"><span class="nmd-icon">◈</span><div class="nmd-body"><span class="nmd-name">Sora 2</span><span class="nmd-desc">OpenAI</span></div></button>
+            <button class="nmd-item" data-model="fal-ai/veo3.1" data-panel="video" data-video-tool="text"><span class="nmd-icon">▲</span><div class="nmd-body"><span class="nmd-name">Veo 3.1</span><span class="nmd-desc">Google</span></div></button>
+            <button class="nmd-item" data-model="xai/grok-imagine-video/text-to-video" data-panel="video" data-video-tool="text"><span class="nmd-icon">✦</span><div class="nmd-body"><span class="nmd-name">Grok Video</span><span class="nmd-desc">xAI</span></div></button>
+            <button class="nmd-item" data-model="fal-ai/wan/v2.7/text-to-video" data-panel="video" data-video-tool="text"><span class="nmd-icon">🌊</span><div class="nmd-body"><span class="nmd-name">WAN v2.7</span><span class="nmd-desc">Open source</span></div></button>
+            <button class="nmd-item" data-model="fal-ai/stable-video" data-panel="video" data-video-tool="text"><span class="nmd-icon">▶</span><div class="nmd-body"><span class="nmd-name">Stable Video</span><span class="nmd-desc">Stable Diffusion</span></div></button>
+            <div class="nmd-group-label">Image to Video</div>
+            <button class="nmd-item" data-model="fal-ai/kling-video/v1/standard/image-to-video" data-panel="video" data-video-tool="image"><span class="nmd-icon">🖼</span><div class="nmd-body"><span class="nmd-name">Kling Standard</span><span class="nmd-desc">Animate images</span></div></button>
+            <button class="nmd-item" data-model="fal-ai/kling-video/v1/pro/image-to-video" data-panel="video" data-video-tool="image"><span class="nmd-icon">🖼</span><div class="nmd-body"><span class="nmd-name">Kling Pro</span><span class="nmd-desc">Pro animation</span></div></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-mega-wrap">
+        <button class="nav-item" data-panel="edit" id="nav-edit">Edit</button>
+        <div class="nav-mega-drop">
+          <div class="nmd-col">
+            <div class="nmd-group-label">Tools</div>
+            <button class="nmd-item" data-panel="edit" data-edit-tool="create">
+              <span class="nmd-icon">✦</span>
+              <div class="nmd-body"><span class="nmd-name">Edit Image</span><span class="nmd-desc">Open image edit workspace</span></div>
+            </button>
+            <button class="nmd-item" data-panel="edit" data-edit-tool="bg-remove" data-model="fal-ai/bria/background/remove">
+              <span class="nmd-icon">✂</span>
+              <div class="nmd-body"><span class="nmd-name">BG Remove</span><span class="nmd-desc">BRIA · no prompt needed · 3⚡</span></div>
+            </button>
+            <button class="nmd-item" data-panel="upscale" data-upscale-entry="image" data-model="fal-ai/seedvr/upscale/image">
+              <span class="nmd-icon">⤢</span>
+              <div class="nmd-body"><span class="nmd-name">Image Upscale</span><span class="nmd-desc">SeedVR · no prompt needed · 8⚡</span></div>
+            </button>
+          </div>
+          <div class="nmd-col">
+            <div class="nmd-group-label">Models</div>
+            <button class="nmd-item" data-model="fal-ai/nano-banana/edit" data-panel="edit">
+              <span class="nmd-icon">🍌</span>
+              <div class="nmd-body"><span class="nmd-name">NB Flash Edit</span><span class="nmd-desc">Gemini Flash edit · 4⚡</span></div>
+            </button>
+            <button class="nmd-item" data-model="fal-ai/nano-banana-2/edit" data-panel="edit">
+              <span class="nmd-icon">🍌</span>
+              <div class="nmd-body"><span class="nmd-name">NB 2 Edit</span><span class="nmd-desc">Gemini 3.1 Flash edit · 5⚡</span></div>
+            </button>
+            <button class="nmd-item" data-model="fal-ai/nano-banana-pro/edit" data-panel="edit">
+              <span class="nmd-icon">🍌</span>
+              <div class="nmd-body"><span class="nmd-name">NB Pro Edit</span><span class="nmd-desc">Gemini 3 Pro edit · 7⚡</span></div>
+            </button>
+            <div class="nmd-group-label">OpenAI</div>
+            <button class="nmd-item" data-model="openai/gpt-image-2/edit" data-panel="edit">
+              <span class="nmd-icon">◈</span>
+              <div class="nmd-body"><span class="nmd-name">GPT Image 2 Edit</span><span class="nmd-desc">OpenAI precision edit · 12⚡</span></div>
+            </button>
+            <div class="nmd-group-label">Seedream (Bytedance)</div>
+            <button class="nmd-item" data-model="fal-ai/bytedance/seedream/v4.5/edit" data-panel="edit">
+              <span class="nmd-icon">🌱</span>
+              <div class="nmd-body"><span class="nmd-name">Seedream 4.5 Edit</span><span class="nmd-desc">Bytedance 4K edit · 7⚡</span></div>
+            </button>
+            <div class="nmd-group-label">xAI</div>
+            <button class="nmd-item" data-model="xai/grok-imagine-image/edit" data-panel="edit">
+              <span class="nmd-icon">✦</span>
+              <div class="nmd-body"><span class="nmd-name">Grok Imagine Edit</span><span class="nmd-desc">xAI image edit · 8⚡</span></div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-mega-wrap">
+        <button class="nav-item" data-panel="apps" id="nav-apps">Apps</button>
+        <div class="nav-mega-drop">
+          <div class="nmd-col">
+            <div class="nmd-group-label">Creative Apps</div>
+            <button class="nmd-item" data-panel="expand">
+              <span class="nmd-icon">↔</span>
+              <div class="nmd-body"><span class="nmd-name">Expand Image</span><span class="nmd-desc">Extend composition by aspect ratio</span></div>
+            </button>
+            <button class="nmd-item" data-panel="angles">
+              <span class="nmd-icon">◢</span>
+              <div class="nmd-body"><span class="nmd-name">Angles 2.0</span><span class="nmd-desc">Generate alternate camera viewpoints</span></div>
+            </button>
+            <button class="nmd-item" data-panel="shots">
+              <span class="nmd-icon">▣</span>
+              <div class="nmd-body"><span class="nmd-name">Shots</span><span class="nmd-desc">Build multi-shot image packs</span></div>
+            </button>
+            <button class="nmd-item" data-panel="restyler">
+              <span class="nmd-icon">🪄</span>
+              <div class="nmd-body"><span class="nmd-name">Restyler</span><span class="nmd-desc">Portrait preset transformations</span></div>
+            </button>
+            <button class="nmd-item" data-panel="upscale" data-upscale-entry="image">
+              <span class="nmd-icon">⬈</span>
+              <div class="nmd-body"><span class="nmd-name">Upscale</span><span class="nmd-desc">Image and video upscaler workspace</span></div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="navbar-right">
+      <button class="pro-pill" id="btn-buy-credits">PRO</button>
+      <div class="navbar-user-wrap" id="navbar-user-wrap">
+        <button class="navbar-user-trigger" id="navbar-user-trigger" aria-expanded="false">
+          <span class="navbar-user-avatar" id="navbar-user-avatar">R</span>
+          <span class="navbar-user-name" id="navbar-user-name">Raiko User</span>
+        </button>
+        <div class="user-dropdown hidden" id="user-dropdown">
+          <button class="user-dropdown-item" id="udrop-my-media">My Media</button>
+          <button class="user-dropdown-item" id="udrop-premium-btn">Upgrade to PRO</button>
+          <button class="user-dropdown-item user-dropdown-item--danger" id="logout-btn">Log out</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+  <!-- SHARED-SHELL:END -->
+
+  <main class="main-area" id="main-area">
+    <section class="panel active" id="panel-audio" data-page-panel="audio">
+      <div class="audio-layout">
+      <aside class="audio-sidebar">
+        <div class="audio-sidebar-head">
+          <p class="audio-kicker">ElevenLabs Audio Suite</p>
+          <h1>Build speech, music, and voice transformations</h1>
+          <p class="audio-subcopy">Three dedicated workflows live inside one brutalist audio workspace: Voiceover, Music Creator, and Voice Changer.</p>
+        </div>
+
+        <div class="img-tool-picker audio-tool-picker" id="audio-tool-picker">
+          <button class="img-tool-card active" data-audio-tool="voiceover"><span>Voiceover</span></button>
+          <button class="img-tool-card" data-audio-tool="music"><span>Music Creator</span></button>
+          <button class="img-tool-card" data-audio-tool="voice-changer"><span>Voice Changer</span></button>
+        </div>
+
+        <div class="audio-sidebar-panel active" id="audio-panel-voiceover">
+          <label class="audio-field-label" for="audio-voiceover-voice">Voice</label>
+          <select id="audio-voiceover-voice" class="audio-select">
+            <option value="Rachel">Rachel</option>
+            <option value="Aria" selected>Aria</option>
+            <option value="Adam">Adam</option>
+            <option value="Bella">Bella</option>
+          </select>
+          <div class="audio-inline-grid">
+            <div>
+              <label class="audio-field-label" for="audio-voiceover-stability">Stability</label>
+              <input id="audio-voiceover-stability" class="audio-range" type="range" min="0" max="1" step="0.05" value="0.5" />
+              <div class="audio-range-meta"><span>Controlled</span><strong id="audio-voiceover-stability-val">0.50</strong></div>
+            </div>
+            <div>
+              <label class="audio-field-label" for="btn-audio-language-modal">Language</label>
+              <button type="button" id="btn-audio-language-modal" class="audio-select audio-language-trigger">
+                <span id="audio-language-flag">🇺🇸</span>
+                <strong id="audio-language-name">English</strong>
+              </button>
+            </div>
+          </div>
+          <label class="audio-field-label" for="audio-voiceover-normalization">Text normalization</label>
+          <select id="audio-voiceover-normalization" class="audio-select">
+            <option value="auto" selected>Auto</option>
+            <option value="on">On</option>
+            <option value="off">Off</option>
+          </select>
+          <label class="audio-check audio-check--compact">
+            <input id="audio-voiceover-timestamps" type="checkbox" />
+            <span>Return timestamps</span>
+          </label>
+          <div class="audio-meta-row">
+            <div class="audio-chip audio-chip--cost">Cost <strong id="audio-voiceover-cost-label">8⚡</strong></div>
+          </div>
+          <label class="audio-field-label" for="audio-voiceover-text">Script</label>
+          <textarea id="audio-voiceover-text" class="audio-prompt" placeholder="Write the full narration, hook, ad read, or product voiceover in English."></textarea>
+          <button id="btn-generate-voiceover" class="audio-generate-btn">Generate Voiceover</button>
+          <div id="audio-voiceover-status" class="audio-status hidden">Generating…</div>
+        </div>
+
+        <div class="audio-sidebar-panel" id="audio-panel-music">
+          <label class="audio-field-label" for="audio-music-format">Output format</label>
+          <select id="audio-music-format" class="audio-select">
+            <option value="mp3_44100_128" selected>MP3 44.1kHz · 128kbps</option>
+            <option value="mp3_44100_192">MP3 44.1kHz · 192kbps</option>
+            <option value="opus_48000_128">Opus 48kHz · 128kbps</option>
+            <option value="pcm_44100">PCM 44.1kHz</option>
+          </select>
+          <label class="audio-field-label" for="audio-music-length">Length</label>
+          <select id="audio-music-length" class="audio-select">
+            <option value="15000">15 sec</option>
+            <option value="30000" selected>30 sec</option>
+            <option value="45000">45 sec</option>
+            <option value="60000">60 sec</option>
+            <option value="90000">90 sec</option>
+          </select>
+          <div class="audio-toggle-grid">
+            <label class="audio-check"><input id="audio-music-instrumental" type="checkbox" /><span>Force instrumental</span></label>
+            <label class="audio-check"><input id="audio-music-respect-sections" type="checkbox" checked /><span>Respect section durations</span></label>
+          </div>
+          <div class="audio-meta-row">
+            <div class="audio-chip audio-chip--cost">Cost <strong id="audio-music-cost-label">14⚡</strong></div>
+          </div>
+          <label class="audio-field-label" for="audio-music-prompt">Music prompt</label>
+          <textarea id="audio-music-prompt" class="audio-prompt" placeholder="Describe genre, instrumentation, themes, emotional arc, pacing, and whether vocals should appear."></textarea>
+          <button id="btn-generate-music" class="audio-generate-btn">Generate Music</button>
+          <div id="audio-music-status" class="audio-status hidden">Generating…</div>
+        </div>
+
+        <div class="audio-sidebar-panel" id="audio-panel-voice-changer">
+          <div class="audio-upload-zone" id="audio-change-upload-zone">
+            <input type="file" id="audio-change-input" accept="audio/*" class="hidden" />
+            <button type="button" id="btn-audio-change-upload" class="audio-upload-btn">Upload Source Audio</button>
+            <p class="audio-upload-note">MP3, WAV, M4A or other browser-supported audio files</p>
+            <audio id="audio-change-preview" class="audio-upload-preview hidden" controls></audio>
+          </div>
+          <label class="audio-field-label" for="audio-change-voice">Target voice</label>
+          <select id="audio-change-voice" class="audio-select">
+            <option value="Rachel">Rachel</option>
+            <option value="Aria" selected>Aria</option>
+            <option value="Adam">Adam</option>
+            <option value="Bella">Bella</option>
+          </select>
+          <label class="audio-field-label" for="audio-change-format">Output format</label>
+          <select id="audio-change-format" class="audio-select">
+            <option value="mp3_44100_128" selected>MP3 44.1kHz · 128kbps</option>
+            <option value="mp3_44100_192">MP3 44.1kHz · 192kbps</option>
+            <option value="opus_48000_128">Opus 48kHz · 128kbps</option>
+            <option value="pcm_44100">PCM 44.1kHz</option>
+          </select>
+          <div class="audio-inline-grid">
+            <div>
+              <label class="audio-field-label" for="audio-change-seed">Seed</label>
+              <input id="audio-change-seed" class="audio-select audio-text-input" type="number" placeholder="Optional" />
+            </div>
+            <label class="audio-check audio-check--boxed"><input id="audio-change-denoise" type="checkbox" /><span>Remove background noise</span></label>
+          </div>
+          <div class="audio-meta-row">
+            <div class="audio-chip audio-chip--cost">Cost <strong id="audio-change-cost-label">10⚡</strong></div>
+          </div>
+          <button id="btn-generate-voice-change" class="audio-generate-btn">Convert Voice</button>
+          <div id="audio-change-status" class="audio-status hidden">Generating…</div>
+        </div>
+      </aside>
+
+      <section class="audio-main">
+        <div id="audio-empty-state" class="audio-empty-state">
+          <div class="video-expl-hero">
+            <p class="audio-kicker">Workspace</p>
+            <h2>Three audio tools. One focused studio.</h2>
+            <p class="audio-hero-copy">Generate clean voiceovers, compose music from prompts, or transform uploaded recordings with a different ElevenLabs voice.</p>
+          </div>
+          <div class="audio-tip-grid">
+            <article class="audio-tip-card"><strong>Voiceover</strong><span>Scripted narration with voice selection, stability tuning, normalization, and optional timestamps.</span></article>
+            <article class="audio-tip-card"><strong>Music Creator</strong><span>Prompt-based composition with length, format, instrumental mode, and section-duration control.</span></article>
+            <article class="audio-tip-card"><strong>Voice Changer</strong><span>Upload source audio, target a new voice, optionally denoise, and export in the format you need.</span></article>
+          </div>
+        </div>
+        <div id="audio-result-zone" class="audio-result-zone hidden">
+          <div id="audio-result-area" class="audio-result-area"></div>
+        </div>
+      </section>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <div id="audio-language-modal" class="audio-language-modal hidden">
+    <div class="audio-language-dialog">
+      <button type="button" class="audio-language-close" id="audio-language-close">×</button>
+      <div class="audio-language-head">
+        <div>
+          <h3>Choose Language</h3>
+          <p>Pick the language your voiceover audio will be generated in.</p>
+        </div>
+        <div class="audio-language-orbs">
+          <span class="audio-lang-orb audio-lang-orb--us">🇺🇸</span>
+          <span class="audio-lang-orb audio-lang-orb--main">🎙️</span>
+          <span class="audio-lang-orb audio-lang-orb--cn">🇨🇳</span>
+        </div>
+      </div>
+      <div class="audio-language-grid" id="audio-language-grid">
+        <button type="button" class="audio-language-card active" data-lang-code="en" data-lang-label="English" data-lang-flag="🇺🇸"><span class="audio-language-card-flag">🇺🇸</span><span class="audio-language-card-name">English</span></button>
+        <button type="button" class="audio-language-card" data-lang-code="zh" data-lang-label="Chinese" data-lang-flag="🇨🇳"><span class="audio-language-card-flag">🇨🇳</span><span class="audio-language-card-name">Chinese</span></button>
+        <button type="button" class="audio-language-card" data-lang-code="fr" data-lang-label="French" data-lang-flag="🇫🇷"><span class="audio-language-card-flag">🇫🇷</span><span class="audio-language-card-name">French</span></button>
+        <button type="button" class="audio-language-card" data-lang-code="hi" data-lang-label="Hindi" data-lang-flag="🇮🇳"><span class="audio-language-card-flag">🇮🇳</span><span class="audio-language-card-name">Hindi</span></button>
+        <button type="button" class="audio-language-card" data-lang-code="it" data-lang-label="Italian" data-lang-flag="🇮🇹"><span class="audio-language-card-flag">🇮🇹</span><span class="audio-language-card-name">Italian</span></button>
+        <button type="button" class="audio-language-card" data-lang-code="ja" data-lang-label="Japanese" data-lang-flag="🇯🇵"><span class="audio-language-card-flag">🇯🇵</span><span class="audio-language-card-name">Japanese</span></button>
+        <button type="button" class="audio-language-card" data-lang-code="ko" data-lang-label="Korean" data-lang-flag="🇰🇷"><span class="audio-language-card-flag">🇰🇷</span><span class="audio-language-card-name">Korean</span></button>
+        <button type="button" class="audio-language-card" data-lang-code="pt" data-lang-label="Portuguese" data-lang-flag="🇵🇹"><span class="audio-language-card-flag">🇵🇹</span><span class="audio-language-card-name">Portuguese</span></button>
+        <button type="button" class="audio-language-card" data-lang-code="ru" data-lang-label="Russian" data-lang-flag="🇷🇺"><span class="audio-language-card-flag">🇷🇺</span><span class="audio-language-card-name">Russian</span></button>
+        <button type="button" class="audio-language-card" data-lang-code="tr" data-lang-label="Turkish" data-lang-flag="🇹🇷"><span class="audio-language-card-flag">🇹🇷</span><span class="audio-language-card-name">Turkish</span></button>
+        <button type="button" class="audio-language-card" data-lang-code="es" data-lang-label="Spanish" data-lang-flag="🇪🇸"><span class="audio-language-card-flag">🇪🇸</span><span class="audio-language-card-name">Spanish</span></button>
+        <button type="button" class="audio-language-card" data-lang-code="de" data-lang-label="German" data-lang-flag="🇩🇪"><span class="audio-language-card-flag">🇩🇪</span><span class="audio-language-card-name">German</span></button>
+        <button type="button" class="audio-language-card" data-lang-code="ar" data-lang-label="Arabic" data-lang-flag="🇸🇦"><span class="audio-language-card-flag">🇸🇦</span><span class="audio-language-card-name">Arabic</span></button>
+        <button type="button" class="audio-language-card" data-lang-code="pl" data-lang-label="Polish" data-lang-flag="🇵🇱"><span class="audio-language-card-flag">🇵🇱</span><span class="audio-language-card-name">Polish</span></button>
+        <button type="button" class="audio-language-card" data-lang-code="id" data-lang-label="Indonesian" data-lang-flag="🇮🇩"><span class="audio-language-card-flag">🇮🇩</span><span class="audio-language-card-name">Indonesian</span></button>
+        <button type="button" class="audio-language-card" data-lang-code="fil" data-lang-label="Filipino" data-lang-flag="🇵🇭"><span class="audio-language-card-flag">🇵🇭</span><span class="audio-language-card-name">Filipino</span></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+  <script src="routes.js"></script>
+  <script src="shell.js"></script>
+  <script src="page-audio.js"></script>
+  <script src="app.js"></script>
+</div>
+</body>
+</html>

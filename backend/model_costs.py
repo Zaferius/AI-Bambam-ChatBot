@@ -89,6 +89,10 @@ FAL_COSTS: dict[str, float] = {
     "fal-ai/kling-video/v1/standard/image-to-video":             15.0,   # ~$0.225 / 5s
     "fal-ai/kling-video/v1/pro/image-to-video":                  35.0,   # proxy from nearest v1.5 pro pricing
     "fal-ai/seedvr/upscale/video":                               15.0,   # conservative fixed launch value
+    # Audio generation
+    "fal-ai/elevenlabs/tts/eleven-v3":                            8.0,
+    "fal-ai/elevenlabs/music":                                   14.0,
+    "fal-ai/elevenlabs/voice-changer":                           10.0,
     # Fallback
     "default":                                   3.0,
 }

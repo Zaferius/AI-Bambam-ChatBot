@@ -270,6 +270,55 @@ class FalAIClient:
             return video.get("url", "")
         return str(video)
 
+    async def generate_audio(
+        self,
+        model: str,
+        prompt: str,
+        duration: str = "30",
+        extra: Optional[dict] = None,
+    ) -> str:
+        """Generate audio from text and return the URL."""
+        model = model or "fal-ai/elevenlabs/music"
+        extra = extra or {}
+        if model == "fal-ai/elevenlabs/tts/eleven-v3":
+            payload = {
+                "text": extra.get("text", prompt),
+                "voice": extra.get("voice", "Rachel"),
+                "stability": extra.get("stability", 0.5),
+                "timestamps": extra.get("timestamps", False),
+                "language_code": extra.get("language_code", "en"),
+                "apply_text_normalization": extra.get("apply_text_normalization", "auto"),
+            }
+        elif model == "fal-ai/elevenlabs/voice-changer":
+            payload = {
+                "audio_url": extra.get("audio_url", ""),
+                "voice": extra.get("voice", "Rachel"),
+                "output_format": extra.get("output_format", "mp3_44100_128"),
+                "remove_background_noise": extra.get("remove_background_noise", False),
+            }
+            if extra.get("seed") is not None:
+                payload["seed"] = extra.get("seed")
+        else:
+            payload = {
+                "prompt": extra.get("prompt", prompt),
+                "music_length_ms": extra.get("music_length_ms"),
+                "force_instrumental": extra.get("force_instrumental", False),
+                "respect_sections_durations": extra.get("respect_sections_durations", True),
+                "output_format": extra.get("output_format", "mp3_44100_128"),
+            }
+            if not payload.get("music_length_ms"):
+                try:
+                    payload["music_length_ms"] = max(3000, min(600000, int(float(duration) * 1000)))
+                except Exception:
+                    payload["music_length_ms"] = 30000
+        if extra:
+            payload.update(extra)
+        result = await self._run(model, payload)
+        audio = result.get("audio") or result.get("file") or result.get("music") or {}
+        if isinstance(audio, dict):
+            return audio.get("url", "")
+        return str(audio)
+
 
 # Module-level singleton (lazy init)
 _fal_client: Optional[FalAIClient] = None

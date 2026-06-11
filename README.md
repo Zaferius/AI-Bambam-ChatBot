@@ -2,7 +2,7 @@
 
 This README is the **source of truth for the current product behavior** so the next AI agent can continue work safely.
 
-Last updated: **2026-05-13 (CSS modularization started + static asset routing hotfix + Explore showcase recovery)**
+Last updated: **2026-05-14 (Audio tab rollout + shared navbar sync + ElevenLabs audio tools + language picker modal)**
 
 ---
 
@@ -28,7 +28,7 @@ Core UX principle: one app shell, **top horizontal navbar** navigation, guest-br
 
 These were intentionally changed and should stay as-is unless explicitly requested:
 
-0. **Navbar nav link order**: **Explore | Image | Video | Edit | Restyler | Content Machine**.
+0. **Navbar nav link order**: **Explore | Image | Video | Audio | Edit | Apps**.
 
 1. **Top navbar** replaces the old left sidebar. Navigation is now a horizontal bar at the top of every page.
 2. **AI Chat removed from visible product UI** — no top navbar entry, no Explore tile, no footer shortcut, and no usable Chat panel in the frontend.
@@ -76,8 +76,11 @@ These were intentionally changed and should stay as-is unless explicitly request
     - Navigation is JS-managed in `frontend/app.js` via `syncFeaturedStripNav()`, `scrollFeaturedStrip(direction)`, and `initFeaturedStripNav()`.
 22. **Video Generate button style**:
     - Text-to-video and image-to-video Generate buttons use yellow background with black text and **no shadow**, including hover state.
-23. **Content Machine panel added**:
-    - New top navbar item: **Content Machine**.
+23. **Content Machine panel hidden from user discovery (temporary)**:
+    - **No top navbar item** for Content Machine.
+    - **No Explore Bottom Tools tile** for Content Machine.
+    - Route mapping for `content` was removed from shared frontend route config so normal panel navigation cannot route into it.
+    - Content Machine implementation files/endpoints remain in the repository but are intentionally not user-discoverable in the frontend.
     - `#panel-content` uses a Video-panel-inspired dark two-column layout: left sidebar controls + right explainer/results area.
     - Left sidebar width matches Video sidebar style (`330px`), dark surface, yellow right border, internal scroll.
     - Right side has Video-style hero/explainer before generation and switches to generated content pack cards after generation.
@@ -121,84 +124,87 @@ These were intentionally changed and should stay as-is unless explicitly request
     - Inside Image navbar mega-dropdown Tools list, a **Restyler** item exists.
     - Clicking it routes directly to `switchPanel('restyler')`.
 30. **Explore Mid Row feature tiles updated**:
-    - The tile grid now includes **Image Restyle**, **Content Machine**, **Image Upscale**, and **Video Upscale**.
+    - The tile grid now includes **Image Restyle**, **Image Upscale**, and **Video Upscale**.
+    - **Content Machine tile removed** from Explore.
     - AI Chat tile was removed.
     - Non-video tiles now use faded random image artwork from `frontend/dashboard-showcase/bottom-tools/`.
     - Video-related tiles now use looped video artwork from `frontend/dashboard-showcase/bottom-tools/s-video1.mp4`.
-31. **Explore Gallery Preview prompt readability fix**:
+31. **Explore layout order updated**:
+    - Section order on Explore is now: **Top Featured Showcase → Bottom Tools tiles → Model showcases**.
+32. **Explore Gallery Preview prompt readability fix**:
     - Long prompts inside `#gallery-preview-overlay` now scroll within the prompt block (`.gp-prompt`) so full prompt text is always readable.
-32. **Explore Featured Showcase Strip includes Restyler card**:
+33. **Explore Featured Showcase Strip includes Restyler card**:
     - Featured strip now includes a 5th card: **Image Restyle**.
     - The Restyler featured card uses assets from `frontend/dashboard-showcase/top-showcase/image-restyle/`.
     - Card media auto-rotates with smooth infinite fade loop in CSS (`.dft-restyle-slide` + `@keyframes dft-restyle-fade`).
-33. **Seedance featured card upgraded to looped preview media**:
+34. **Seedance featured card upgraded to looped preview media**:
     - The Seedance card title is now **Seedance 2.0** with subtitle **TEXT TO VIDEO**.
     - The card cycles through looped videos from `frontend/dashboard-showcase/top-showcase/seedance-explore/`.
-34. **Explore model showcases now have floating `View all` CTA inside each showcase preview area**:
+35. **Explore model showcases now have floating `View all` CTA inside each showcase preview area**:
     - Buttons are positioned on top of showcase media (not between sections).
     - Trigger function: `openModelGalleryPage(key)`.
-35. **`View all` now opens a dedicated Explore Gallery page panel (not modal, not in-place section)**:
+36. **`View all` now opens a dedicated Explore Gallery page panel (not modal, not in-place section)**:
     - New panel: `#panel-explore-gallery`.
     - Back action returns to Explore via `closeModelGalleryPage()` → `switchPanel('dashboard')`.
-36. **Explore Gallery content is data-driven and orientation-aware**:
+37. **Explore Gallery content is data-driven and orientation-aware**:
     - Data source: `window.EXPLORE_MODEL_GALLERIES` in `frontend/explore-data.js`.
     - Items support `shape: 'wide' | 'tall' | 'square'` and render with corresponding classes.
-37. **Explore Gallery layout switched to masonry-style columns with preserved orientation feel**:
+38. **Explore Gallery layout switched to masonry-style columns with preserved orientation feel**:
     - Uses `.emg-grid` column flow and `break-inside: avoid` cards.
     - Avoids rigid grid dead zones / black gaps from track-based CSS grid packing.
-38. **Explore Gallery vertical scrolling fixed**:
+39. **Explore Gallery vertical scrolling fixed**:
     - Dedicated panel `#panel-explore-gallery` explicitly uses `overflow-y: auto`.
-39. **Branding assets updated**:
+40. **Branding assets updated**:
     - Navbar/auth logo image now uses `frontend/raiko-logo-trans.png`.
     - Footer logos now use `frontend/raiko-logo-trans-w.png`.
     - Navbar text label `Raiko` removed; icon-only brand mark remains.
-40. **Favicon stack wired to root assets**:
+41. **Favicon stack wired to root assets**:
     - `frontend/index.html` now links to root `favicon.ico`, `favicon.svg`, `favicon-96x96.png`, `apple-touch-icon.png`, and `site.webmanifest`.
     - `site.webmanifest` updated from placeholder app name/colors to `Raiko` and dark theme colors.
-41. **Pricing system overhauled to safer economics**:
+42. **Pricing system overhauled to safer economics**:
     - Pricing modal supports **Subscriptions** and **Credit Packs** views.
     - Subscription billing supports **Monthly** and **Yearly** toggle states.
     - Current public subscription plans are Basic / Creator / Pro; Studio is hidden in config.
     - Credits and pack pricing were recalibrated conservatively around higher-cost video risk.
-42. **Login page redesigned**:
+43. **Login page redesigned**:
     - `frontend/login.html` now uses the Raiko logo without the yellow boxed orb treatment.
     - Left side uses a subtle yellow dot-grid pattern instead of square tile lines.
     - Right preview area now has a 2-stage progress bar and randomly selects between two preview sets:
       - cat image + Seedance video
       - girlcat image + `s-video10.mp4`
     - Login page includes a lower-right **Explore** escape button for browsing without signing in.
-43. **Explore now includes a dedicated Seedance 2.0 showcase section**:
+44. **Explore now includes a dedicated Seedance 2.0 showcase section**:
     - Showcase order is now **GPT Image 2 → Seedance 2.0 → Nano Banana Pro → Seedream 4.5**.
     - Seedance showcase assets live under `frontend/dashboard-showcase/seedance20-explore/`.
     - Showcase uses looping video cards, including text-to-video and image-to-video examples.
     - Seedance showcase rows are taller than default image showcase rows for a stronger video presentation.
-44. **Gallery Preview modal now supports video + source-image previews**:
+45. **Gallery Preview modal now supports video + source-image previews**:
     - `openGalleryPreview(el)` supports both image and video media inside the same modal.
     - Video showcase items render in a dedicated `<video>` preview area instead of forcing media into an `<img>`.
     - Image-to-video items can include a `sourceImage`, shown in the right info sidebar under the model badges and above the prompt.
     - Clicking the source image opens a larger overlay preview above the gallery modal.
-45. **Model dropdown close flow hardened**:
+46. **Model dropdown close flow hardened**:
     - `closeModelDropdown()` now safely no-ops if `#model-dropdown` is not present, preventing null `.classList` runtime errors triggered during gallery interactions.
-46. **Image mega-menu Tools expanded with new creative workflows**:
+47. **Image mega-menu Tools expanded with new creative workflows**:
     - Added **Expand Image**, **Angles 2.0**, and **Shots** under the existing Image mega-menu Tools section.
     - These tools are available from the Image dropdown only and do not appear as top-level navbar items.
-47. **Three dedicated image-tool panels added**:
+48. **Three dedicated image-tool panels added**:
     - `#panel-expand` — upload one image, choose aspect ratio, and generate an expanded composition.
     - `#panel-angles` — upload one image, choose an angle preset, optional guidance, and generate alternate viewpoints.
     - `#panel-shots` — upload one image, choose a shot pack and count, and generate a multi-shot image set.
-48. **New image tools currently reuse the unified edit backend flow**:
+49. **New image tools currently reuse the unified edit backend flow**:
     - `Expand Image` uses `openai/gpt-image-2/edit` as the default orchestration model.
     - `Angles 2.0` and `Shots` use `fal-ai/nano-banana-pro/edit` as their default orchestration model.
     - No dedicated new backend tool endpoints were added in this iteration.
-49. **Shared Image Tools suite UI added**:
+50. **Shared Image Tools suite UI added**:
     - New brutalist workspace components support upload-first sidebars, result stages, reusable chip selectors, and shared result-card rendering.
-50. **Frontend is now multi-page, not single-file SPA-only**:
+51. **Frontend is now multi-page, not single-file SPA-only**:
     - Dedicated page entries now exist for [`frontend/index.html`](frontend/index.html), [`frontend/explore-gallery.html`](frontend/explore-gallery.html), [`frontend/image.html`](frontend/image.html), [`frontend/video.html`](frontend/video.html), [`frontend/edit.html`](frontend/edit.html), [`frontend/restyler.html`](frontend/restyler.html), [`frontend/content-machine.html`](frontend/content-machine.html), [`frontend/upscale.html`](frontend/upscale.html), [`frontend/expand.html`](frontend/expand.html), [`frontend/angles.html`](frontend/angles.html), [`frontend/shots.html`](frontend/shots.html), [`frontend/media.html`](frontend/media.html), and [`frontend/login.html`](frontend/login.html).
     - [`frontend/index.html`](frontend/index.html) is now Explore-only; tool panels were removed from it.
-51. **Shared frontend shell sync flow added**:
+52. **Shared frontend shell sync flow added**:
     - Shared navbar/footer/modal shell markup is edited from [`frontend/index.html`](frontend/index.html) and propagated to other pages via [`tools/sync_frontend_shell.py`](tools/sync_frontend_shell.py).
     - `SHARED-SHELL:START/END` markers in page HTML are intentional and should be preserved.
-52. **Frontend JS modularization checkpoint reached**:
+53. **Frontend JS modularization checkpoint reached**:
     - Shared route config now lives in [`frontend/routes.js`](frontend/routes.js).
     - Shared navbar/dropdown/pricing shell behavior now lives in [`frontend/shell.js`](frontend/shell.js).
     - Page binders/business logic are being moved out of [`frontend/app.js`](frontend/app.js) into page scripts:
@@ -210,17 +216,29 @@ These were intentionally changed and should stay as-is unless explicitly request
       - [`frontend/page-content-machine.js`](frontend/page-content-machine.js)
       - [`frontend/page-restyler.js`](frontend/page-restyler.js)
       - [`frontend/page-media.js`](frontend/page-media.js)
-53. **CSS modularization started**:
+54. **CSS modularization started**:
     - Primary stylesheet entry is now [`frontend/css/main.css`](frontend/css/main.css).
     - [`frontend/styles.css`](frontend/styles.css) is kept only as a legacy compatibility shim that imports the modular entry.
     - Current CSS modules live under [`frontend/css/`](frontend/css/) and preserve import order from the former monolith to avoid visual regressions.
-54. **Frontend static asset routing fallback hardened**:
+55. **Frontend static asset routing fallback hardened**:
     - Clean page alias handling in [`backend/main.py`](backend/main.py) now falls back to serving real frontend/root static files when the request is not a known panel alias.
     - This prevents false 404s for root-level frontend assets like [`frontend/api.js`](frontend/api.js), [`frontend/routes.js`](frontend/routes.js), [`frontend/shell.js`](frontend/shell.js), [`frontend/explore-data.js`](frontend/explore-data.js), [`frontend/app.js`](frontend/app.js), [`frontend/raiko-logo-trans.png`](frontend/raiko-logo-trans.png), [`frontend/raiko-logo-trans-w.png`](frontend/raiko-logo-trans-w.png), and root favicon/manifest assets.
-55. **Explore showcase recovery after modularization**:
+56. **Explore showcase recovery after modularization**:
     - Homepage showcase strips for GPT Image 2, Seedance 2.0, Nano Banana Pro, and Seedream 4.5 remain data-driven from [`frontend/explore-data.js`](frontend/explore-data.js) and rendered by [`frontend/app.js`](frontend/app.js).
     - Showcase sections in [`frontend/index.html`](frontend/index.html) now explicitly distinguish image vs video variants with `.dash-showcase--image` and `.dash-showcase--video` so split CSS keeps the correct height.
     - Explore featured strip arrows and showcase initialization depend on app boot completing successfully; the global keyboard shortcut binder must remain defined during bootstrap.
+57. **Audio panel (`#panel-audio`) added as a first-class top-nav workspace**:
+    - Top navbar now includes **Audio** and it must use the **same shared shell/navbar** as Explore and the rest of the multi-page app.
+    - [`frontend/audio.html`](frontend/audio.html) must not diverge into a custom navbar; shell markup is shared from [`frontend/index.html`](frontend/index.html) and propagated with [`tools/sync_frontend_shell.py`](tools/sync_frontend_shell.py).
+    - Audio page uses a dark brutalist two-column layout: left workflow sidebar + right explainer/results canvas.
+58. **Audio workspace currently exposes 3 ElevenLabs-powered tools**:
+    - **Voiceover** → model `fal-ai/elevenlabs/tts/eleven-v3`
+    - **Music Creator** → model `fal-ai/elevenlabs/music`
+    - **Voice Changer** → model `fal-ai/elevenlabs/voice-changer`
+59. **Voiceover language selection is modal/grid-based, not free text**:
+    - The language control in [`frontend/audio.html`](frontend/audio.html) opens a visual modal grid picker inspired by the provided reference.
+    - Users choose from cards such as English, Chinese, French, Hindi, Italian, Japanese, Korean, Portuguese, Russian, Turkish, Spanish, German, Arabic, Polish, Indonesian, and Filipino.
+    - Do not revert this back to a plain text input.
 
 If you reintroduce gradients, soft shadows, pill-shaped buttons, lavender/purple colors, or standalone info "ⓘ" icons, you are regressing the product.
 
